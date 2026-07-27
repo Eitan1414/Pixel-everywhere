@@ -46,6 +46,9 @@ function toast(message) {
 
 async function api(path, options = {}) {
   const headers = { ...(options.headers || {}) };
+  if (apiBase.includes(".ngrok-free.")) {
+    headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
+  }
   if (options.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
@@ -217,6 +220,9 @@ $("#loginForm").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify(values)
     });
+    if (!result.token || !result.user) {
+      throw new Error("Le serveur n’a pas renvoyé une session valide.");
+    }
     saveSession(result.token, result.user);
     form.reset();
     setFormStatus(status, "");
