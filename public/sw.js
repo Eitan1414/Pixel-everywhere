@@ -1,4 +1,4 @@
-const CACHE = "pixel-everywhere-alpha-v2";
+const CACHE = "pixel-everywhere-alpha-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -6,8 +6,11 @@ const APP_SHELL = [
   "/web/main.js",
   "/manifest.webmanifest",
   "/assets/pdd-logo.jpg",
+  "/assets/pdd2-wordmark.png",
   "/assets/alpha-logo.png",
   "/assets/pixel-mascot.png",
+  "/assets/pixel-body.png",
+  "/assets/pixel-eye.png",
   "/assets/icon-192.png",
   "/assets/icon-512.png"
 ];
