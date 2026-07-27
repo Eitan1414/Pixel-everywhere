@@ -44,8 +44,10 @@ jobs:
         run: |
           mkdir -p public/assets
           base64 --decode assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
-          convert public/assets/pdd-logo.jpg -resize 192x192 public/assets/icon-192.png
-          convert public/assets/pdd-logo.jpg -resize 512x512 public/assets/icon-512.png
+          base64 --decode assets-encoded/alpha-logo.png.b64 > public/assets/alpha-logo.png
+          base64 --decode assets-encoded/pixel-mascot.png.b64 > public/assets/pixel-mascot.png
+          convert public/assets/alpha-logo.png -resize 192x192 public/assets/icon-192.png
+          convert public/assets/alpha-logo.png -resize 512x512 public/assets/icon-512.png
 
       - name: Construire l’interface
         run: npm run build
@@ -55,7 +57,7 @@ jobs:
           npx cap add android
           npx cap sync android
 
-      - name: Appliquer le logo PDD
+      - name: Appliquer le logo Alpha PDD
         run: bash scripts/brand-android.sh
 
       - name: Compiler l’APK
