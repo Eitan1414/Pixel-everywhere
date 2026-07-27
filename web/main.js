@@ -1,3 +1,5 @@
+import { LocalNotifications } from "@capacitor/local-notifications";
+
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
 const state = {
@@ -5,6 +7,9 @@ const state = {
   user: JSON.parse(sessionStorage.getItem("pixel-user") || "null"),
   memberToken: localStorage.getItem("pixel-member-token") || "",
   member: JSON.parse(localStorage.getItem("pixel-member") || "null"),
+  memberMessages: [],
+  memberApplications: [],
+  unreadCount: 0,
   applications: [],
   activeApplication: null,
   pet: JSON.parse(localStorage.getItem("pixel-pet") || "null")
@@ -120,15 +125,21 @@ function saveMemberSession(token, member) {
   localStorage.setItem("pixel-member", JSON.stringify(member));
   updateAccountButton();
   updateAccountDialog();
+  updateMemberAccess();
+  loadMemberInbox({ notify: false });
 }
 
 function clearMemberSession() {
   state.memberToken = "";
   state.member = null;
+  state.memberMessages = [];
+  state.memberApplications = [];
+  state.unreadCount = 0;
   localStorage.removeItem("pixel-member-token");
   localStorage.removeItem("pixel-member");
   updateAccountButton();
   updateAccountDialog();
+  updateMemberAccess();
 }
 
 function updateAccountButton() {
@@ -141,6 +152,13 @@ function updateAccountButton() {
   );
 }
 
+function updateMemberAccess() {
+  $("#memberInboxButton").classList.toggle("hidden", !state.member);
+  const badge = $("#inboxBadge");
+  badge.textContent = String(state.unreadCount);
+  badge.classList.toggle("hidden", !state.member || state.unreadCount === 0);
+}
+
 function navigate(page) {
   $$(".page").forEach((section) => section.classList.toggle("active", section.id === `page-${page}`));
   $$(".bottom-nav button").forEach((button) =>
@@ -150,6 +168,8 @@ function navigate(page) {
 
   if (page === "announcements") loadAnnouncements();
   if (page === "pixel") renderPet();
+  if (page === "application") prepareApplicationPage();
+  if (page === "member-inbox") loadMemberInbox({ markVisible: true });
   if (page === "staff") openStaffWorkspace();
 }
 
@@ -233,10 +253,12 @@ $("#applicationForm").addEventListener("submit", async (event) => {
   try {
     const result = await api("/applications", {
       method: "POST",
+      auth: "member",
       body: JSON.stringify(values)
     });
     form.reset();
     setFormStatus(status, result.message, "success");
+    await prepareApplicationPage();
   } catch (error) {
     setFormStatus(status, error.message, "error");
   } finally {
@@ -244,11 +266,48 @@ $("#applicationForm").addEventListener("submit", async (event) => {
   }
 });
 
+async function prepareApplicationPage() {
+  const gate = $("#applicationMemberGate");
+  const form = $("#applicationForm");
+  const summary = $("#memberApplicationSummary");
+  gate.classList.toggle("hidden", Boolean(state.member));
+  form.classList.toggle("hidden", !state.member);
+  summary.classList.add("hidden");
+  summary.replaceChildren();
+  if (!state.member) return;
+
+  try {
+    const data = await api("/members/applications", { auth: "member" });
+    state.memberApplications = data.applications;
+    const active = data.applications.find((application) =>
+      ["pending", "reviewing"].includes(application.status)
+    );
+    const latest = data.applications[0];
+    if (latest) {
+      summary.classList.remove("hidden");
+      summary.replaceChildren(
+        element("span", {
+          className: `status-pill status-${latest.status}`,
+          text: statusLabels[latest.status]
+        }),
+        element("div", {}, [
+          element("strong", { text: `Candidature ${statusLabels[latest.status].toLowerCase()}` }),
+          element("small", { text: `Envoyée le ${formatDate(latest.created_at)}` })
+        ])
+      );
+    }
+    form.classList.toggle("hidden", Boolean(active));
+  } catch (error) {
+    setFormStatus($("#applicationStatus"), error.message, "error");
+  }
+}
+
 const loginDialog = $("#loginDialog");
 $("#accountButton").addEventListener("click", () => {
   updateAccountDialog();
   loginDialog.showModal();
 });
+$("#memberInboxButton").addEventListener("click", () => navigate("member-inbox"));
 $("#closeLogin").addEventListener("click", () => loginDialog.close());
 
 function selectAccountTab(tab) {
@@ -275,6 +334,10 @@ function updateAccountDialog() {
   $("#staffDialogIdentity").textContent = state.user
     ? `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`
     : "";
+  $("#notificationStatus").textContent =
+    localStorage.getItem("pixel-notifications-enabled") === "true"
+      ? "Notifications activées sur cet appareil."
+      : "Active-les pour être averti quand l’application est ouverte.";
 }
 
 $$("[data-member-mode]").forEach((button) => {
@@ -323,6 +386,15 @@ $("#memberRegisterForm").addEventListener("submit", (event) =>
 $("#memberLogoutButton").addEventListener("click", () => {
   clearMemberSession();
   toast("Compte membre déconnecté.");
+});
+$("#openMemberAccountButton").addEventListener("click", () => {
+  selectAccountTab("member");
+  updateAccountDialog();
+  loginDialog.showModal();
+});
+$("#openMemberInboxButton").addEventListener("click", () => {
+  loginDialog.close();
+  navigate("member-inbox");
 });
 $("#openStaffButton").addEventListener("click", () => {
   loginDialog.close();
@@ -435,6 +507,146 @@ const statusLabels = {
   rejected: "Refusée"
 };
 
+function notificationStorageKey() {
+  return `pixel-last-notified-message-${state.member?.id || "guest"}`;
+}
+
+async function enableMemberNotifications() {
+  try {
+    let permission = await LocalNotifications.checkPermissions();
+    if (permission.display !== "granted") {
+      permission = await LocalNotifications.requestPermissions();
+    }
+    if (permission.display !== "granted") {
+      throw new Error("Autorisation de notification refusée.");
+    }
+    localStorage.setItem("pixel-notifications-enabled", "true");
+    updateAccountDialog();
+    toast("Notifications activées.");
+    await loadMemberInbox({ notify: true });
+  } catch (error) {
+    toast(error.message || "Notifications indisponibles sur cet appareil.");
+  }
+}
+
+$("#enableNotificationsButton").addEventListener("click", enableMemberNotifications);
+$("#refreshMemberInbox").addEventListener("click", () => loadMemberInbox({ notify: false }));
+
+async function notifyForNewMemberMail(messages) {
+  if (
+    !state.member ||
+    localStorage.getItem("pixel-notifications-enabled") !== "true" ||
+    !messages.length
+  ) {
+    return;
+  }
+  const storageKey = notificationStorageKey();
+  const lastNotified = Number(localStorage.getItem(storageKey) || 0);
+  const newMessages = messages.filter(
+    (message) => !message.read_at && Number(message.id) > lastNotified
+  );
+  if (!newMessages.length) return;
+
+  try {
+    await LocalNotifications.schedule({
+      notifications: newMessages.slice(0, 5).map((message) => ({
+        id: 100000 + Number(message.id),
+        title: message.sender_name,
+        body: message.subject,
+        schedule: { at: new Date(Date.now() + 500) },
+        extra: { page: "member-inbox", messageId: message.id }
+      }))
+    });
+    localStorage.setItem(storageKey, String(Math.max(...newMessages.map((message) => message.id))));
+  } catch {
+    // La boîte membre reste la source fiable si les notifications sont indisponibles.
+  }
+}
+
+function renderMemberMessage(message) {
+  const card = element(
+    "article",
+    {
+      className: `member-mail ${message.read_at ? "" : "unread"}`.trim()
+    },
+    [
+      element("div", { className: "member-mail-sender" }, [
+        element("img", { src: message.sender_logo, alt: "Logo PDD" }),
+        element("div", {}, [
+          element("strong", { text: message.sender_name }),
+          element("time", { text: formatDate(message.created_at) })
+        ]),
+        message.read_at ? null : element("span", { className: "unread-dot", title: "Non lu" })
+      ]),
+      element("h3", { text: message.subject }),
+      element("p", { text: message.body })
+    ]
+  );
+  if (!message.read_at) {
+    let markingRead = false;
+    card.tabIndex = 0;
+    card.setAttribute("role", "button");
+    const markRead = async () => {
+      if (markingRead) return;
+      markingRead = true;
+      try {
+        await api(`/members/inbox/${message.id}/read`, {
+          method: "PATCH",
+          auth: "member"
+        });
+        message.read_at = new Date().toISOString();
+        card.classList.remove("unread");
+        $(".unread-dot", card)?.remove();
+        card.removeAttribute("role");
+        card.removeAttribute("tabindex");
+        state.unreadCount = Math.max(0, state.unreadCount - 1);
+        updateMemberAccess();
+      } catch (error) {
+        markingRead = false;
+        toast(error.message);
+      }
+    };
+    card.addEventListener("click", markRead, { once: true });
+    card.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") markRead();
+    }, { once: true });
+  }
+  return card;
+}
+
+async function loadMemberInbox({ notify = true } = {}) {
+  const list = $("#memberInboxList");
+  if (!state.member || !state.memberToken) {
+    state.unreadCount = 0;
+    updateMemberAccess();
+    list.replaceChildren(
+      element("div", {
+        className: "empty-state",
+        text: "Connecte-toi avec un compte membre pour ouvrir cette messagerie."
+      })
+    );
+    return;
+  }
+
+  list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des messages…" }));
+  try {
+    const data = await api("/members/inbox", { auth: "member" });
+    state.memberMessages = data.messages;
+    state.unreadCount = data.unreadCount;
+    updateMemberAccess();
+    if (!data.messages.length) {
+      list.replaceChildren(
+        element("div", { className: "empty-state", text: "Tu n’as reçu aucun message pour le moment." })
+      );
+    } else {
+      list.replaceChildren(...data.messages.map(renderMemberMessage));
+    }
+    if (notify) await notifyForNewMemberMail(data.messages);
+  } catch (error) {
+    list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
+  }
+}
+
 async function loadApplications() {
   const list = $("#staffApplicationsList");
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
@@ -479,6 +691,8 @@ function renderApplicationCard(application) {
 
 const applicationDialog = $("#applicationDialog");
 $("#closeApplication").addEventListener("click", () => applicationDialog.close());
+const acceptApplicationDialog = $("#acceptApplicationDialog");
+$("#closeAcceptApplication").addEventListener("click", () => acceptApplicationDialog.close());
 
 async function openApplication(application) {
   state.activeApplication = application;
@@ -504,10 +718,12 @@ function renderApplicationDetail(application, notes) {
   const content = $("#applicationDetailContent");
   const statusSelect = element("select");
   Object.entries(statusLabels).forEach(([value, label]) => {
+    if (value === "accepted" && application.status !== "accepted") return;
     const option = element("option", { value, text: label });
     option.selected = value === application.status;
     statusSelect.append(option);
   });
+  statusSelect.disabled = application.status === "accepted";
   statusSelect.addEventListener("change", async () => {
     try {
       await api(`/staff/applications/${application.id}/status`, {
@@ -555,6 +771,27 @@ function renderApplicationDetail(application, notes) {
     }
   });
 
+  let acceptButton;
+  if (
+    state.user?.role === "admin" &&
+    application.status !== "accepted" &&
+    application.member_id
+  ) {
+    acceptButton = element("button", {
+      type: "button",
+      className: "primary-button acceptance-button",
+      text: "Accepter et créer le compte modérateur"
+    });
+    acceptButton.addEventListener("click", () => {
+      state.activeApplication = application;
+      $("#acceptApplicationRecipient").textContent =
+        `Destinataire : ${application.member_display_name} (@${application.member_username}).`;
+      $("#acceptApplicationForm").reset();
+      setFormStatus($(".form-status", $("#acceptApplicationForm")), "");
+      acceptApplicationDialog.showModal();
+    });
+  }
+
   content.replaceChildren(
     element("p", { className: "eyebrow", text: "Candidature privée" }),
     element("h2", { text: application.discord_username }),
@@ -563,15 +800,50 @@ function renderApplicationDetail(application, notes) {
       field("Âge", `${application.age} ans`),
       field("Rôle souhaité", application.desired_role),
       field("Pseudo Discord", application.discord_username),
+      field(
+        "Compte membre",
+        application.member_username
+          ? `${application.member_display_name} (@${application.member_username})`
+          : "Ancienne candidature sans compte membre"
+      ),
       field("Motivation", application.motivation),
       field("Reçue le", formatDate(application.created_at))
     ]),
     element("label", {}, [document.createTextNode("Statut"), statusSelect]),
+    acceptButton,
     element("h3", { text: "Notes du staff" }),
     notesList,
     element("div", { className: "application-actions" }, [noteInput, noteButton])
   );
 }
+
+$("#acceptApplicationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const application = state.activeApplication;
+  if (!application) return;
+  const form = event.currentTarget;
+  const status = $(".form-status", form);
+  const button = $("button[type='submit']", form);
+  const values = Object.fromEntries(new FormData(form));
+  button.disabled = true;
+  setFormStatus(status, "Création sécurisée du compte…");
+  try {
+    await api(`/admin/applications/${application.id}/accept`, {
+      method: "POST",
+      body: JSON.stringify(values)
+    });
+    application.status = "accepted";
+    form.reset();
+    acceptApplicationDialog.close();
+    applicationDialog.close();
+    toast("Candidature acceptée et identifiants envoyés au membre.");
+    await loadApplications();
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadMessages() {
   const list = $("#staffMessagesList");
@@ -865,17 +1137,40 @@ $$("[data-guide-page]").forEach((button) => {
 });
 
 async function restoreMemberSession() {
-  if (!state.memberToken) return;
+  if (!state.memberToken) {
+    updateMemberAccess();
+    prepareApplicationPage();
+    return;
+  }
   try {
     const data = await api("/members/me", { auth: "member" });
     state.member = data.member;
     localStorage.setItem("pixel-member", JSON.stringify(data.member));
+    await loadMemberInbox({ notify: true });
   } catch {
     clearMemberSession();
   }
   updateAccountButton();
   updateAccountDialog();
+  updateMemberAccess();
+  prepareApplicationPage();
 }
+
+LocalNotifications.addListener("localNotificationActionPerformed", () => {
+  if (state.member) navigate("member-inbox");
+}).catch(() => {});
+
+window.setInterval(() => {
+  if (state.member && document.visibilityState === "visible") {
+    loadMemberInbox({ notify: true });
+  }
+}, 60_000);
+
+document.addEventListener("visibilitychange", () => {
+  if (state.member && document.visibilityState === "visible") {
+    loadMemberInbox({ notify: true });
+  }
+});
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
@@ -883,5 +1178,6 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 
 updateAccountButton();
 updateAccountDialog();
+updateMemberAccess();
 renderPet();
 restoreMemberSession();
