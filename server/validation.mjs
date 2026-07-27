@@ -72,6 +72,10 @@ export const activityRewardSchema = z.object({
   mode: z.enum(["start", "minute"])
 }).strict();
 
+export const petActionSchema = z.object({
+  action: z.enum(["feed", "pet", "bounce", "walk", "sleep"])
+}).strict();
+
 export function parse(schema, req, res) {
   const result = schema.safeParse(req.body);
   if (!result.success) {
