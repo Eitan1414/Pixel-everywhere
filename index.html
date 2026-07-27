@@ -477,6 +477,23 @@
       </article>
     </dialog>
 
+    <dialog id="rejectApplicationDialog">
+      <article class="application-detail acceptance-card">
+        <button id="closeRejectApplication" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Décision administrateur</p>
+        <h2>Refuser la candidature</h2>
+        <p id="rejectApplicationRecipient" class="account-help"></p>
+        <div class="rejection-preview">
+          <strong>Message envoyé par PDD Staff</strong>
+          <p id="rejectApplicationPreview"></p>
+        </div>
+        <form id="rejectApplicationForm" class="compact-form">
+          <button class="danger-button" type="submit">Confirmer le refus et envoyer le message</button>
+          <p class="form-status" aria-live="polite"></p>
+        </form>
+      </article>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script type="module" src="/web/main.js"></script>
   </body>
