@@ -7,13 +7,16 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 
 - présentation du serveur et invitation `https://discord.gg/DbxADDbuzz` ;
 - lecture du salon Discord d’annonces `1256623943494926407` ;
+- création et connexion de comptes membres, séparés des comptes du staff ;
 - formulaire public de candidature au staff ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
 - panneau administrateur pour créer et désactiver les comptes du staff ;
 - changement obligatoire du mot de passe temporaire à la première connexion ;
-- crédits complets de l’équipe PDD.
+- Tamagotchi Pixel interactif avec faim, joie et énergie ;
+- assistant Pixel pour naviguer dans l’application ;
+- identité visuelle Alpha et crédits complets de l’équipe PDD.
 
 ## Sécurité des comptes
 
@@ -99,17 +102,20 @@ appareil tant que Termux, le serveur Node.js et ngrok restent actifs.
 
 ## Comptes et autorisations
 
-| Type de compte | Candidatures | Messagerie | Notes | Créer des comptes | Désactiver des comptes |
+| Type de compte | Candidatures privées | Messagerie staff | Notes | Créer des comptes staff | Désactiver des comptes |
 | --- | ---: | ---: | ---: | ---: | ---: |
+| Membre | Non | Non | Non | Non | Non |
 | Modérateur | Oui | Oui | Oui | Non | Non |
 | Administrateur | Oui | Oui | Oui | Oui | Oui |
 
-Un administrateur ne peut pas désactiver son propre compte depuis l’application.
+Les comptes membres et staff utilisent des sessions séparées. Un compte membre
+ne peut pas accéder aux routes privées du staff. Un administrateur ne peut pas
+désactiver son propre compte depuis l’application.
 
 ## Crédits
 
-- **Eitan 2.0** — Programming and creator of the server/app
-- **thib549** — Co-creator
-- **kamiko** — Co-creator
-- **simgi** — Director of staff
-- **baba / touille / Maggie** — Modérateurs responsables
+- **Eitan 2.0** — Programmation et créateur du serveur et de l’application
+- **thib549** — Co-créateur
+- **Kamiko** — Co-créateur
+- **Simgi** — Directeur du staff
+- **Baba**, **Touille** et **Maggie** — Modérateurs responsables
