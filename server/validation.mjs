@@ -76,6 +76,11 @@ export const petActionSchema = z.object({
   action: z.enum(["feed", "pet", "bounce", "walk", "sleep"])
 }).strict();
 
+export const appRatingSchema = z.object({
+  stars: z.coerce.number().int().min(1).max(5),
+  comment: z.string().trim().min(3).max(1500)
+}).strict();
+
 export function parse(schema, req, res) {
   const result = schema.safeParse(req.body);
   if (!result.success) {
