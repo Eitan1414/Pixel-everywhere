@@ -20,6 +20,8 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
   validation rapportant 50 pièces ;
 - économie membre sécurisée : 5 pièces par minute active, pause anti-AFK après
   3 minutes, boutique de nourriture Pixel et demandes de conversion XP ;
+- interactions Tamagotchi payantes et protégées par des délais serveur, maison
+  pleine hauteur en croquis et déplacements d’attente aléatoires de Pixel ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
@@ -146,6 +148,9 @@ complètement fermée nécessiteront l’ajout ultérieur de Firebase Cloud Mess
   exactement 50 pièces, une seule fois.
 - Les pièces permettent d’acheter une friandise (15), un repas (30) ou un
   festin (50) pour Pixel.
+- Les actions directes de Pixel coûtent entre 5 et 15 pièces et possèdent un
+  délai indépendant : nourrir 5/20 s, caresser 5/10 s, jouer 8/15 s,
+  dormir 10/30 s et promener 15/60 s.
 - Le taux de conversion est **1 pièce = 15 XP PDD**.
 - Lors d’une demande de conversion, les pièces sont réservées immédiatement.
   Le staff ajoute les XP manuellement sur Discord puis confirme la demande.
