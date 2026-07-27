@@ -55,7 +55,7 @@ app.use(
         .map((value) => value.trim());
       const mobileOrigins = (
         process.env.MOBILE_ORIGINS ||
-        "http://localhost,https://localhost,capacitor://localhost"
+        "http://localhost,https://localhost,capacitor://localhost,app://pixel"
       )
         .split(",")
         .map((value) => value.trim());
