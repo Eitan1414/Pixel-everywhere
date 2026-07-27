@@ -26,6 +26,12 @@ function persist() {
   fs.renameSync(temporaryPath, databasePath);
 }
 
+let transactionDepth = 0;
+
+function persistWhenReady() {
+  if (transactionDepth === 0) persist();
+}
+
 function normalizeParameters(parameters) {
   if (parameters.length === 1 && Array.isArray(parameters[0])) {
     return parameters[0];
@@ -44,7 +50,7 @@ export const db = {
   exec(sql) {
     try {
       sqlite.exec(sql);
-      persist();
+      persistWhenReady();
     } catch (error) {
       throw mapDatabaseError(error);
     }
@@ -58,7 +64,7 @@ export const db = {
           const changes = sqlite.getRowsModified();
           const row = sqlite.exec("SELECT last_insert_rowid() AS id");
           const lastInsertRowid = row[0]?.values[0]?.[0] || 0;
-          persist();
+          persistWhenReady();
           return { changes, lastInsertRowid };
         } catch (error) {
           throw mapDatabaseError(error);
@@ -89,6 +95,22 @@ export const db = {
         }
       }
     };
+  },
+
+  transaction(callback) {
+    sqlite.run("BEGIN IMMEDIATE");
+    transactionDepth += 1;
+    try {
+      const result = callback();
+      sqlite.run("COMMIT");
+      transactionDepth -= 1;
+      persist();
+      return result;
+    } catch (error) {
+      sqlite.run("ROLLBACK");
+      transactionDepth -= 1;
+      throw mapDatabaseError(error);
+    }
   }
 };
 
@@ -141,9 +163,34 @@ db.exec(`
     user_id INTEGER NOT NULL,
     body TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES staff_users(id) ON DELETE RESTRICT
+      FOREIGN KEY (user_id) REFERENCES staff_users(id) ON DELETE RESTRICT
+  );
+
+  CREATE TABLE IF NOT EXISTS member_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    application_id INTEGER,
+    sender_name TEXT NOT NULL DEFAULT 'PDD Staff',
+    sender_logo TEXT NOT NULL DEFAULT '/assets/pdd-logo.jpg',
+    subject TEXT NOT NULL,
+    body TEXT NOT NULL,
+    read_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE,
+    FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL
   );
 `);
+
+const applicationColumns = db.prepare("PRAGMA table_info(applications)").all();
+if (!applicationColumns.some((column) => column.name === "member_id")) {
+  db.exec("ALTER TABLE applications ADD COLUMN member_id INTEGER REFERENCES member_users(id)");
+}
+if (!applicationColumns.some((column) => column.name === "staff_account_id")) {
+  db.exec("ALTER TABLE applications ADD COLUMN staff_account_id INTEGER REFERENCES staff_users(id)");
+}
+if (!applicationColumns.some((column) => column.name === "accepted_at")) {
+  db.exec("ALTER TABLE applications ADD COLUMN accepted_at TEXT");
+}
 
 export async function seedInitialAdmin() {
   const username = process.env.INITIAL_ADMIN_USERNAME?.trim();
