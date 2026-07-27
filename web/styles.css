@@ -132,8 +132,8 @@ body.startup-running .app-shell {
 }
 
 .startup-hello text {
-  fill: rgba(255, 151, 56, 0);
-  stroke: var(--orange-2);
+  fill: rgba(255, 255, 255, 0);
+  stroke: #fff;
   stroke-width: 3;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -383,15 +383,15 @@ body.startup-running .app-shell {
 
 @keyframes startup-write-hello {
   0%, 11% {
-    fill: rgba(255, 151, 56, 0);
+    fill: rgba(255, 255, 255, 0);
     stroke-dashoffset: 760;
   }
   43% {
-    fill: rgba(255, 151, 56, 0);
+    fill: rgba(255, 255, 255, 0);
     stroke-dashoffset: 0;
   }
   49%, 100% {
-    fill: rgba(255, 151, 56, 0.18);
+    fill: rgba(255, 255, 255, 0.14);
     stroke-dashoffset: 0;
   }
 }
@@ -1683,15 +1683,15 @@ dialog::backdrop {
 }
 
 .pet-stage.pet-day {
-  background: linear-gradient(#71c9e9 0 47%, #e9b36e 47% 51%, #d17b48 51% 100%);
+  background: #0c0e13;
 }
 
 .pet-stage.pet-evening {
-  background: linear-gradient(#5c467c 0 42%, #e47b58 42% 51%, #7b4b4b 51% 100%);
+  background: #0c0e13;
 }
 
 .pet-stage.pet-night {
-  background: linear-gradient(#0c1735 0 48%, #162443 48% 51%, #302c46 51% 100%);
+  background: #0c0e13;
 }
 
 .pet-sky {
