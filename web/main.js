@@ -20,6 +20,14 @@ const state = {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+function responseArray(payload, ...keys) {
+  if (Array.isArray(payload)) return payload;
+  for (const key of keys) {
+    if (Array.isArray(payload?.[key])) return payload[key];
+  }
+  return [];
+}
+
 const startupAnimation = $("#startupAnimation");
 let startupTimer;
 let serverAvailable = null;
@@ -283,7 +291,8 @@ async function loadAnnouncements() {
 
   try {
     const data = await api("/announcements");
-    if (!data.configured) {
+    const announcements = responseArray(data, "announcements", "messages", "items");
+    if (data?.configured === false) {
       list.replaceChildren(
         element("div", {
           className: "empty-state",
@@ -292,13 +301,13 @@ async function loadAnnouncements() {
       );
       return;
     }
-    if (!data.announcements.length) {
+    if (!announcements.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Aucune annonce pour le moment." })
       );
       return;
     }
-    list.replaceChildren(...data.announcements.map(renderAnnouncement));
+    list.replaceChildren(...announcements.map(renderAnnouncement));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -321,12 +330,12 @@ function renderAnnouncement(announcement) {
   if (announcement.content) {
     card.append(element("p", { className: "announcement-content", text: announcement.content }));
   }
-  announcement.embeds.forEach((embed) => {
+  responseArray(announcement, "embeds").forEach((embed) => {
     const body = [embed.title, embed.description].filter(Boolean).join("\n");
     if (body) card.append(element("p", { className: "announcement-content", text: body }));
   });
-  announcement.attachments
-    .filter((attachment) => attachment.contentType.startsWith("image/"))
+  responseArray(announcement, "attachments")
+    .filter((attachment) => String(attachment.contentType || "").startsWith("image/"))
     .forEach((attachment) => {
       card.append(
         element("img", {
@@ -378,11 +387,12 @@ async function prepareApplicationPage() {
 
   try {
     const data = await api("/members/applications", { auth: "member" });
-    state.memberApplications = data.applications;
-    const active = data.applications.find((application) =>
+    const applications = responseArray(data, "applications", "candidatures", "items");
+    state.memberApplications = applications;
+    const active = applications.find((application) =>
       ["pending", "reviewing"].includes(application.status)
     );
-    const latest = data.applications[0];
+    const latest = applications[0];
     if (latest) {
       summary.classList.remove("hidden");
       summary.replaceChildren(
@@ -439,6 +449,9 @@ function updateAccountDialog() {
   $("#staffDialogIdentity").textContent = state.user
     ? `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`
     : "";
+  $("#openStaffButton").textContent = state.user?.role === "admin"
+    ? "Ouvrir le panel administrateur"
+    : "Ouvrir l’espace staff";
   $("#notificationStatus").textContent =
     localStorage.getItem("pixel-notifications-enabled") === "true"
       ? "Notifications activées sur cet appareil."
@@ -638,7 +651,10 @@ async function openStaffWorkspace() {
     `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`;
   $("#passwordChangePanel").classList.toggle("hidden", !state.user.mustChangePassword);
   $("#staffWorkspace").classList.toggle("hidden", state.user.mustChangePassword);
-  $("#accountsTabButton").classList.toggle("hidden", !state.user.isOwnerAdmin);
+  const isAdmin = state.user.role === "admin";
+  $("#accountsTabButton").classList.toggle("hidden", !isAdmin);
+  $("#accountsTabButton").textContent = "Panel admin";
+  $("#openStaffButton").textContent = isAdmin ? "Ouvrir le panel administrateur" : "Ouvrir l’espace staff";
 
   if (!state.user.mustChangePassword) loadApplications();
 }
@@ -811,17 +827,18 @@ async function loadMemberInbox({ notify = true } = {}) {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des messages…" }));
   try {
     const data = await api("/members/inbox", { auth: "member" });
-    state.memberMessages = data.messages;
-    state.unreadCount = data.unreadCount;
-    setMemberPoints(data.points);
-    if (!data.messages.length) {
+    const messages = responseArray(data, "messages", "inbox", "items");
+    state.memberMessages = messages;
+    state.unreadCount = Number(data?.unreadCount ?? messages.filter((message) => !message.read_at).length);
+    setMemberPoints(data?.points ?? state.points);
+    if (!messages.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Tu n’as reçu aucun message pour le moment." })
       );
     } else {
-      list.replaceChildren(...data.messages.map(renderMemberMessage));
+      list.replaceChildren(...messages.map(renderMemberMessage));
     }
-    if (notify) await notifyForNewMemberMail(data.messages);
+    if (notify) await notifyForNewMemberMail(messages);
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -905,7 +922,7 @@ async function loadApplications() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/staff/applications");
-    state.applications = data.applications;
+    state.applications = responseArray(data, "applications", "candidatures", "requests", "items");
     if (!state.applications.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Aucune candidature reçue." })
@@ -956,7 +973,7 @@ async function openApplication(application) {
   applicationDialog.showModal();
   try {
     const data = await api(`/staff/applications/${application.id}/notes`);
-    renderApplicationDetail(application, data.notes);
+    renderApplicationDetail(application, responseArray(data, "notes", "comments", "items"));
   } catch (error) {
     content.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -969,7 +986,7 @@ function field(label, value) {
   ]);
 }
 
-function renderApplicationDetail(application, notes) {
+function renderApplicationDetail(application, notes = []) {
   const content = $("#applicationDetailContent");
   const statusSelect = element("select");
   Object.entries(statusLabels).forEach(([value, label]) => {
@@ -1157,14 +1174,15 @@ async function loadMessages() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/staff/messages");
-    if (!data.messages.length) {
+    const messages = responseArray(data, "messages", "items");
+    if (!messages.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "La messagerie est vide." })
       );
       return;
     }
     list.replaceChildren(
-      ...data.messages.map((message) =>
+      ...messages.map((message) =>
         element("article", { className: "message-card" }, [
           element("strong", {
             text: `${message.username}${message.role === "admin" ? " • Admin" : ""}`
@@ -1185,13 +1203,14 @@ async function loadStaffAlerts() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des demandes…" }));
   try {
     const data = await api("/staff/alerts");
-    if (!data.alerts.length) {
+    const alerts = responseArray(data, "alerts", "requests", "demandes", "items");
+    if (!alerts.length) {
       list.replaceChildren(
         element("div", { className: "empty-state compact", text: "Aucune demande membre." })
       );
       return;
     }
-    list.replaceChildren(...data.alerts.map(renderStaffAlert));
+    list.replaceChildren(...alerts.map(renderStaffAlert));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state compact", text: error.message }));
   }
@@ -1205,23 +1224,30 @@ async function loadStaffRatings() {
   }));
   try {
     const data = await api("/staff/ratings");
-    $("#staffRatingAverage").textContent = data.count
-      ? `${Number(data.average).toLocaleString("fr-FR", {
+    const ratings = responseArray(data, "ratings", "reviews", "avis", "items");
+    const count = Number(data?.count ?? data?.summary?.count ?? ratings.length);
+    const average = Number(
+      data?.average ??
+      data?.summary?.average ??
+      (ratings.length ? ratings.reduce((sum, rating) => sum + Number(rating.stars || 0), 0) / ratings.length : 0)
+    );
+    $("#staffRatingAverage").textContent = count
+      ? `${average.toLocaleString("fr-FR", {
           minimumFractionDigits: 1,
           maximumFractionDigits: 2
         })} / 5`
       : "— / 5";
-    $("#staffRatingStars").textContent = starText(data.average);
+    $("#staffRatingStars").textContent = starText(average);
     $("#staffRatingCount").textContent =
-      `${data.count} avis${data.count > 1 ? " reçus" : data.count ? " reçu" : ""}`;
-    if (!data.ratings.length) {
+      `${count} avis${count > 1 ? " reçus" : count ? " reçu" : ""}`;
+    if (!ratings.length) {
       list.replaceChildren(element("div", {
         className: "empty-state",
         text: "Aucune évaluation reçue pour le moment."
       }));
       return;
     }
-    list.replaceChildren(...data.ratings.map((rating) =>
+    list.replaceChildren(...ratings.map((rating) =>
       element("article", { className: "staff-rating-card" }, [
         element("div", { className: "staff-rating-head" }, [
           element("div", {}, [
@@ -1325,7 +1351,12 @@ async function loadAccounts() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/admin/accounts");
-    list.replaceChildren(...data.accounts.map(renderAccount));
+    const accounts = responseArray(data, "accounts", "users", "items");
+    if (!accounts.length) {
+      list.replaceChildren(element("div", { className: "empty-state", text: "Aucun autre compte staff." }));
+      return;
+    }
+    list.replaceChildren(...accounts.map(renderAccount));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -1513,12 +1544,27 @@ function completePetInteraction(pet, xp, diary, animation, reaction, particle) {
 
 let petActionPending = false;
 
+const adminPetCooldowns = { feed: 20, pet: 10, bounce: 15, sleep: 30, walk: 60 };
+
+function useAdminPetAction(action) {
+  const cooldownSeconds = adminPetCooldowns[action] || 10;
+  const key = `pixel-admin-pet-${state.user?.username || "admin"}-${action}`;
+  const lastUsedAt = Number(localStorage.getItem(key) || 0);
+  const remainingSeconds = Math.ceil((cooldownSeconds * 1000 - (Date.now() - lastUsedAt)) / 1000);
+  if (remainingSeconds > 0) {
+    throw new Error(`Pixel doit souffler encore ${remainingSeconds} seconde${remainingSeconds > 1 ? "s" : ""} avant cette action.`);
+  }
+  localStorage.setItem(key, String(Date.now()));
+  return { cost: 0, cooldownSeconds, points: state.points, adminBypass: true };
+}
+
 async function handlePetAction(action) {
-  if (!state.member) {
-    selectAccountTab("member");
+  const isAdmin = state.user?.role === "admin";
+  if (!state.member && !isAdmin) {
+    selectAccountTab(state.user ? "staff" : "member");
     updateAccountDialog();
     loginDialog.showModal();
-    toast("Connecte un compte membre pour interagir avec Pixel.");
+    toast("Connecte un compte membre ou administrateur pour interagir avec Pixel.");
     return;
   }
   if (petActionPending) return;
@@ -1527,12 +1573,14 @@ async function handlePetAction(action) {
   actionButtons.forEach((button) => { button.disabled = true; });
   setFormStatus($("#petActionStatus"), "Pixel se prépare…");
   try {
-    const result = await api("/members/pixel/action", {
-      method: "POST",
-      auth: "member",
-      body: JSON.stringify({ action })
-    });
-    setMemberPoints(result.points);
+    const result = isAdmin && !state.member
+      ? useAdminPetAction(action)
+      : await api("/members/pixel/action", {
+          method: "POST",
+          auth: "member",
+          body: JSON.stringify({ action })
+        });
+    if (!result.adminBypass) setMemberPoints(result.points);
   const pet = currentPet();
   if (action === "feed") {
     pet.hunger = Math.min(100, pet.hunger + 18);
@@ -1561,7 +1609,9 @@ async function handlePetAction(action) {
     }
     setFormStatus(
       $("#petActionStatus"),
-      `${result.cost} pièces utilisées • délai ${result.cooldownSeconds} secondes.`,
+      result.adminBypass
+        ? `Action administrateur • délai ${result.cooldownSeconds} secondes.`
+        : `${result.cost} pièces utilisées • délai ${result.cooldownSeconds} secondes.`,
       "success"
     );
   } catch (error) {
@@ -1584,23 +1634,36 @@ const shopEffects = {
 
 $$("[data-shop-item]").forEach((button) => {
   button.addEventListener("click", async () => {
-    if (!state.member) {
-      selectAccountTab("member");
+    const isAdmin = state.user?.role === "admin";
+    if (!state.member && !isAdmin) {
+      selectAccountTab(state.user ? "staff" : "member");
       updateAccountDialog();
       loginDialog.showModal();
-      toast("Connecte un compte membre pour utiliser tes pièces.");
+      toast("Connecte un compte membre ou administrateur pour utiliser la boutique de Pixel.");
       return;
     }
     const item = button.dataset.shopItem;
     button.disabled = true;
     setFormStatus($("#pixelShopStatus"), "Achat en cours…");
     try {
-      const result = await api("/members/shop/purchase", {
-        method: "POST",
-        auth: "member",
-        body: JSON.stringify({ item })
-      });
-      setMemberPoints(result.points);
+      let result;
+      if (isAdmin && !state.member) {
+        const key = `pixel-admin-shop-${state.user.username}-${item}`;
+        const lastUsedAt = Number(localStorage.getItem(key) || 0);
+        const remainingSeconds = Math.ceil((15_000 - (Date.now() - lastUsedAt)) / 1000);
+        if (remainingSeconds > 0) {
+          throw new Error(`Attends encore ${remainingSeconds} seconde${remainingSeconds > 1 ? "s" : ""} avant de réutiliser cet objet.`);
+        }
+        localStorage.setItem(key, String(Date.now()));
+        result = { label: "Objet Pixel", cost: 0, points: state.points, adminBypass: true };
+      } else {
+        result = await api("/members/shop/purchase", {
+          method: "POST",
+          auth: "member",
+          body: JSON.stringify({ item })
+        });
+        setMemberPoints(result.points);
+      }
       const effect = shopEffects[item];
       const pet = currentPet();
       pet.hunger = Math.min(100, pet.hunger + effect.hunger);
@@ -1615,7 +1678,9 @@ $$("[data-shop-item]").forEach((button) => {
       );
       setFormStatus(
         $("#pixelShopStatus"),
-        `${result.label} acheté pour ${result.cost} pièces.`,
+        result.adminBypass
+          ? "Objet utilisé avec les droits administrateur."
+          : `${result.label} acheté pour ${result.cost} pièces.`,
         "success"
       );
     } catch (error) {

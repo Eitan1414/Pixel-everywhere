@@ -391,7 +391,7 @@
               <button class="active" data-staff-tab="applications">Candidatures</button>
               <button data-staff-tab="messages">Messagerie</button>
               <button data-staff-tab="ratings">Avis</button>
-              <button id="accountsTabButton" data-staff-tab="accounts">Comptes</button>
+              <button id="accountsTabButton" data-staff-tab="accounts">Panel admin</button>
             </div>
 
             <section id="staff-applications" class="staff-panel active">
@@ -425,7 +425,8 @@
 
             <section id="staff-accounts" class="staff-panel">
               <form id="accountForm" class="card compact-form">
-                <h3>Créer un compte staff</h3>
+                <h3>Panel administrateur</h3>
+                <p class="account-help">Créer, activer ou désactiver les comptes du staff.</p>
                 <input name="username" minlength="3" maxlength="32" placeholder="Identifiant" required />
                 <input name="password" type="password" minlength="12" maxlength="128" placeholder="Mot de passe temporaire" required />
                 <select name="role">
