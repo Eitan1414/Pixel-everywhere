@@ -13,7 +13,31 @@
   <body class="startup-running">
     <div id="startupAnimation" class="startup-animation" aria-label="Animation de démarrage Pixel Everywhere">
       <div class="startup-backdrop-glow" aria-hidden="true"></div>
+      <div class="startup-paper" aria-hidden="true"></div>
+      <svg class="startup-doodles" viewBox="0 0 1000 1600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <g class="doodle doodle-gamepad">
+          <path d="M76 220 C95 166 168 153 226 166 L310 166 C367 153 440 169 458 221 L489 315 C502 357 466 387 427 367 L352 311 C331 296 308 289 282 289 L252 289 C225 289 202 296 181 312 L108 367 C69 389 33 357 46 315 Z" />
+          <path d="M151 215 L151 279 M119 247 L183 247 M365 222 C376 222 383 230 383 240 C383 251 376 259 365 259 C354 259 347 251 347 240 C347 230 354 222 365 222 Z M410 263 C421 263 428 271 428 281 C428 292 421 300 410 300 C399 300 392 292 392 281 C392 271 399 263 410 263 Z" />
+        </g>
+        <g class="doodle doodle-bubble">
+          <path d="M677 180 C677 132 727 101 809 101 C892 101 942 134 942 181 L942 269 C942 316 891 347 809 347 L744 347 L683 400 L697 334 C684 318 677 298 677 274 Z" />
+          <path d="M727 211 C753 194 775 226 800 208 C826 190 850 228 882 204" />
+        </g>
+        <g class="doodle doodle-pencil">
+          <path d="M72 1217 L148 1088 L190 1113 L113 1244 Z M148 1088 L166 1047 L207 1072 L190 1113 M72 1217 L65 1266 L113 1244" />
+          <path d="M95 1181 C180 1217 254 1195 328 1150 C411 1099 498 1116 565 1177" />
+        </g>
+        <g class="doodle doodle-spark">
+          <path d="M850 1015 L864 1063 L911 1078 L864 1094 L850 1143 L835 1094 L788 1078 L835 1063 Z" />
+          <path d="M144 746 C191 714 235 723 271 762 C306 799 350 807 397 773" />
+          <path d="M750 704 C787 657 847 654 884 699 C919 742 913 801 873 835" />
+        </g>
+      </svg>
+      <div class="startup-ink" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
       <div class="startup-scene" aria-hidden="true">
+        <div class="startup-swipe"></div>
         <div class="startup-pixel">
           <img class="startup-pixel-body" src="/assets/pixel-body.png" alt="" />
           <img class="startup-pixel-eye" src="/assets/pixel-eye.png" alt="" />
@@ -107,35 +131,65 @@
             </div>
             <span id="petMoodBadge" class="mood-badge">Heureux</span>
           </div>
+          <div class="pet-profile card">
+            <div class="pet-profile-mark">P</div>
+            <div class="pet-profile-info">
+              <span><strong>Pixel</strong><small id="petEnvironment">Dans son atelier</small></span>
+              <div class="pet-xp-track"><i id="petXpBar"></i></div>
+              <small id="petLevelText">Niveau 1 • 0/40 XP</small>
+            </div>
+          </div>
           <article class="pet-card card">
-            <div class="pet-sparkles" aria-hidden="true"><span>✦</span><span>·</span><span>✦</span></div>
-            <div id="petStage" class="pet-stage">
-              <img id="petMascot" src="/assets/pixel-mascot.png" alt="Pixel, la mascotte virtuelle de PDD" />
+            <div id="petStage" class="pet-stage pet-day">
+              <div class="pet-sky" aria-hidden="true">
+                <span class="pet-sun"></span>
+                <span class="pet-moon">☾</span>
+                <i class="pet-cloud cloud-one"></i>
+                <i class="pet-cloud cloud-two"></i>
+                <span class="pet-stars">· ✦ ·　✧　·</span>
+              </div>
+              <div class="pet-room" aria-hidden="true">
+                <div class="pet-picture"><span>★</span><small>PDD</small></div>
+                <div class="pet-shelf"><i></i><i></i><i></i></div>
+                <div class="pet-rug"></div>
+              </div>
+              <button class="pet-object pet-bowl" type="button" data-pet-action="feed" aria-label="Donner à manger à Pixel">🍊</button>
+              <button class="pet-object pet-ball" type="button" data-pet-action="bounce" aria-label="Jouer avec Pixel">★</button>
+              <button class="pet-object pet-bed" type="button" data-pet-action="sleep" aria-label="Faire dormir Pixel">Zz</button>
+              <button id="petMascot" class="pet-character" type="button" aria-label="Caresser Pixel">
+                <img class="pet-character-body" src="/assets/pixel-body.png" alt="Pixel, la mascotte virtuelle de PDD" />
+                <img class="pet-character-eye" src="/assets/pixel-eye.png" alt="" />
+              </button>
               <div id="petReaction" class="pet-reaction" aria-live="polite">Salut !</div>
+              <div id="petParticles" class="pet-particles" aria-hidden="true"></div>
             </div>
             <p id="petMessage" class="pet-message">Pixel est très content de te voir !</p>
             <div class="pet-stats">
               <div class="pet-stat">
-                <span><strong>Faim</strong><small id="hungerValue">82%</small></span>
+                <span><strong>🍊 Faim</strong><small id="hungerValue">82%</small></span>
                 <div><i id="hungerBar"></i></div>
               </div>
               <div class="pet-stat">
-                <span><strong>Joie</strong><small id="joyValue">88%</small></span>
+                <span><strong>💛 Joie</strong><small id="joyValue">88%</small></span>
                 <div><i id="joyBar"></i></div>
               </div>
               <div class="pet-stat">
-                <span><strong>Énergie</strong><small id="energyValue">76%</small></span>
+                <span><strong>⚡ Énergie</strong><small id="energyValue">76%</small></span>
                 <div><i id="energyBar"></i></div>
               </div>
             </div>
             <div class="pet-actions">
-              <button type="button" data-pet-action="feed"><span>🍊</span>Nourrir</button>
-              <button type="button" data-pet-action="bounce"><span>✨</span>Faire bondir</button>
-              <button type="button" data-pet-action="walk"><span>👟</span>Promener</button>
-              <button type="button" data-pet-action="sleep"><span>🌙</span>Dormir</button>
+              <button type="button" data-pet-action="feed"><span>🍊</span><strong>Nourrir</strong><small>+ faim</small></button>
+              <button type="button" data-pet-action="bounce"><span>✨</span><strong>Jouer</strong><small>+ joie</small></button>
+              <button type="button" data-pet-action="walk"><span>👟</span><strong>Promener</strong><small>+ joie & XP</small></button>
+              <button type="button" data-pet-action="sleep"><span>🌙</span><strong>Dormir</strong><small>+ énergie</small></button>
+            </div>
+            <div class="pet-diary">
+              <span aria-hidden="true">✎</span>
+              <div><small>Journal de Pixel</small><p id="petDiary">Pixel vient d’arriver dans son atelier.</p></div>
             </div>
           </article>
-          <p class="pet-hint">Les besoins de Pixel évoluent doucement, même lorsque l’application est fermée.</p>
+          <p class="pet-hint">Touche Pixel pour le caresser. Son atelier change selon l’heure réelle et ses besoins évoluent lorsque l’application est fermée.</p>
         </section>
 
         <section id="page-application" class="page">
