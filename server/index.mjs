@@ -15,6 +15,7 @@ import {
 } from "./auth.mjs";
 import { fetchAnnouncements } from "./discord.mjs";
 import {
+  acceptApplicationSchema,
   accountSchema,
   applicationSchema,
   loginSchema,
@@ -105,6 +106,16 @@ function currentUser(req) {
     .get(Number(req.staff.sub));
 }
 
+function currentMember(req) {
+  return db
+    .prepare(`
+      SELECT id, username, display_name, created_at
+      FROM member_users
+      WHERE id = ?
+    `)
+    .get(Number(req.member.sub));
+}
+
 function requireActiveStaff(req, res, next) {
   const user = currentUser(req);
   if (!user || !user.active) {
@@ -121,6 +132,15 @@ function staffOnly(req, res, next) {
       code: "PASSWORD_CHANGE_REQUIRED"
     });
   }
+  next();
+}
+
+function requireActiveMember(req, res, next) {
+  const member = currentMember(req);
+  if (!member) {
+    return res.status(403).json({ error: "Ce compte membre n’existe plus." });
+  }
+  req.currentMember = member;
   next();
 }
 
@@ -222,15 +242,63 @@ app.post("/api/members/login", loginLimiter, async (req, res) => {
   });
 });
 
-app.get("/api/members/me", authenticateMember, (req, res) => {
-  const member = db
-    .prepare("SELECT id, username, display_name, created_at FROM member_users WHERE id = ?")
-    .get(Number(req.member.sub));
-  if (!member) {
-    return res.status(404).json({ error: "Compte membre introuvable." });
+app.get(
+  "/api/members/me",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => res.json({ member: publicMember(req.currentMember) })
+);
+
+app.get(
+  "/api/members/applications",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const applications = db.prepare(`
+      SELECT id, desired_role, discord_username, status, created_at, updated_at
+      FROM applications
+      WHERE member_id = ?
+      ORDER BY datetime(created_at) DESC
+    `).all(req.currentMember.id);
+    res.json({ applications });
   }
-  res.json({ member: publicMember(member) });
-});
+);
+
+app.get(
+  "/api/members/inbox",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const messages = db.prepare(`
+      SELECT id, sender_name, sender_logo, subject, body, read_at, created_at
+      FROM member_messages
+      WHERE member_id = ?
+      ORDER BY datetime(created_at) DESC, id DESC
+      LIMIT 100
+    `).all(req.currentMember.id);
+    res.json({
+      messages,
+      unreadCount: messages.filter((message) => !message.read_at).length
+    });
+  }
+);
+
+app.patch(
+  "/api/members/inbox/:id/read",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const result = db.prepare(`
+      UPDATE member_messages
+      SET read_at = COALESCE(read_at, CURRENT_TIMESTAMP)
+      WHERE id = ? AND member_id = ?
+    `).run(Number(req.params.id), req.currentMember.id);
+    if (!result.changes) {
+      return res.status(404).json({ error: "Message introuvable." });
+    }
+    res.json({ ok: true });
+  }
+);
 
 let announcementCache = { expiresAt: 0, value: null };
 app.get("/api/announcements", async (_req, res) => {
@@ -247,27 +315,46 @@ app.get("/api/announcements", async (_req, res) => {
   }
 });
 
-app.post("/api/applications", publicFormLimiter, (req, res) => {
-  const input = parse(applicationSchema, req, res);
-  if (!input) return;
+app.post(
+  "/api/applications",
+  authenticateMember,
+  requireActiveMember,
+  publicFormLimiter,
+  (req, res) => {
+    const input = parse(applicationSchema, req, res);
+    if (!input) return;
 
-  const result = db.prepare(`
-    INSERT INTO applications
-      (age, desired_role, real_name, discord_username, motivation)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(
-    input.age,
-    input.desiredRole,
-    input.realName,
-    input.discordUsername,
-    input.motivation
-  );
+    const activeApplication = db.prepare(`
+      SELECT id
+      FROM applications
+      WHERE member_id = ? AND status IN ('pending', 'reviewing')
+      LIMIT 1
+    `).get(req.currentMember.id);
+    if (activeApplication) {
+      return res.status(409).json({
+        error: "Tu as déjà une candidature en attente d’examen."
+      });
+    }
 
-  res.status(201).json({
-    id: result.lastInsertRowid,
-    message: "Ta candidature a bien été envoyée au staff."
-  });
-});
+    const result = db.prepare(`
+      INSERT INTO applications
+        (member_id, age, desired_role, real_name, discord_username, motivation)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      req.currentMember.id,
+      input.age,
+      input.desiredRole,
+      input.realName,
+      input.discordUsername,
+      input.motivation
+    );
+
+    res.status(201).json({
+      id: result.lastInsertRowid,
+      message: "Ta candidature a bien été envoyée au staff."
+    });
+  }
+);
 
 app.get(
   "/api/staff/applications",
@@ -276,8 +363,12 @@ app.get(
   staffOnly,
   (_req, res) => {
     const applications = db.prepare(`
-      SELECT *
-      FROM applications
+      SELECT
+        a.*,
+        m.username AS member_username,
+        m.display_name AS member_display_name
+      FROM applications a
+      LEFT JOIN member_users m ON m.id = a.member_id
       ORDER BY
         CASE status
           WHEN 'pending' THEN 0
@@ -339,16 +430,123 @@ app.patch(
   (req, res) => {
     const input = parse(statusSchema, req, res);
     if (!input) return;
+    if (input.status === "accepted") {
+      return res.status(400).json({
+        error: "L’acceptation doit créer les identifiants du nouveau modérateur.",
+        code: "ACCEPTANCE_ACCOUNT_REQUIRED"
+      });
+    }
+    const application = db
+      .prepare("SELECT status FROM applications WHERE id = ?")
+      .get(Number(req.params.id));
+    if (!application) {
+      return res.status(404).json({ error: "Candidature introuvable." });
+    }
+    if (application.status === "accepted") {
+      return res.status(409).json({
+        error: "Une candidature acceptée ne peut plus être modifiée."
+      });
+    }
 
     const result = db.prepare(`
       UPDATE applications
       SET status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(input.status, Number(req.params.id));
-    if (!result.changes) {
+    res.json({ ok: true });
+  }
+);
+
+app.post(
+  "/api/admin/applications/:id/accept",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  requireAdmin,
+  async (req, res) => {
+    const input = parse(acceptApplicationSchema, req, res);
+    if (!input) return;
+
+    const applicationId = Number(req.params.id);
+    const application = db.prepare(`
+      SELECT a.*, m.username AS member_username, m.display_name AS member_display_name
+      FROM applications a
+      LEFT JOIN member_users m ON m.id = a.member_id
+      WHERE a.id = ?
+    `).get(applicationId);
+
+    if (!application) {
       return res.status(404).json({ error: "Candidature introuvable." });
     }
-    res.json({ ok: true });
+    if (!application.member_id) {
+      return res.status(409).json({
+        error: "Cette ancienne candidature n’est reliée à aucun compte membre."
+      });
+    }
+    if (application.status === "accepted" || application.staff_account_id) {
+      return res.status(409).json({ error: "Cette candidature a déjà été acceptée." });
+    }
+    const usernameExists = db
+      .prepare("SELECT id FROM staff_users WHERE username = ? COLLATE NOCASE")
+      .get(input.username);
+    if (usernameExists) {
+      return res.status(409).json({ error: "Cet identifiant staff existe déjà." });
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+    const subject = "Candidature acceptée 🎉";
+    const body = [
+      "Félicitations, votre candidature a été acceptée !",
+      "",
+      "Voici les identifiants créés par un administrateur :",
+      `Identifiant : ${input.username}`,
+      `Mot de passe temporaire : ${input.password}`,
+      "",
+      "Vous devrez modifier ce mot de passe lors de votre première connexion."
+    ].join("\n");
+
+    try {
+      const staffAccount = db.transaction(() => {
+        const accountResult = db.prepare(`
+          INSERT INTO staff_users
+            (username, password_hash, role, active, must_change_password)
+          VALUES (?, ?, 'moderator', 1, 1)
+        `).run(input.username, passwordHash);
+
+        db.prepare(`
+          UPDATE applications
+          SET status = 'accepted',
+              staff_account_id = ?,
+              accepted_at = CURRENT_TIMESTAMP,
+              updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `).run(accountResult.lastInsertRowid, applicationId);
+
+        db.prepare(`
+          INSERT INTO member_messages
+            (member_id, application_id, sender_name, sender_logo, subject, body)
+          VALUES (?, ?, 'PDD Staff', '/assets/pdd-logo.jpg', ?, ?)
+        `).run(application.member_id, applicationId, subject, body);
+
+        return db
+          .prepare("SELECT * FROM staff_users WHERE id = ?")
+          .get(accountResult.lastInsertRowid);
+      });
+
+      res.status(201).json({
+        ok: true,
+        account: publicUser(staffAccount),
+        recipient: {
+          username: application.member_username,
+          displayName: application.member_display_name
+        }
+      });
+    } catch (error) {
+      if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+        return res.status(409).json({ error: "Cet identifiant staff existe déjà." });
+      }
+      throw error;
+    }
   }
 );
 
