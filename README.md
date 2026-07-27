@@ -87,13 +87,15 @@ Une sauvegarde régulière du fichier `data/pixel-everywhere.db` est recommandé
 Le projet contient le workflow `.github/workflows/android.yml`.
 
 1. Mettre le projet dans un dépôt GitHub.
-2. Installer et démarrer le serveur Node.js dans Termux sur le même appareil.
-3. Ouvrir **Actions > Compiler Pixel Everywhere > Run workflow**.
-4. Télécharger l’artefact **Pixel-Everywhere-APK** à la fin de la compilation.
+2. Installer et démarrer le serveur Node.js dans Termux.
+3. Démarrer le tunnel ngrok public associé au port `3000`.
+4. Ouvrir **Actions > Compiler Pixel Everywhere > Run workflow**.
+5. Télécharger l’artefact **Pixel-Everywhere-APK** à la fin de la compilation.
 
-L’APK est configuré pour joindre automatiquement le serveur Termux à l’adresse
-`http://127.0.0.1:3000/api`. Cette adresse fonctionne uniquement lorsque
-Termux et Pixel Everywhere sont exécutés sur le même appareil Android.
+L’APK est configuré pour joindre automatiquement le serveur Termux via le
+tunnel HTTPS `https://reprimand-overprice-quickly.ngrok-free.dev`. Les autres
+administrateurs peuvent ainsi utiliser l’application depuis leur propre
+appareil tant que Termux, le serveur Node.js et ngrok restent actifs.
 
 ## Comptes et autorisations
 
