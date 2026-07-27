@@ -10,6 +10,11 @@ export default defineConfig({
         return [
           {
             tag: "script",
+            attrs: { type: "module", src: "./web/server-settings.js" },
+            injectTo: "head-prepend"
+          },
+          {
+            tag: "script",
             attrs: { type: "module", src: "./web/enhancements.js" },
             injectTo: "head-prepend"
           },
