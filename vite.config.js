@@ -1,3 +1,4 @@
+import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 const serverSettingsPanel = `
@@ -22,15 +23,19 @@ const serverSettingsPanel = `
 export default defineConfig({
   base: "./",
   publicDir: "public",
+  resolve: {
+    alias: [
+      {
+        find: /^\/web\/main\.js$/,
+        replacement: fileURLToPath(new URL("./web/app-entry.js", import.meta.url))
+      }
+    ]
+  },
   plugins: [
     {
-      name: "pixel-everywhere-app-entry",
+      name: "pixel-everywhere-static-server-panel",
       transformIndexHtml(html) {
-        const withEntry = html.replace(
-          'src="/web/main.js"',
-          'src="./web/app-entry.js"'
-        );
-        return withEntry.replace(
+        return html.replace(
           '<div class="account-tabs" role="tablist">',
           `${serverSettingsPanel}\n        <div class="account-tabs" role="tablist">`
         );
