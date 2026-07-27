@@ -28,7 +28,7 @@ function finishStartupAnimation() {
 
 if (startupAnimation) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  startupTimer = window.setTimeout(finishStartupAnimation, reducedMotion ? 1600 : 5300);
+  startupTimer = window.setTimeout(finishStartupAnimation, reducedMotion ? 1600 : 8300);
   $("#skipStartup").addEventListener("click", finishStartupAnimation);
 }
 
@@ -687,11 +687,22 @@ const defaultPet = {
   hunger: 82,
   joy: 88,
   energy: 76,
+  xp: 0,
+  level: 1,
+  interactions: 0,
+  lastAction: "Pixel vient d’arriver dans son atelier.",
   updatedAt: Date.now()
 };
 
 function currentPet() {
   const pet = state.pet && typeof state.pet === "object" ? state.pet : { ...defaultPet };
+  pet.hunger = Number(pet.hunger ?? defaultPet.hunger);
+  pet.joy = Number(pet.joy ?? defaultPet.joy);
+  pet.energy = Number(pet.energy ?? defaultPet.energy);
+  pet.xp = Number(pet.xp ?? 0);
+  pet.level = Math.max(1, Number(pet.level ?? 1));
+  pet.interactions = Number(pet.interactions ?? 0);
+  pet.lastAction = pet.lastAction || defaultPet.lastAction;
   const hoursAway = Math.max(0, (Date.now() - Number(pet.updatedAt || Date.now())) / 3_600_000);
   if (hoursAway >= 0.25) {
     pet.hunger = Math.max(5, Number(pet.hunger ?? 82) - hoursAway * 2.5);
@@ -716,6 +727,32 @@ function petMood(pet) {
   return ["Fatigué", "Pixel a besoin que tu prennes soin de lui."];
 }
 
+function petEnvironment() {
+  const hour = new Date().getHours();
+  if (hour >= 7 && hour < 17) {
+    return { className: "pet-day", label: hour < 12 ? "Matin dans son atelier" : "Après-midi dans son atelier" };
+  }
+  if (hour >= 17 && hour < 21) {
+    return { className: "pet-evening", label: "Soirée dans son atelier" };
+  }
+  return { className: "pet-night", label: "Nuit calme dans son atelier" };
+}
+
+function petXpGoal(pet) {
+  return pet.level * 40;
+}
+
+function gainPetXp(pet, amount) {
+  pet.xp += amount;
+  let leveledUp = false;
+  while (pet.xp >= petXpGoal(pet)) {
+    pet.xp -= petXpGoal(pet);
+    pet.level += 1;
+    leveledUp = true;
+  }
+  return leveledUp;
+}
+
 function renderPet(reaction = "") {
   const pet = currentPet();
   const values = {
@@ -730,48 +767,84 @@ function renderPet(reaction = "") {
   const [mood, message] = petMood(pet);
   $("#petMoodBadge").textContent = mood;
   $("#petMessage").textContent = message;
+  const environment = petEnvironment();
+  $("#petStage").classList.remove("pet-day", "pet-evening", "pet-night");
+  $("#petStage").classList.add(environment.className);
+  $("#petEnvironment").textContent = environment.label;
+  const xpGoal = petXpGoal(pet);
+  $("#petXpBar").style.width = `${Math.min(100, (pet.xp / xpGoal) * 100)}%`;
+  $("#petLevelText").textContent = `Niveau ${pet.level} • ${Math.round(pet.xp)}/${xpGoal} XP`;
+  $("#petDiary").textContent = pet.lastAction;
   if (reaction) $("#petReaction").textContent = reaction;
   savePet();
 }
 
 function animatePet(animation, reaction) {
   const mascot = $("#petMascot");
-  mascot.classList.remove("pet-bounce", "pet-eat", "pet-walk", "pet-sleep");
+  mascot.classList.remove("pet-bounce", "pet-eat", "pet-walk", "pet-sleep", "pet-pet");
   void mascot.offsetWidth;
   mascot.classList.add(animation);
   $("#petReaction").textContent = reaction;
-  window.setTimeout(() => mascot.classList.remove(animation), 950);
+  window.setTimeout(() => mascot.classList.remove(animation), 1300);
+}
+
+function emitPetParticles(symbol) {
+  const container = $("#petParticles");
+  for (let index = 0; index < 6; index += 1) {
+    const particle = element("span", { text: symbol });
+    const offset = (index - 2.5) * 25 + Math.round(Math.random() * 16 - 8);
+    particle.style.setProperty("--particle-x", `calc(-50% + ${offset}px)`);
+    particle.style.animationDelay = `${index * 55}ms`;
+    container.append(particle);
+    window.setTimeout(() => particle.remove(), 1500);
+  }
+}
+
+function completePetInteraction(pet, xp, diary, animation, reaction, particle) {
+  pet.interactions += 1;
+  pet.lastAction = diary;
+  const leveledUp = gainPetXp(pet, xp);
+  state.pet = pet;
+  savePet();
+  animatePet(animation, leveledUp ? `Niveau ${pet.level} ! 🎉` : reaction);
+  emitPetParticles(leveledUp ? "⭐" : particle);
+  navigator.vibrate?.(25);
+  renderPet();
+}
+
+function handlePetAction(action) {
+  const pet = currentPet();
+  if (action === "feed") {
+    pet.hunger = Math.min(100, pet.hunger + 18);
+    pet.joy = Math.min(100, pet.joy + 3);
+    completePetInteraction(pet, 6, "Pixel a dégusté une orange avec plaisir.", "pet-eat", "Miam ! 🍊", "🍊");
+  }
+  if (action === "bounce") {
+    pet.joy = Math.min(100, pet.joy + 13);
+    pet.energy = Math.max(5, pet.energy - 5);
+    completePetInteraction(pet, 8, "Pixel a joué et bondi dans tout l’atelier.", "pet-bounce", "Youpi ! ✨", "✨");
+  }
+  if (action === "walk") {
+    pet.joy = Math.min(100, pet.joy + 16);
+    pet.hunger = Math.max(5, pet.hunger - 4);
+    pet.energy = Math.max(5, pet.energy - 8);
+    completePetInteraction(pet, 12, "Vous êtes partis vous promener autour de PDD.", "pet-walk", "En route ! 👟", "💨");
+  }
+  if (action === "sleep") {
+    pet.energy = Math.min(100, pet.energy + 24);
+    pet.hunger = Math.max(5, pet.hunger - 3);
+    completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤");
+  }
 }
 
 $$("[data-pet-action]").forEach((button) => {
-  button.addEventListener("click", () => {
-    const pet = currentPet();
-    const action = button.dataset.petAction;
-    if (action === "feed") {
-      pet.hunger = Math.min(100, pet.hunger + 18);
-      pet.joy = Math.min(100, pet.joy + 3);
-      animatePet("pet-eat", "Miam ! 🍊");
-    }
-    if (action === "bounce") {
-      pet.joy = Math.min(100, pet.joy + 13);
-      pet.energy = Math.max(5, pet.energy - 5);
-      animatePet("pet-bounce", "Youpi ! ✨");
-    }
-    if (action === "walk") {
-      pet.joy = Math.min(100, pet.joy + 16);
-      pet.hunger = Math.max(5, pet.hunger - 4);
-      pet.energy = Math.max(5, pet.energy - 8);
-      animatePet("pet-walk", "En route ! 👟");
-    }
-    if (action === "sleep") {
-      pet.energy = Math.min(100, pet.energy + 24);
-      pet.hunger = Math.max(5, pet.hunger - 3);
-      animatePet("pet-sleep", "Zzz… 🌙");
-    }
-    state.pet = pet;
-    savePet();
-    renderPet();
-  });
+  button.addEventListener("click", () => handlePetAction(button.dataset.petAction));
+});
+
+$("#petMascot").addEventListener("click", () => {
+  const pet = currentPet();
+  pet.joy = Math.min(100, pet.joy + 2);
+  completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛");
 });
 
 const guideDialog = $("#guideDialog");
