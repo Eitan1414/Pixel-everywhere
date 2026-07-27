@@ -6,7 +6,7 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 ## Fonctionnalités
 
 - présentation du serveur et invitation `https://discord.gg/DbxADDbuzz` ;
-- lecture du salon Discord d’annonces `1531069689583763467` ;
+- lecture du salon Discord d’annonces `1256623943494926407` ;
 - formulaire public de candidature au staff ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
@@ -45,7 +45,7 @@ JWT_SECRET=une-longue-valeur-aleatoire-secrete
 INITIAL_ADMIN_USERNAME=Eitan14
 INITIAL_ADMIN_PASSWORD=un-nouveau-mot-de-passe-prive
 DISCORD_BOT_TOKEN=token-du-bot
-DISCORD_ANNOUNCEMENT_CHANNEL_ID=1531069689583763467
+DISCORD_ANNOUNCEMENT_CHANNEL_ID=1256623943494926407
 ```
 
 Le site de développement est disponible sur `http://localhost:5173` et l’API
@@ -78,7 +78,7 @@ Variables nécessaires en production :
 - `INITIAL_ADMIN_USERNAME=Eitan14`
 - `INITIAL_ADMIN_PASSWORD`
 - `DISCORD_BOT_TOKEN`
-- `DISCORD_ANNOUNCEMENT_CHANNEL_ID=1531069689583763467`
+- `DISCORD_ANNOUNCEMENT_CHANNEL_ID=1256623943494926407`
 
 Une sauvegarde régulière du fichier `data/pixel-everywhere.db` est recommandée.
 
