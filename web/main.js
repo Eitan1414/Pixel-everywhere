@@ -20,6 +20,9 @@ const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
 const startupAnimation = $("#startupAnimation");
 let startupTimer;
+let serverAvailable = null;
+let serverCheckRunning = false;
+const serverStatusDialog = $("#serverStatusDialog");
 
 function finishStartupAnimation() {
   if (!startupAnimation || startupAnimation.classList.contains("leaving")) return;
@@ -70,6 +73,84 @@ function toast(message) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => node.classList.remove("visible"), 2600);
 }
+
+function serverCheckTime() {
+  return new Intl.DateTimeFormat("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date());
+}
+
+function showServerClosedDialog() {
+  $("#serverStatusIcon").textContent = "!";
+  $("#serverStatusIcon").className = "server-status-icon offline";
+  $("#serverStatusEyebrow").textContent = "Connexion impossible";
+  $("#serverStatusTitle").textContent = "Les serveurs sont fermés";
+  $("#serverStatusMessage").textContent =
+    "Pixel Everywhere ne peut pas joindre le serveur PDD. Les annonces, candidatures, comptes et messageries sont temporairement indisponibles. Vérifie que Termux, npm start et le tunnel ngrok sont actifs.";
+  $("#retryServerButton").classList.remove("hidden");
+  $("#closeServerStatus").classList.add("hidden");
+  $("#serverLastCheck").textContent = `Dernière vérification : ${serverCheckTime()}`;
+  if (!serverStatusDialog.open) serverStatusDialog.showModal();
+}
+
+function showServerReopenedDialog() {
+  $("#serverStatusIcon").textContent = "✓";
+  $("#serverStatusIcon").className = "server-status-icon online";
+  $("#serverStatusEyebrow").textContent = "Connexion rétablie";
+  $("#serverStatusTitle").textContent = "Les serveurs sont de nouveau ouverts";
+  $("#serverStatusMessage").textContent =
+    "La connexion à Pixel Difficult Drawer est rétablie. Toutes les fonctionnalités en ligne sont de nouveau disponibles.";
+  $("#retryServerButton").classList.add("hidden");
+  $("#closeServerStatus").classList.remove("hidden");
+  $("#serverLastCheck").textContent = `Serveur retrouvé à ${serverCheckTime()}`;
+  if (!serverStatusDialog.open) serverStatusDialog.showModal();
+}
+
+async function checkServerAvailability({ manual = false } = {}) {
+  if (serverCheckRunning) return;
+  serverCheckRunning = true;
+  const retryButton = $("#retryServerButton");
+  if (manual) {
+    retryButton.disabled = true;
+    retryButton.textContent = "Vérification…";
+  }
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 6500);
+  try {
+    const headers = {};
+    if (apiBase.includes(".ngrok-free.")) {
+      headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
+    }
+    const response = await fetch(`${apiBase}/health`, {
+      method: "GET",
+      headers,
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error("Serveur indisponible");
+    const wasOffline = serverAvailable === false;
+    serverAvailable = true;
+    if (wasOffline) showServerReopenedDialog();
+    else if (serverStatusDialog.open && !$("#closeServerStatus").classList.contains("hidden")) {
+      serverStatusDialog.close();
+    }
+  } catch {
+    serverAvailable = false;
+    showServerClosedDialog();
+  } finally {
+    window.clearTimeout(timeout);
+    serverCheckRunning = false;
+    retryButton.disabled = false;
+    retryButton.textContent = "Réessayer maintenant";
+  }
+}
+
+$("#retryServerButton").addEventListener("click", () =>
+  checkServerAvailability({ manual: true })
+);
+$("#closeServerStatus").addEventListener("click", () => serverStatusDialog.close());
 
 async function api(path, options = {}) {
   const { auth = "staff", ...fetchOptions } = options;
@@ -1223,7 +1304,13 @@ document.addEventListener("visibilitychange", () => {
   if (state.member && document.visibilityState === "visible") {
     loadMemberInbox({ notify: true });
   }
+  if (document.visibilityState === "visible") {
+    checkServerAvailability();
+  }
 });
+
+window.setInterval(() => checkServerAvailability(), 30_000);
+window.setTimeout(() => checkServerAvailability(), 1200);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
