@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   macos:
-    runs-on: macos-latest
+    runs-on: macos-14
     env:
       VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
@@ -25,10 +25,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Installer les dépendances
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Restaurer les ressources graphiques
         run: |
@@ -44,10 +43,10 @@ jobs:
       - name: Tester le projet
         run: npm test
 
-      - name: Compiler l’application macOS
+      - name: Compiler les applications macOS Intel et Apple Silicon
         run: npm run mac:build
 
-      - name: Publier l’application
+      - name: Publier les applications macOS
         uses: actions/upload-artifact@v4
         with:
           name: Pixel-Everywhere-macOS
