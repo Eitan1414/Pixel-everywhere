@@ -34,6 +34,185 @@ body {
     var(--bg);
 }
 
+body.startup-running {
+  overflow: hidden;
+}
+
+.startup-animation {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  color: white;
+  background: #000;
+  opacity: 1;
+  transition: opacity 480ms ease, visibility 480ms ease;
+}
+
+.startup-animation.leaving {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.startup-backdrop-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 70% 42%, rgba(18, 214, 223, 0.08), transparent 28%),
+    radial-gradient(circle at 30% 58%, rgba(255, 107, 25, 0.1), transparent 32%);
+  animation: startup-glow 4.8s ease both;
+}
+
+.startup-scene {
+  position: relative;
+  width: min(94vw, 720px);
+  height: min(70vh, 560px);
+}
+
+.startup-pixel {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  z-index: 2;
+  width: clamp(105px, 25vw, 180px);
+  aspect-ratio: 198 / 373;
+  transform: translate(-50%, -50%);
+  animation: startup-pixel-journey 4.8s cubic-bezier(0.65, 0, 0.28, 1) both;
+}
+
+.startup-pixel-body,
+.startup-pixel-eye {
+  position: absolute;
+  display: block;
+  object-fit: contain;
+}
+
+.startup-pixel-body {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.startup-pixel-eye {
+  top: 28.15%;
+  left: 54.55%;
+  z-index: 3;
+  width: 45.45%;
+  height: 44.24%;
+  transform-origin: center;
+  animation: startup-eye-look 4.8s ease-in-out both;
+}
+
+.startup-wordmark {
+  position: absolute;
+  top: 48%;
+  left: 31%;
+  width: min(66vw, 500px);
+  height: auto;
+  opacity: 0;
+  filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.5));
+  transform: translateY(-50%) translateX(45px) scale(0.94);
+  animation: startup-logo-reveal 4.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.startup-app-name {
+  position: absolute;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  left: 50%;
+  margin: 0;
+  color: #a6aab4;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  animation: startup-name 4.8s ease both;
+}
+
+.startup-app-name span {
+  color: var(--orange-2);
+}
+
+#skipStartup {
+  position: absolute;
+  top: calc(16px + env(safe-area-inset-top));
+  right: 16px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 999px;
+  color: #989da8;
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+@keyframes startup-pixel-journey {
+  0% {
+    left: 50%;
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.72);
+  }
+  10% {
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  52% {
+    left: 50%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  68%,
+  100% {
+    left: 15%;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.82);
+  }
+}
+
+@keyframes startup-eye-look {
+  0%,
+  10% {
+    transform: translateX(0) scale(1);
+  }
+  19%,
+  31% {
+    transform: translateX(14%) scale(0.98);
+  }
+  42%,
+  100% {
+    transform: translateX(0) scale(1.03);
+  }
+}
+
+@keyframes startup-logo-reveal {
+  0%,
+  62% {
+    opacity: 0;
+    transform: translateY(-50%) translateX(45px) scale(0.94);
+  }
+  77%,
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0) scale(1);
+  }
+}
+
+@keyframes startup-glow {
+  0% { opacity: 0; }
+  20%, 100% { opacity: 1; }
+}
+
+@keyframes startup-name {
+  0%, 74% { opacity: 0; transform: translate(-50%, 8px); }
+  88%, 100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
 button,
 input,
 textarea,
@@ -203,11 +382,12 @@ main {
 .hero-logo {
   position: relative;
   width: 100%;
-  aspect-ratio: 1.55;
+  aspect-ratio: 1;
   margin-bottom: 22px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  object-fit: cover;
+  object-fit: contain;
+  background: #000;
 }
 
 .eyebrow {
@@ -1258,5 +1438,49 @@ dialog::backdrop {
 
   .pixel-guide-button {
     padding: 4px;
+  }
+
+  .startup-scene {
+    width: 100vw;
+    height: 68vh;
+  }
+
+  .startup-pixel {
+    width: 112px;
+  }
+
+  .startup-wordmark {
+    left: 27%;
+    width: 71vw;
+  }
+
+  @keyframes startup-pixel-journey {
+    0% {
+      left: 50%;
+      opacity: 0;
+      transform: translate(-50%, -46%) scale(0.72);
+    }
+    10%,
+    52% {
+      left: 50%;
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    68%,
+    100% {
+      left: 13%;
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.72);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .startup-pixel,
+  .startup-pixel-eye,
+  .startup-wordmark,
+  .startup-backdrop-glow,
+  .startup-app-name {
+    animation-duration: 1.3s;
   }
 }
