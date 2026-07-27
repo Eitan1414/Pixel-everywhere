@@ -5,25 +5,12 @@ export default defineConfig({
   publicDir: "public",
   plugins: [
     {
-      name: "pixel-everywhere-enhancements",
-      transformIndexHtml() {
-        return [
-          {
-            tag: "script",
-            attrs: { type: "module", src: "./web/server-settings.js" },
-            injectTo: "head-prepend"
-          },
-          {
-            tag: "script",
-            attrs: { type: "module", src: "./web/enhancements.js" },
-            injectTo: "head-prepend"
-          },
-          {
-            tag: "link",
-            attrs: { rel: "stylesheet", href: "./web/startup-v2.css" },
-            injectTo: "head"
-          }
-        ];
+      name: "pixel-everywhere-app-entry",
+      transformIndexHtml(html) {
+        return html.replace(
+          'src="/web/main.js"',
+          'src="./web/app-entry.js"'
+        );
       }
     }
   ],
