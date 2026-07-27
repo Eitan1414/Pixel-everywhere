@@ -1339,6 +1339,59 @@ dialog::backdrop {
   line-height: 1.5;
 }
 
+.server-status-dialog {
+  width: min(calc(100% - 32px), 430px);
+}
+
+.server-status-card {
+  display: grid;
+  place-items: center;
+  padding: 28px 22px 22px;
+  text-align: center;
+}
+
+.server-status-icon {
+  display: grid;
+  width: 68px;
+  height: 68px;
+  margin-bottom: 17px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 2rem;
+  font-weight: 950;
+}
+
+.server-status-icon.offline {
+  color: var(--danger);
+  background: rgba(255, 84, 104, 0.1);
+  box-shadow: 0 0 32px rgba(255, 84, 104, 0.18);
+}
+
+.server-status-icon.online {
+  color: var(--success);
+  background: rgba(84, 214, 139, 0.1);
+  box-shadow: 0 0 32px rgba(84, 214, 139, 0.18);
+}
+
+.server-status-card > p:not(.eyebrow) {
+  margin: 13px 0 18px;
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.server-status-actions {
+  display: grid;
+  width: 100%;
+  gap: 9px;
+}
+
+.server-status-card > small {
+  margin-top: 14px;
+  color: #737987;
+  font-size: 0.7rem;
+}
+
 .acceptance-card {
   padding-top: 27px;
 }
