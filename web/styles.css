@@ -569,6 +569,25 @@ button {
   background: var(--danger);
 }
 
+.points-chip {
+  display: flex;
+  height: 41px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border: 1px solid rgba(255, 196, 64, 0.4);
+  border-radius: 999px;
+  color: #ffd86b;
+  background: rgba(255, 196, 64, 0.09);
+  cursor: pointer;
+}
+
+.points-chip span,
+.member-wallet span {
+  color: #ffd04b;
+  text-shadow: 0 0 10px rgba(255, 208, 75, 0.5);
+}
+
 main {
   padding: 22px 18px;
 }
@@ -1435,6 +1454,80 @@ dialog::backdrop {
   background: var(--surface);
 }
 
+.staff-alerts-heading {
+  display: grid;
+  gap: 3px;
+  margin: 4px 2px 10px;
+}
+
+.staff-alerts-heading small {
+  color: var(--muted);
+}
+
+.staff-alerts-list {
+  display: grid;
+  gap: 9px;
+  max-height: 45vh;
+  margin-bottom: 17px;
+  overflow-y: auto;
+}
+
+.staff-alert-card {
+  padding: 13px;
+  border: 1px solid rgba(255, 107, 25, 0.32);
+  border-radius: 15px;
+  background: rgba(255, 107, 25, 0.07);
+}
+
+.staff-alert-card.resolved {
+  opacity: 0.62;
+  border-color: var(--line);
+  background: #0d0f14;
+}
+
+.staff-alert-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.staff-alert-head time,
+.resolved-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.staff-alert-card p {
+  margin: 9px 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.staff-alert-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.staff-alert-actions button {
+  padding: 9px;
+  font-size: 0.72rem;
+}
+
+.empty-state.compact {
+  padding: 15px;
+}
+
+.conversion-preview {
+  padding: 13px;
+  border: 1px solid rgba(255, 196, 64, 0.26);
+  border-radius: 13px;
+  color: #ffe397;
+  font-weight: 800;
+  text-align: center;
+  background: rgba(255, 196, 64, 0.06);
+}
+
 .message-composer {
   display: grid;
   grid-template-columns: 1fr 48px;
@@ -1983,6 +2076,54 @@ dialog::backdrop {
   text-align: center;
 }
 
+.pixel-shop {
+  margin-top: 13px;
+  padding: 14px;
+  border: 1px solid rgba(255, 196, 64, 0.22);
+  border-radius: 17px;
+  background: rgba(255, 196, 64, 0.045);
+}
+
+.pixel-shop h3 {
+  font-size: 1rem;
+}
+
+.pixel-shop-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 12px 0 9px;
+}
+
+.pixel-shop-items button {
+  display: grid;
+  gap: 4px;
+  place-items: center;
+  padding: 10px 5px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  color: var(--text);
+  background: #0c0e13;
+  cursor: pointer;
+}
+
+.pixel-shop-items button:disabled {
+  opacity: 0.55;
+}
+
+.pixel-shop-items span {
+  font-size: 1.45rem;
+}
+
+.pixel-shop-items strong {
+  font-size: 0.7rem;
+}
+
+.pixel-shop-items small {
+  color: #ffd86b;
+  font-size: 0.67rem;
+}
+
 .pet-bounce { animation: pet-bounce 0.95s ease; }
 .pet-eat { animation: pet-eat 1s ease; }
 .pet-walk { animation: pet-walk 1.2s ease; }
@@ -2168,6 +2309,18 @@ dialog::backdrop {
 
 .member-profile .text-button {
   margin-top: 8px;
+}
+
+.member-wallet {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 5px 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 196, 64, 0.28);
+  border-radius: 999px;
+  color: #ffe397;
+  background: rgba(255, 196, 64, 0.07);
 }
 
 .guide-card > p {
