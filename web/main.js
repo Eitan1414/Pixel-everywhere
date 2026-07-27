@@ -3,8 +3,11 @@ const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "")
 const state = {
   token: sessionStorage.getItem("pixel-token") || "",
   user: JSON.parse(sessionStorage.getItem("pixel-user") || "null"),
+  memberToken: localStorage.getItem("pixel-member-token") || "",
+  member: JSON.parse(localStorage.getItem("pixel-member") || "null"),
   applications: [],
-  activeApplication: null
+  activeApplication: null,
+  pet: JSON.parse(localStorage.getItem("pixel-pet") || "null")
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -45,6 +48,7 @@ function toast(message) {
 }
 
 async function api(path, options = {}) {
+  const { auth = "staff", ...fetchOptions } = options;
   const headers = { ...(options.headers || {}) };
   if (apiBase.includes(".ngrok-free.")) {
     headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
@@ -52,11 +56,12 @@ async function api(path, options = {}) {
   if (options.body && !(options.body instanceof FormData)) {
     headers["Content-Type"] = "application/json";
   }
-  if (state.token) headers.Authorization = `Bearer ${state.token}`;
+  const token = auth === "member" ? state.memberToken : auth === "none" ? "" : state.token;
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   let response;
   try {
-    response = await fetch(`${apiBase}${path}`, { ...options, headers });
+    response = await fetch(`${apiBase}${path}`, { ...fetchOptions, headers });
   } catch {
     throw new Error(
       "Serveur Pixel Everywhere inaccessible. Vérifie que Termux est ouvert et que npm start fonctionne."
@@ -77,7 +82,7 @@ function saveSession(token, user) {
   state.user = user;
   sessionStorage.setItem("pixel-token", token);
   sessionStorage.setItem("pixel-user", JSON.stringify(user));
-  updateStaffButton();
+  updateAccountButton();
 }
 
 function clearSession() {
@@ -86,15 +91,34 @@ function clearSession() {
   state.applications = [];
   sessionStorage.removeItem("pixel-token");
   sessionStorage.removeItem("pixel-user");
-  updateStaffButton();
+  updateAccountButton();
 }
 
-function updateStaffButton() {
-  const button = $("#staffButton");
+function saveMemberSession(token, member) {
+  state.memberToken = token;
+  state.member = member;
+  localStorage.setItem("pixel-member-token", token);
+  localStorage.setItem("pixel-member", JSON.stringify(member));
+  updateAccountButton();
+  updateAccountDialog();
+}
+
+function clearMemberSession() {
+  state.memberToken = "";
+  state.member = null;
+  localStorage.removeItem("pixel-member-token");
+  localStorage.removeItem("pixel-member");
+  updateAccountButton();
+  updateAccountDialog();
+}
+
+function updateAccountButton() {
+  const button = $("#accountButton");
   button.innerHTML = "";
+  const label = state.user?.username || state.member?.displayName || "Compte";
   button.append(
-    element("span", { text: state.user ? "●" : "◆", "aria-hidden": "true" }),
-    document.createTextNode(state.user ? state.user.username : "Staff")
+    element("span", { text: state.user || state.member ? "●" : "○", "aria-hidden": "true" }),
+    document.createTextNode(label)
   );
 }
 
@@ -106,6 +130,7 @@ function navigate(page) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 
   if (page === "announcements") loadAnnouncements();
+  if (page === "pixel") renderPet();
   if (page === "staff") openStaffWorkspace();
 }
 
@@ -201,11 +226,89 @@ $("#applicationForm").addEventListener("submit", async (event) => {
 });
 
 const loginDialog = $("#loginDialog");
-$("#staffButton").addEventListener("click", () => {
-  if (state.user && state.token) navigate("staff");
-  else loginDialog.showModal();
+$("#accountButton").addEventListener("click", () => {
+  updateAccountDialog();
+  loginDialog.showModal();
 });
 $("#closeLogin").addEventListener("click", () => loginDialog.close());
+
+function selectAccountTab(tab) {
+  $$("[data-account-tab]").forEach((button) =>
+    button.classList.toggle("active", button.dataset.accountTab === tab)
+  );
+  $$(".account-panel").forEach((panel) =>
+    panel.classList.toggle("active", panel.id === `account-${tab}`)
+  );
+}
+
+$$("[data-account-tab]").forEach((button) => {
+  button.addEventListener("click", () => selectAccountTab(button.dataset.accountTab));
+});
+
+function updateAccountDialog() {
+  $("#memberSignedIn").classList.toggle("hidden", !state.member);
+  $("#memberGuest").classList.toggle("hidden", Boolean(state.member));
+  $("#memberIdentity").textContent = state.member
+    ? `${state.member.displayName} (@${state.member.username})`
+    : "";
+  $("#staffSignedIn").classList.toggle("hidden", !state.user);
+  $("#loginForm").classList.toggle("hidden", Boolean(state.user));
+  $("#staffDialogIdentity").textContent = state.user
+    ? `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`
+    : "";
+}
+
+$$("[data-member-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const mode = button.dataset.memberMode;
+    $$("[data-member-mode]").forEach((item) => item.classList.toggle("active", item === button));
+    $("#memberLoginForm").classList.toggle("active", mode === "login");
+    $("#memberRegisterForm").classList.toggle("active", mode === "register");
+  });
+});
+
+async function submitMemberForm(event, path, successMessage) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = $(".form-status", form);
+  const button = $("button[type='submit']", form);
+  const values = Object.fromEntries(new FormData(form));
+  button.disabled = true;
+  setFormStatus(status, "Connexion…");
+  try {
+    const result = await api(path, {
+      method: "POST",
+      auth: "none",
+      body: JSON.stringify(values)
+    });
+    if (!result.token || !result.member) {
+      throw new Error("Le serveur n’a pas renvoyé une session membre valide.");
+    }
+    saveMemberSession(result.token, result.member);
+    form.reset();
+    setFormStatus(status, "");
+    toast(successMessage);
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+}
+
+$("#memberLoginForm").addEventListener("submit", (event) =>
+  submitMemberForm(event, "/members/login", "Connexion membre réussie.")
+);
+$("#memberRegisterForm").addEventListener("submit", (event) =>
+  submitMemberForm(event, "/members/register", "Ton compte membre a été créé.")
+);
+$("#memberLogoutButton").addEventListener("click", () => {
+  clearMemberSession();
+  toast("Compte membre déconnecté.");
+});
+$("#openStaffButton").addEventListener("click", () => {
+  loginDialog.close();
+  navigate("staff");
+});
 
 $("#loginForm").addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -218,6 +321,7 @@ $("#loginForm").addEventListener("submit", async (event) => {
   try {
     const result = await api("/auth/login", {
       method: "POST",
+      auth: "none",
       body: JSON.stringify(values)
     });
     if (!result.token || !result.user) {
@@ -226,6 +330,7 @@ $("#loginForm").addEventListener("submit", async (event) => {
     saveSession(result.token, result.user);
     form.reset();
     setFormStatus(status, "");
+    updateAccountDialog();
     loginDialog.close();
     navigate("staff");
   } catch (error) {
@@ -238,7 +343,7 @@ $("#loginForm").addEventListener("submit", async (event) => {
 $("#logoutButton").addEventListener("click", () => {
   clearSession();
   navigate("home");
-  toast("Déconnexion réussie.");
+  toast("Session staff déconnectée.");
 });
 
 async function openStaffWorkspace() {
@@ -254,6 +359,7 @@ async function openStaffWorkspace() {
   } catch {
     clearSession();
     navigate("home");
+    selectAccountTab("staff");
     loginDialog.showModal();
     return;
   }
@@ -558,8 +664,132 @@ $("#accountForm").addEventListener("submit", async (event) => {
   }
 });
 
+const defaultPet = {
+  hunger: 82,
+  joy: 88,
+  energy: 76,
+  updatedAt: Date.now()
+};
+
+function currentPet() {
+  const pet = state.pet && typeof state.pet === "object" ? state.pet : { ...defaultPet };
+  const hoursAway = Math.max(0, (Date.now() - Number(pet.updatedAt || Date.now())) / 3_600_000);
+  if (hoursAway >= 0.25) {
+    pet.hunger = Math.max(5, Number(pet.hunger ?? 82) - hoursAway * 2.5);
+    pet.joy = Math.max(5, Number(pet.joy ?? 88) - hoursAway * 1.8);
+    pet.energy = Math.max(5, Number(pet.energy ?? 76) - hoursAway * 1.4);
+  }
+  pet.updatedAt = Date.now();
+  state.pet = pet;
+  return pet;
+}
+
+function savePet() {
+  state.pet.updatedAt = Date.now();
+  localStorage.setItem("pixel-pet", JSON.stringify(state.pet));
+}
+
+function petMood(pet) {
+  const average = (pet.hunger + pet.joy + pet.energy) / 3;
+  if (average >= 80) return ["Très heureux", "Pixel rayonne de bonheur !"];
+  if (average >= 60) return ["Heureux", "Pixel est content de passer du temps avec toi."];
+  if (average >= 40) return ["Calme", "Pixel aimerait recevoir un peu d’attention."];
+  return ["Fatigué", "Pixel a besoin que tu prennes soin de lui."];
+}
+
+function renderPet(reaction = "") {
+  const pet = currentPet();
+  const values = {
+    hunger: Math.round(pet.hunger),
+    joy: Math.round(pet.joy),
+    energy: Math.round(pet.energy)
+  };
+  Object.entries(values).forEach(([name, value]) => {
+    $(`#${name}Value`).textContent = `${value}%`;
+    $(`#${name}Bar`).style.width = `${value}%`;
+  });
+  const [mood, message] = petMood(pet);
+  $("#petMoodBadge").textContent = mood;
+  $("#petMessage").textContent = message;
+  if (reaction) $("#petReaction").textContent = reaction;
+  savePet();
+}
+
+function animatePet(animation, reaction) {
+  const mascot = $("#petMascot");
+  mascot.classList.remove("pet-bounce", "pet-eat", "pet-walk", "pet-sleep");
+  void mascot.offsetWidth;
+  mascot.classList.add(animation);
+  $("#petReaction").textContent = reaction;
+  window.setTimeout(() => mascot.classList.remove(animation), 950);
+}
+
+$$("[data-pet-action]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const pet = currentPet();
+    const action = button.dataset.petAction;
+    if (action === "feed") {
+      pet.hunger = Math.min(100, pet.hunger + 18);
+      pet.joy = Math.min(100, pet.joy + 3);
+      animatePet("pet-eat", "Miam ! 🍊");
+    }
+    if (action === "bounce") {
+      pet.joy = Math.min(100, pet.joy + 13);
+      pet.energy = Math.max(5, pet.energy - 5);
+      animatePet("pet-bounce", "Youpi ! ✨");
+    }
+    if (action === "walk") {
+      pet.joy = Math.min(100, pet.joy + 16);
+      pet.hunger = Math.max(5, pet.hunger - 4);
+      pet.energy = Math.max(5, pet.energy - 8);
+      animatePet("pet-walk", "En route ! 👟");
+    }
+    if (action === "sleep") {
+      pet.energy = Math.min(100, pet.energy + 24);
+      pet.hunger = Math.max(5, pet.hunger - 3);
+      animatePet("pet-sleep", "Zzz… 🌙");
+    }
+    state.pet = pet;
+    savePet();
+    renderPet();
+  });
+});
+
+const guideDialog = $("#guideDialog");
+$("#pixelGuideButton").addEventListener("click", () => guideDialog.showModal());
+$("#closeGuide").addEventListener("click", () => guideDialog.close());
+$$("[data-guide-page]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const page = button.dataset.guidePage;
+    guideDialog.close();
+    if (page === "staff" && !state.user) {
+      selectAccountTab("staff");
+      updateAccountDialog();
+      loginDialog.showModal();
+      return;
+    }
+    navigate(page);
+  });
+});
+
+async function restoreMemberSession() {
+  if (!state.memberToken) return;
+  try {
+    const data = await api("/members/me", { auth: "member" });
+    state.member = data.member;
+    localStorage.setItem("pixel-member", JSON.stringify(data.member));
+  } catch {
+    clearMemberSession();
+  }
+  updateAccountButton();
+  updateAccountDialog();
+}
+
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
 }
 
-updateStaffButton();
+updateAccountButton();
+updateAccountDialog();
+renderPet();
+restoreMemberSession();
