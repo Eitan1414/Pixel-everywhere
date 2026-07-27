@@ -8,7 +8,10 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 - présentation du serveur et invitation `https://discord.gg/DbxADDbuzz` ;
 - lecture du salon Discord d’annonces `1256623943494926407` ;
 - création et connexion de comptes membres, séparés des comptes du staff ;
-- formulaire public de candidature au staff ;
+- candidature au staff réservée aux comptes membres connectés ;
+- messagerie membre privée avec badge non lu et notifications locales ;
+- acceptation d’une candidature avec création obligatoire d’identifiants
+  modérateur temporaires et envoi automatique par **PDD Staff** ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
@@ -104,15 +107,22 @@ appareil tant que Termux, le serveur Node.js et ngrok restent actifs.
 
 ## Comptes et autorisations
 
-| Type de compte | Candidatures privées | Messagerie staff | Notes | Créer des comptes staff | Désactiver des comptes |
+| Type de compte | Envoyer une candidature | Messagerie membre | Espace staff | Créer des comptes staff | Accepter une candidature |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Membre | Non | Non | Non | Non | Non |
-| Modérateur | Oui | Oui | Oui | Non | Non |
-| Administrateur | Oui | Oui | Oui | Oui | Oui |
+| Membre | Oui | La sienne uniquement | Non | Non | Non |
+| Modérateur | Non | Non | Oui | Non | Non |
+| Administrateur | Non | Non | Oui | Oui | Oui |
 
 Les comptes membres et staff utilisent des sessions séparées. Un compte membre
-ne peut pas accéder aux routes privées du staff. Un administrateur ne peut pas
-désactiver son propre compte depuis l’application.
+ne peut pas accéder aux routes privées du staff ni choisir un rôle lors de son
+inscription. L’acceptation est réservée à un administrateur : elle crée toujours
+un compte modérateur avec mot de passe temporaire, puis envoie les identifiants
+dans la messagerie du membre. Un administrateur ne peut pas désactiver son propre
+compte depuis l’application.
+
+Les notifications locales avertissent le membre lorsque l’application est
+ouverte ou reprise. Les notifications reçues lorsque l’application est
+complètement fermée nécessiteront l’ajout ultérieur de Firebase Cloud Messaging.
 
 ## Crédits
 
