@@ -14,6 +14,8 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
   modérateur temporaires et envoi automatique par **PDD Staff** ;
 - refus confirmé dans une fenêtre administrateur, avec décision professionnelle
   envoyée automatiquement au membre par **PDD Staff** ;
+- vérification automatique du serveur au lancement, au retour dans l’application
+  et toutes les 30 secondes, avec alertes de fermeture et de réouverture ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
