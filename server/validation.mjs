@@ -47,6 +47,31 @@ export const noteSchema = z.object({
   body: z.string().trim().min(1).max(2000)
 });
 
+export const bugReportSchema = z.object({
+  description: z.string().trim().min(20).max(3000)
+}).strict();
+
+export const bugDecisionSchema = z.object({
+  decision: z.enum(["approved", "rejected"])
+}).strict();
+
+export const xpConversionSchema = z.object({
+  discordUsername: z.string().trim().min(2).max(80),
+  amount: z.coerce.number().int().min(1).max(100000)
+}).strict();
+
+export const xpDecisionSchema = z.object({
+  decision: z.enum(["completed", "rejected"])
+}).strict();
+
+export const shopPurchaseSchema = z.object({
+  item: z.enum(["treat", "meal", "feast"])
+}).strict();
+
+export const activityRewardSchema = z.object({
+  mode: z.enum(["start", "minute"])
+}).strict();
+
 export function parse(schema, req, res) {
   const result = schema.safeParse(req.body);
   if (!result.success) {
