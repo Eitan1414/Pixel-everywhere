@@ -3,8 +3,10 @@
   "appName": "Pixel Everywhere",
   "webDir": "www",
   "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "http"
+  },
   "android": {
     "allowMixedContent": false
   }
 }
-
