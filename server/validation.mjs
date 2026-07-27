@@ -9,7 +9,7 @@ export const memberRegistrationSchema = z.object({
   displayName: z.string().trim().min(2).max(40),
   username: z.string().trim().min(3).max(32).regex(/^[A-Za-z0-9_.-]+$/),
   password: z.string().min(8).max(128)
-});
+}).strict();
 
 export const applicationSchema = z.object({
   age: z.coerce.number().int().min(13).max(99),
@@ -24,6 +24,11 @@ export const accountSchema = z.object({
   password: z.string().min(12).max(128),
   role: z.enum(["moderator", "admin"]).default("moderator")
 });
+
+export const acceptApplicationSchema = z.object({
+  username: z.string().trim().min(3).max(32).regex(/^[A-Za-z0-9_.-]+$/),
+  password: z.string().min(12).max(128)
+}).strict();
 
 export const passwordSchema = z.object({
   currentPassword: z.string().min(8).max(128),
