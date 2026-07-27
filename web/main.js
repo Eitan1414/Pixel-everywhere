@@ -13,6 +13,25 @@ const state = {
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
+const startupAnimation = $("#startupAnimation");
+let startupTimer;
+
+function finishStartupAnimation() {
+  if (!startupAnimation || startupAnimation.classList.contains("leaving")) return;
+  window.clearTimeout(startupTimer);
+  startupAnimation.classList.add("leaving");
+  document.body.classList.remove("startup-running");
+  window.setTimeout(() => {
+    startupAnimation.hidden = true;
+  }, 520);
+}
+
+if (startupAnimation) {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  startupTimer = window.setTimeout(finishStartupAnimation, reducedMotion ? 1600 : 5300);
+  $("#skipStartup").addEventListener("click", finishStartupAnimation);
+}
+
 function element(tag, options = {}, children = []) {
   const node = document.createElement(tag);
   Object.entries(options).forEach(([key, value]) => {
