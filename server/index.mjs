@@ -18,6 +18,7 @@ import {
   acceptApplicationSchema,
   accountSchema,
   activityRewardSchema,
+  appRatingSchema,
   applicationSchema,
   bugDecisionSchema,
   bugReportSchema,
@@ -189,6 +190,17 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, app: "Pixel Everywhere" });
 });
 
+app.get("/api/ratings/summary", (_req, res) => {
+  const summary = db.prepare(`
+    SELECT COUNT(*) AS count, COALESCE(AVG(stars), 0) AS average
+    FROM app_ratings
+  `).get();
+  res.json({
+    count: Number(summary.count),
+    average: Number(Number(summary.average).toFixed(2))
+  });
+});
+
 app.post("/api/auth/login", loginLimiter, async (req, res) => {
   const input = parse(loginSchema, req, res);
   if (!input) return;
@@ -288,6 +300,47 @@ app.get(
   authenticateMember,
   requireActiveMember,
   (req, res) => res.json({ member: publicMember(req.currentMember) })
+);
+
+app.get(
+  "/api/members/rating",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const rating = db.prepare(`
+      SELECT id, stars, comment, created_at, updated_at
+      FROM app_ratings
+      WHERE member_id = ?
+    `).get(req.currentMember.id);
+    res.json({ rating: rating || null });
+  }
+);
+
+app.put(
+  "/api/members/rating",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(appRatingSchema, req, res);
+    if (!input) return;
+    db.prepare(`
+      INSERT INTO app_ratings (member_id, stars, comment)
+      VALUES (?, ?, ?)
+      ON CONFLICT(member_id) DO UPDATE SET
+        stars = excluded.stars,
+        comment = excluded.comment,
+        updated_at = CURRENT_TIMESTAMP
+    `).run(req.currentMember.id, input.stars, input.comment);
+    const rating = db.prepare(`
+      SELECT id, stars, comment, created_at, updated_at
+      FROM app_ratings
+      WHERE member_id = ?
+    `).get(req.currentMember.id);
+    res.json({
+      rating,
+      message: "Merci ! Ton évaluation de Pixel Everywhere a été enregistrée."
+    });
+  }
 );
 
 app.get(
@@ -1017,6 +1070,37 @@ app.get(
       LIMIT 100
     `).all().reverse();
     res.json({ messages });
+  }
+);
+
+app.get(
+  "/api/staff/ratings",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (_req, res) => {
+    const ratings = db.prepare(`
+      SELECT
+        r.id,
+        r.stars,
+        r.comment,
+        r.created_at,
+        r.updated_at,
+        m.username AS member_username,
+        m.display_name AS member_display_name
+      FROM app_ratings r
+      JOIN member_users m ON m.id = r.member_id
+      ORDER BY datetime(r.updated_at) DESC
+    `).all();
+    const summary = db.prepare(`
+      SELECT COUNT(*) AS count, COALESCE(AVG(stars), 0) AS average
+      FROM app_ratings
+    `).get();
+    res.json({
+      ratings,
+      count: Number(summary.count),
+      average: Number(Number(summary.average).toFixed(2))
+    });
   }
 );
 
