@@ -225,6 +225,16 @@ db.exec(`
     PRIMARY KEY (member_id, action),
     FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS app_ratings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL UNIQUE,
+    stars INTEGER NOT NULL CHECK (stars BETWEEN 1 AND 5),
+    comment TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE
+  );
 `);
 
 const memberColumns = db.prepare("PRAGMA table_info(member_users)").all();
