@@ -87,9 +87,74 @@ function rememberForm(form, kind) {
   }, { capture: true });
 }
 
+function installPixelSwipeGuard() {
+  const page = document.querySelector("#page-pixel");
+  if (!page) return;
+
+  let gesture = null;
+
+  page.addEventListener("touchstart", (event) => {
+    const touch = event.changedTouches[0];
+    if (!touch) {
+      gesture = null;
+      return;
+    }
+
+    gesture = {
+      x: touch.clientX,
+      y: touch.clientY,
+      scrollY: window.scrollY,
+      multiTouch: event.touches.length > 1,
+      interactive: Boolean(event.target.closest(
+        "button, input, textarea, select, a, dialog, [role='button'], [data-pet-action], [data-shop-item]"
+      ))
+    };
+  }, { capture: true, passive: true });
+
+  page.addEventListener("touchmove", (event) => {
+    if (gesture && event.touches.length > 1) gesture.multiTouch = true;
+  }, { capture: true, passive: true });
+
+  page.addEventListener("touchend", (event) => {
+    if (!gesture) return;
+
+    const touch = event.changedTouches[0];
+    const start = gesture;
+    gesture = null;
+
+    if (!touch) {
+      event.stopImmediatePropagation();
+      return;
+    }
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const horizontalDistance = Math.abs(deltaX);
+    const verticalDistance = Math.abs(deltaY);
+    const pageScrolled = Math.abs(window.scrollY - start.scrollY) > 8;
+
+    const clearlyHorizontal =
+      !start.multiTouch &&
+      !start.interactive &&
+      !pageScrolled &&
+      horizontalDistance >= 110 &&
+      horizontalDistance > verticalDistance * 1.5;
+
+    if (!clearlyHorizontal) {
+      event.stopImmediatePropagation();
+    }
+  }, { capture: true, passive: true });
+
+  page.addEventListener("touchcancel", (event) => {
+    gesture = null;
+    event.stopImmediatePropagation();
+  }, { capture: true, passive: true });
+}
+
 replaceStartupIntro();
 
 window.addEventListener("DOMContentLoaded", () => {
+  installPixelSwipeGuard();
   rememberForm(document.querySelector("#memberLoginForm"), "member");
   rememberForm(document.querySelector("#memberRegisterForm"), "member");
   rememberForm(document.querySelector("#loginForm"), "staff");
