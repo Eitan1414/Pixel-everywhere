@@ -1883,8 +1883,14 @@ window.setInterval(() => {
   }
 }, 30_000);
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+if (
+  "serviceWorker" in navigator &&
+  import.meta.env.PROD &&
+  ["http:", "https:"].includes(window.location.protocol)
+) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 
 updateAccountButton();
