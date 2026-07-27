@@ -21,6 +21,8 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 - économie membre sécurisée : 5 pièces par minute active, pause anti-AFK après
   3 minutes, boutique de nourriture Pixel et demandes de conversion XP ;
 - interactions Tamagotchi payantes et protégées par des délais serveur, maison
+- évaluations membres de 1 à 5 étoiles avec commentaire, moyenne globale et
+  consultation détaillée réservée aux modérateurs et administrateurs ;
   pleine hauteur en croquis et déplacements d’attente aléatoires de Pixel ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
