@@ -4,9 +4,15 @@
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
-    "androidScheme": "https"
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.ngrok-free.app",
+      "*.ngrok-free.dev",
+      "127.0.0.1",
+      "localhost"
+    ]
   },
   "android": {
-    "allowMixedContent": false
+    "allowMixedContent": true
   }
 }
