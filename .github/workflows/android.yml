@@ -46,6 +46,9 @@ jobs:
           base64 --decode assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
           base64 --decode assets-encoded/alpha-logo.png.b64 > public/assets/alpha-logo.png
           base64 --decode assets-encoded/pixel-mascot.png.b64 > public/assets/pixel-mascot.png
+          base64 --decode assets-encoded/pdd2-wordmark.png.b64 > public/assets/pdd2-wordmark.png
+          base64 --decode assets-encoded/pixel-body.png.b64 > public/assets/pixel-body.png
+          base64 --decode assets-encoded/pixel-eye.png.b64 > public/assets/pixel-eye.png
           convert public/assets/alpha-logo.png -resize 192x192 public/assets/icon-192.png
           convert public/assets/alpha-logo.png -resize 512x512 public/assets/icon-512.png
 
