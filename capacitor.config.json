@@ -1,0 +1,10 @@
+{
+  "appId": "com.pdd.pixeleverywhere",
+  "appName": "Pixel Everywhere",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false
+  }
+}
+

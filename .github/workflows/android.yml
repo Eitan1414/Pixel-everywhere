@@ -1,0 +1,67 @@
+name: Compiler Pixel Everywhere
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    env:
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Installer ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Restaurer les ressources graphiques
+        run: |
+          mkdir -p public/assets
+          base64 --decode assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
+          convert public/assets/pdd-logo.jpg -resize 192x192 public/assets/icon-192.png
+          convert public/assets/pdd-logo.jpg -resize 512x512 public/assets/icon-512.png
+
+      - name: Construire l’interface
+        run: npm run build
+
+      - name: Générer le projet Android
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Appliquer le logo PDD
+        run: bash scripts/brand-android.sh
+
+      - name: Compiler l’APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Publier l’APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

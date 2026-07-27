@@ -1,0 +1,38 @@
+{
+  "name": "pixel-everywhere",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n WEB,API -c cyan,magenta \"vite --host 0.0.0.0\" \"node --watch server/index.mjs\"",
+    "start": "node server/index.mjs",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "cap:init": "cap add android",
+    "cap:sync": "npm run build && cap sync android",
+    "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "bcryptjs": "^3.0.2",
+    "better-sqlite3": "^12.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "zod": "^4.0.17"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "concurrently": "^9.2.1",
+    "vite": "^7.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

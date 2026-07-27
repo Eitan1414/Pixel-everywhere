@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0b0f" />
+    <meta name="description" content="Pixel Everywhere, l'application officielle de Pixel Difficult Drawer." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/assets/icon-192.png" />
+    <link rel="stylesheet" href="/web/styles.css" />
+    <title>Pixel Everywhere</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="brand" data-page-target="home" aria-label="Retour à l'accueil">
+          <img src="/assets/icon-192.png" alt="" />
+          <span>
+            <strong>Pixel Everywhere</strong>
+            <small>Pixel Difficult Drawer</small>
+          </span>
+        </button>
+        <button id="staffButton" class="staff-button" type="button">
+          <span aria-hidden="true">◆</span>
+          Staff
+        </button>
+      </header>
+
+      <main id="mainContent">
+        <section id="page-home" class="page active">
+          <article class="hero card">
+            <div class="hero-glow"></div>
+            <img class="hero-logo" src="/assets/pdd-logo.jpg" alt="Logo Pixel Difficult Drawer" />
+            <p class="eyebrow">Bienvenue sur PDD</p>
+            <h1>Le dessin et le gaming, partout avec toi.</h1>
+            <p>
+              Pixel Difficult Drawer est une communauté consacrée au dessin, au gaming,
+              au partage de créations et à bien d’autres univers.
+            </p>
+            <a
+              class="primary-button"
+              href="https://discord.gg/DbxADDbuzz"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Rejoindre le serveur Discord
+            </a>
+          </article>
+
+          <div class="feature-grid">
+            <button class="feature-card" data-page-target="announcements">
+              <span class="feature-icon orange">!</span>
+              <span><strong>Annonces</strong><small>Les nouveautés officielles du serveur</small></span>
+            </button>
+            <button class="feature-card" data-page-target="application">
+              <span class="feature-icon cyan">✦</span>
+              <span><strong>Rejoindre le staff</strong><small>Envoie ta candidature aux modérateurs</small></span>
+            </button>
+          </div>
+        </section>
+
+        <section id="page-announcements" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Salon officiel</p>
+              <h2>Annonces</h2>
+            </div>
+            <button id="refreshAnnouncements" class="icon-button" aria-label="Actualiser">↻</button>
+          </div>
+          <div id="announcementsList" class="stack"></div>
+        </section>
+
+        <section id="page-application" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Candidature privée</p>
+              <h2>Rejoindre les modos</h2>
+            </div>
+          </div>
+          <div class="privacy-note">
+            Ta candidature sera uniquement visible par l’équipe de modération de PDD.
+          </div>
+          <form id="applicationForm" class="card form-card">
+            <label>
+              Quel âge as-tu ?
+              <input name="age" type="number" min="13" max="99" required inputmode="numeric" />
+            </label>
+            <label>
+              Quel rôle veux-tu ?
+              <input name="desiredRole" type="text" maxlength="80" required placeholder="Ex. modérateur dessin" />
+            </label>
+            <label>
+              Comment t’appelles-tu ?
+              <input name="realName" type="text" maxlength="80" required autocomplete="name" />
+            </label>
+            <label>
+              Quel est ton pseudo Discord ?
+              <input name="discordUsername" type="text" maxlength="80" required placeholder="Ex. pixel_artiste" />
+            </label>
+            <label>
+              Pourquoi veux-tu rejoindre les modérateurs ?
+              <textarea name="motivation" minlength="20" maxlength="2000" rows="6" required></textarea>
+            </label>
+            <button class="primary-button" type="submit">Envoyer ma candidature</button>
+            <p id="applicationStatus" class="form-status" aria-live="polite"></p>
+          </form>
+        </section>
+
+        <section id="page-credits" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Pixel Everywhere</p>
+              <h2>Crédits</h2>
+            </div>
+          </div>
+          <div class="credit-list">
+            <article class="credit-card featured">
+              <span class="avatar-mark">E</span>
+              <div><strong>Eitan 2.0</strong><small>Programming • Creator of the server/app</small></div>
+            </article>
+            <article class="credit-card">
+              <span class="avatar-mark">T</span>
+              <div><strong>thib549</strong><small>Co-creator</small></div>
+            </article>
+            <article class="credit-card">
+              <span class="avatar-mark">K</span>
+              <div><strong>kamiko</strong><small>Co-creator</small></div>
+            </article>
+            <article class="credit-card">
+              <span class="avatar-mark">S</span>
+              <div><strong>simgi</strong><small>Director of staff</small></div>
+            </article>
+            <article class="credit-card">
+              <span class="avatar-mark">M</span>
+              <div><strong>baba • touille • Maggie</strong><small>Modérateurs responsables</small></div>
+            </article>
+          </div>
+        </section>
+
+        <section id="page-staff" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Zone privée</p>
+              <h2>Espace staff</h2>
+            </div>
+            <button id="logoutButton" class="text-button" type="button">Déconnexion</button>
+          </div>
+
+          <div id="staffIdentity" class="staff-identity"></div>
+          <div id="passwordChangePanel" class="card hidden">
+            <h3>Choisis ton mot de passe personnel</h3>
+            <p>Le mot de passe donné par l’administrateur est temporaire.</p>
+            <form id="passwordChangeForm" class="compact-form">
+              <input name="currentPassword" type="password" minlength="8" placeholder="Mot de passe temporaire" required />
+              <input name="newPassword" type="password" minlength="12" placeholder="Nouveau mot de passe (12 caractères minimum)" required />
+              <button class="primary-button" type="submit">Modifier le mot de passe</button>
+              <p class="form-status" aria-live="polite"></p>
+            </form>
+          </div>
+
+          <div id="staffWorkspace" class="hidden">
+            <div class="staff-tabs" role="tablist">
+              <button class="active" data-staff-tab="applications">Candidatures</button>
+              <button data-staff-tab="messages">Messagerie</button>
+              <button id="accountsTabButton" data-staff-tab="accounts">Comptes</button>
+            </div>
+
+            <section id="staff-applications" class="staff-panel active">
+              <div id="staffApplicationsList" class="stack"></div>
+            </section>
+
+            <section id="staff-messages" class="staff-panel">
+              <div id="staffMessagesList" class="message-list"></div>
+              <form id="staffMessageForm" class="message-composer">
+                <input name="body" maxlength="2000" placeholder="Écrire à l’équipe…" required />
+                <button type="submit" aria-label="Envoyer">➤</button>
+              </form>
+            </section>
+
+            <section id="staff-accounts" class="staff-panel">
+              <form id="accountForm" class="card compact-form">
+                <h3>Créer un compte staff</h3>
+                <input name="username" minlength="3" maxlength="32" placeholder="Identifiant" required />
+                <input name="password" type="password" minlength="12" maxlength="128" placeholder="Mot de passe temporaire" required />
+                <select name="role">
+                  <option value="moderator">Modérateur</option>
+                  <option value="admin">Administrateur</option>
+                </select>
+                <button class="primary-button" type="submit">Créer le compte</button>
+                <p class="form-status" aria-live="polite"></p>
+              </form>
+              <div id="staffAccountsList" class="stack"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="Navigation principale">
+        <button class="active" data-page-target="home"><span>⌂</span><small>Accueil</small></button>
+        <button data-page-target="announcements"><span>!</span><small>Annonces</small></button>
+        <button data-page-target="application"><span>✦</span><small>Candidature</small></button>
+        <button data-page-target="credits"><span>©</span><small>Crédits</small></button>
+      </nav>
+    </div>
+
+    <dialog id="loginDialog">
+      <form id="loginForm" class="login-card">
+        <button id="closeLogin" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <img src="/assets/icon-192.png" alt="" />
+        <p class="eyebrow">Accès réservé</p>
+        <h2>Connexion staff</h2>
+        <label>
+          Identifiant
+          <input name="username" autocomplete="username" required />
+        </label>
+        <label>
+          Mot de passe
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="primary-button" type="submit">Se connecter</button>
+        <p class="form-status" aria-live="polite"></p>
+      </form>
+    </dialog>
+
+    <dialog id="applicationDialog">
+      <article class="application-detail">
+        <button id="closeApplication" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <div id="applicationDetailContent"></div>
+      </article>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/web/main.js"></script>
+  </body>
+</html>
+
