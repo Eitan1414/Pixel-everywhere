@@ -57,6 +57,13 @@ jobs:
       - name: Construire l’interface
         run: npm run build
 
+      - name: Publier le bundle web de contrôle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Web-Bundle-Debug
+          path: www
+          if-no-files-found: error
+
       - name: Vérifier le bundle Serveur PDD
         run: |
           set -euo pipefail
