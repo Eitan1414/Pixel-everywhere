@@ -1,0 +1,55 @@
+name: Compiler Pixel Everywhere macOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    env:
+      VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm ci
+
+      - name: Restaurer les ressources graphiques
+        run: |
+          mkdir -p public/assets
+          base64 -D < assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
+          base64 -D < assets-encoded/alpha-logo.png.b64 > public/assets/alpha-logo.png
+          base64 -D < assets-encoded/pixel-mascot.png.b64 > public/assets/pixel-mascot.png
+          base64 -D < assets-encoded/pdd2-wordmark.png.b64 > public/assets/pdd2-wordmark.png
+          base64 -D < assets-encoded/pixel-body.png.b64 > public/assets/pixel-body.png
+          base64 -D < assets-encoded/pixel-eye.png.b64 > public/assets/pixel-eye.png
+          sips -z 512 512 public/assets/alpha-logo.png --out public/assets/alpha-logo.png
+
+      - name: Tester le projet
+        run: npm test
+
+      - name: Compiler l’application macOS
+        run: npm run mac:build
+
+      - name: Publier l’application
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-macOS
+          path: release/*.zip
+          if-no-files-found: error
