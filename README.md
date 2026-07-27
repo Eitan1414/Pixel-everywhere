@@ -16,6 +16,10 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
   envoyée automatiquement au membre par **PDD Staff** ;
 - vérification automatique du serveur au lancement, au retour dans l’application
   et toutes les 30 secondes, avec alertes de fermeture et de réouverture ;
+- signalements de bugs membres distribués à tous les comptes staff, avec
+  validation rapportant 50 pièces ;
+- économie membre sécurisée : 5 pièces par minute active, pause anti-AFK après
+  3 minutes, boutique de nourriture Pixel et demandes de conversion XP ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
@@ -133,6 +137,19 @@ candidature, mais ne peuvent pas créer librement un compte staff.
 Les notifications locales avertissent le membre lorsque l’application est
 ouverte ou reprise. Les notifications reçues lorsque l’application est
 complètement fermée nécessiteront l’ajout ultérieur de Firebase Cloud Messaging.
+
+## Pièces, bugs et XP PDD
+
+- Une minute d’activité réelle rapporte 5 pièces.
+- Après 3 minutes sans interaction, le gain est suspendu jusqu’au retour du membre.
+- Un signalement de bug validé par un modérateur ou administrateur rapporte
+  exactement 50 pièces, une seule fois.
+- Les pièces permettent d’acheter une friandise (15), un repas (30) ou un
+  festin (50) pour Pixel.
+- Le taux de conversion est **1 pièce = 15 XP PDD**.
+- Lors d’une demande de conversion, les pièces sont réservées immédiatement.
+  Le staff ajoute les XP manuellement sur Discord puis confirme la demande.
+  En cas de refus, toutes les pièces sont remboursées automatiquement.
 
 ## Crédits
 
