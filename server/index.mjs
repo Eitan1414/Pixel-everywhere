@@ -17,14 +17,20 @@ import { fetchAnnouncements } from "./discord.mjs";
 import {
   acceptApplicationSchema,
   accountSchema,
+  activityRewardSchema,
   applicationSchema,
+  bugDecisionSchema,
+  bugReportSchema,
   loginSchema,
   memberRegistrationSchema,
   messageSchema,
   noteSchema,
   parse,
   passwordSchema,
-  statusSchema
+  shopPurchaseSchema,
+  statusSchema,
+  xpConversionSchema,
+  xpDecisionSchema
 } from "./validation.mjs";
 
 const app = express();
@@ -103,6 +109,7 @@ function publicMember(member) {
     id: member.id,
     username: member.username,
     displayName: member.display_name,
+    points: Number(member.points || 0),
     createdAt: member.created_at
   };
 }
@@ -120,7 +127,7 @@ function currentUser(req) {
 function currentMember(req) {
   return db
     .prepare(`
-      SELECT id, username, display_name, created_at
+      SELECT id, username, display_name, points, last_activity_reward_at, created_at
       FROM member_users
       WHERE id = ?
     `)
@@ -162,6 +169,19 @@ function requireActiveMember(req, res, next) {
   }
   req.currentMember = member;
   next();
+}
+
+function notifyActiveStaff(alertType, referenceId, body) {
+  const recipients = db
+    .prepare("SELECT id FROM staff_users WHERE active = 1")
+    .all();
+  const insert = db.prepare(`
+    INSERT INTO staff_alerts (recipient_id, alert_type, reference_id, body)
+    VALUES (?, ?, ?, ?)
+  `);
+  recipients.forEach((recipient) =>
+    insert.run(recipient.id, alertType, referenceId, body)
+  );
 }
 
 app.get("/api/health", (_req, res) => {
@@ -230,7 +250,7 @@ app.post("/api/members/register", loginLimiter, async (req, res) => {
       VALUES (?, ?, ?)
     `).run(input.username, passwordHash, input.displayName);
     const member = db
-      .prepare("SELECT id, username, display_name, created_at FROM member_users WHERE id = ?")
+      .prepare("SELECT id, username, display_name, points, created_at FROM member_users WHERE id = ?")
       .get(result.lastInsertRowid);
     res.status(201).json({
       token: createToken({ ...member, role: "member" }, "member"),
@@ -298,7 +318,8 @@ app.get(
     `).all(req.currentMember.id);
     res.json({
       messages,
-      unreadCount: messages.filter((message) => !message.read_at).length
+      unreadCount: messages.filter((message) => !message.read_at).length,
+      points: Number(req.currentMember.points || 0)
     });
   }
 );
@@ -317,6 +338,147 @@ app.patch(
       return res.status(404).json({ error: "Message introuvable." });
     }
     res.json({ ok: true });
+  }
+);
+
+app.post(
+  "/api/members/activity/reward",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(activityRewardSchema, req, res);
+    if (!input) return;
+    if (input.mode === "start") {
+      db.prepare(`
+        UPDATE member_users
+        SET last_activity_reward_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(req.currentMember.id);
+      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
+    }
+    const lastReward = req.currentMember.last_activity_reward_at
+      ? new Date(`${req.currentMember.last_activity_reward_at}Z`).getTime()
+      : 0;
+    const elapsed = Date.now() - lastReward;
+
+    if (!lastReward) {
+      db.prepare(`
+        UPDATE member_users
+        SET last_activity_reward_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(req.currentMember.id);
+      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
+    }
+    if (elapsed < 55_000) {
+      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
+    }
+
+    db.prepare(`
+      UPDATE member_users
+      SET points = points + 5, last_activity_reward_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(req.currentMember.id);
+    const updated = currentMember(req);
+    res.json({ awarded: 5, points: Number(updated.points) });
+  }
+);
+
+const shopItems = {
+  treat: { cost: 15, label: "Friandise Pixel" },
+  meal: { cost: 30, label: "Repas Pixel" },
+  feast: { cost: 50, label: "Festin Pixel" }
+};
+
+app.post(
+  "/api/members/shop/purchase",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(shopPurchaseSchema, req, res);
+    if (!input) return;
+    const product = shopItems[input.item];
+    if (Number(req.currentMember.points) < product.cost) {
+      return res.status(409).json({ error: "Tu n’as pas assez de pièces." });
+    }
+    db.prepare(`
+      UPDATE member_users
+      SET points = points - ?
+      WHERE id = ? AND points >= ?
+    `).run(product.cost, req.currentMember.id, product.cost);
+    const updated = currentMember(req);
+    res.json({
+      ok: true,
+      item: input.item,
+      label: product.label,
+      cost: product.cost,
+      points: Number(updated.points)
+    });
+  }
+);
+
+app.post(
+  "/api/members/bug-reports",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(bugReportSchema, req, res);
+    if (!input) return;
+    const result = db.transaction(() => {
+      const report = db.prepare(`
+        INSERT INTO bug_reports (member_id, description)
+        VALUES (?, ?)
+      `).run(req.currentMember.id, input.description);
+      notifyActiveStaff(
+        "bug_report",
+        report.lastInsertRowid,
+        `Nouveau bug signalé par ${req.currentMember.display_name} (@${req.currentMember.username}) :\n${input.description}`
+      );
+      return report;
+    });
+    res.status(201).json({
+      id: result.lastInsertRowid,
+      message: "Merci ! Ton bug a été transmis à tous les modérateurs et administrateurs."
+    });
+  }
+);
+
+app.post(
+  "/api/members/xp-conversions",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(xpConversionSchema, req, res);
+    if (!input) return;
+    if (Number(req.currentMember.points) < input.amount) {
+      return res.status(409).json({ error: "Tu n’as pas assez de pièces." });
+    }
+    const xpAmount = input.amount * 15;
+    const result = db.transaction(() => {
+      const request = db.prepare(`
+        INSERT INTO xp_conversion_requests
+          (member_id, discord_username, amount)
+        VALUES (?, ?, ?)
+      `).run(req.currentMember.id, input.discordUsername, input.amount);
+      db.prepare(`
+        UPDATE member_users
+        SET points = points - ?
+        WHERE id = ? AND points >= ?
+      `).run(input.amount, req.currentMember.id, input.amount);
+      notifyActiveStaff(
+        "xp_conversion",
+        request.lastInsertRowid,
+        `Conversion XP demandée par ${req.currentMember.display_name} : ${input.amount} pièces = ${xpAmount} XP PDD pour ${input.discordUsername}.`
+      );
+      return request;
+    });
+    const updated = currentMember(req);
+    res.status(201).json({
+      id: result.lastInsertRowid,
+      pointsSpent: input.amount,
+      xpAmount,
+      points: Number(updated.points),
+      message: "Ta demande de conversion a été envoyée à tout le staff."
+    });
   }
 );
 
@@ -638,6 +800,140 @@ app.post(
         username: application.member_username,
         displayName: application.member_display_name
       }
+    });
+  }
+);
+
+app.get(
+  "/api/staff/alerts",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => {
+    const alerts = db.prepare(`
+      SELECT id, alert_type, reference_id, body, resolved, created_at
+      FROM staff_alerts
+      WHERE recipient_id = ?
+      ORDER BY resolved ASC, datetime(created_at) DESC, id DESC
+      LIMIT 100
+    `).all(req.currentUser.id);
+    res.json({ alerts });
+  }
+);
+
+app.post(
+  "/api/staff/bug-reports/:id/decision",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => {
+    const input = parse(bugDecisionSchema, req, res);
+    if (!input) return;
+    const reportId = Number(req.params.id);
+    const report = db.prepare(`
+      SELECT b.*, m.display_name, m.username
+      FROM bug_reports b
+      JOIN member_users m ON m.id = b.member_id
+      WHERE b.id = ?
+    `).get(reportId);
+    if (!report) {
+      return res.status(404).json({ error: "Signalement introuvable." });
+    }
+    if (report.status !== "pending") {
+      return res.status(409).json({ error: "Ce signalement a déjà été traité." });
+    }
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE bug_reports
+        SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'pending'
+      `).run(input.decision, req.currentUser.id, reportId);
+      if (input.decision === "approved") {
+        db.prepare(`
+          UPDATE member_users SET points = points + 50 WHERE id = ?
+        `).run(report.member_id);
+      }
+      const approved = input.decision === "approved";
+      const body = approved
+        ? `Merci ${report.display_name} ! Ton signalement de bug a été validé par ${req.currentUser.username}. Tu as reçu 50 pièces.`
+        : `Merci ${report.display_name}. Ton signalement a été étudié par ${req.currentUser.username}, mais il n’a pas été retenu pour une récompense cette fois-ci.`;
+      db.prepare(`
+        INSERT INTO member_messages
+          (member_id, sender_name, sender_logo, subject, body)
+        VALUES (?, 'PDD Staff', '/assets/pdd-logo.jpg', ?, ?)
+      `).run(
+        report.member_id,
+        approved ? "Bug validé : +50 pièces" : "Signalement de bug examiné",
+        body
+      );
+      db.prepare(`
+        UPDATE staff_alerts SET resolved = 1
+        WHERE alert_type = 'bug_report' AND reference_id = ?
+      `).run(reportId);
+    });
+    res.json({ ok: true, decision: input.decision, reward: input.decision === "approved" ? 50 : 0 });
+  }
+);
+
+app.post(
+  "/api/staff/xp-conversions/:id/decision",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => {
+    const input = parse(xpDecisionSchema, req, res);
+    if (!input) return;
+    const requestId = Number(req.params.id);
+    const conversion = db.prepare(`
+      SELECT x.*, m.display_name, m.username
+      FROM xp_conversion_requests x
+      JOIN member_users m ON m.id = x.member_id
+      WHERE x.id = ?
+    `).get(requestId);
+    if (!conversion) {
+      return res.status(404).json({ error: "Demande de conversion introuvable." });
+    }
+    if (conversion.status !== "pending") {
+      return res.status(409).json({ error: "Cette demande a déjà été traitée." });
+    }
+
+    const xpAmount = Number(conversion.amount) * 15;
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE xp_conversion_requests
+        SET status = ?, reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND status = 'pending'
+      `).run(input.decision, req.currentUser.id, requestId);
+      if (input.decision === "rejected") {
+        db.prepare(`
+          UPDATE member_users SET points = points + ? WHERE id = ?
+        `).run(conversion.amount, conversion.member_id);
+      }
+      const completed = input.decision === "completed";
+      const body = completed
+        ? `Ta conversion de ${conversion.amount} pièces en ${xpAmount} XP PDD pour ${conversion.discord_username} a été marquée comme effectuée par ${req.currentUser.username}.`
+        : `Ta demande de conversion de ${conversion.amount} pièces a été refusée par ${req.currentUser.username}. Tes pièces ont été intégralement remboursées.`;
+      db.prepare(`
+        INSERT INTO member_messages
+          (member_id, sender_name, sender_logo, subject, body)
+        VALUES (?, 'PDD Staff', '/assets/pdd-logo.jpg', ?, ?)
+      `).run(
+        conversion.member_id,
+        completed ? "Conversion XP effectuée" : "Conversion XP refusée et remboursée",
+        body
+      );
+      db.prepare(`
+        UPDATE staff_alerts SET resolved = 1
+        WHERE alert_type = 'xp_conversion' AND reference_id = ?
+      `).run(requestId);
+    });
+    res.json({
+      ok: true,
+      decision: input.decision,
+      points: Number(conversion.amount),
+      xpAmount,
+      refunded: input.decision === "rejected"
     });
   }
 );
