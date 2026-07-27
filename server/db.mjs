@@ -124,6 +124,8 @@ db.exec(`
     role TEXT NOT NULL CHECK (role IN ('admin', 'moderator')),
     active INTEGER NOT NULL DEFAULT 1,
     must_change_password INTEGER NOT NULL DEFAULT 1,
+    points INTEGER NOT NULL DEFAULT 0,
+    last_activity_reward_at TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -226,6 +228,14 @@ db.exec(`
     FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS staff_pet_actions (
+    staff_id INTEGER NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('feed', 'pet', 'bounce', 'walk', 'sleep')),
+    last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (staff_id, action),
+    FOREIGN KEY (staff_id) REFERENCES staff_users(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS app_ratings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     member_id INTEGER NOT NULL UNIQUE,
@@ -236,6 +246,14 @@ db.exec(`
     FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE
   );
 `);
+
+const staffColumns = db.prepare("PRAGMA table_info(staff_users)").all();
+if (!staffColumns.some((column) => column.name === "points")) {
+  db.exec("ALTER TABLE staff_users ADD COLUMN points INTEGER NOT NULL DEFAULT 0");
+}
+if (!staffColumns.some((column) => column.name === "last_activity_reward_at")) {
+  db.exec("ALTER TABLE staff_users ADD COLUMN last_activity_reward_at TEXT");
+}
 
 const memberColumns = db.prepare("PRAGMA table_info(member_users)").all();
 if (!memberColumns.some((column) => column.name === "points")) {

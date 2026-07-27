@@ -2,15 +2,18 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
+const storedStaff = JSON.parse(sessionStorage.getItem("pixel-user") || "null");
+const storedMember = JSON.parse(localStorage.getItem("pixel-member") || "null");
+
 const state = {
   token: sessionStorage.getItem("pixel-token") || "",
-  user: JSON.parse(sessionStorage.getItem("pixel-user") || "null"),
+  user: storedStaff,
   memberToken: localStorage.getItem("pixel-member-token") || "",
-  member: JSON.parse(localStorage.getItem("pixel-member") || "null"),
+  member: storedMember,
   memberMessages: [],
   memberApplications: [],
   unreadCount: 0,
-  points: Number(JSON.parse(localStorage.getItem("pixel-member") || "null")?.points || 0),
+  points: Number(storedStaff?.points ?? storedMember?.points ?? 0),
   memberRating: null,
   applications: [],
   activeApplication: null,
@@ -19,6 +22,7 @@ const state = {
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const asArray = (value) => (Array.isArray(value) ? value : []);
 
 const startupAnimation = $("#startupAnimation");
 let startupTimer;
@@ -187,24 +191,32 @@ async function api(path, options = {}) {
 function saveSession(token, user) {
   state.token = token;
   state.user = user;
+  state.points = Number(user.points || 0);
   sessionStorage.setItem("pixel-token", token);
   sessionStorage.setItem("pixel-user", JSON.stringify(user));
   updateAccountButton();
+  updateAccountDialog();
+  updateMemberAccess();
+  beginActiveSession();
 }
 
 function clearSession() {
   state.token = "";
   state.user = null;
   state.applications = [];
+  state.points = Number(state.member?.points || 0);
   sessionStorage.removeItem("pixel-token");
   sessionStorage.removeItem("pixel-user");
   updateAccountButton();
+  updateAccountDialog();
+  updateMemberAccess();
+  if (state.member) beginActiveSession();
 }
 
 function saveMemberSession(token, member) {
   state.memberToken = token;
   state.member = member;
-  state.points = Number(member.points || 0);
+  if (!state.user) state.points = Number(member.points || 0);
   localStorage.setItem("pixel-member-token", token);
   localStorage.setItem("pixel-member", JSON.stringify(member));
   updateAccountButton();
@@ -220,7 +232,7 @@ function clearMemberSession() {
   state.memberMessages = [];
   state.memberApplications = [];
   state.unreadCount = 0;
-  state.points = 0;
+  state.points = Number(state.user?.points || 0);
   localStorage.removeItem("pixel-member-token");
   localStorage.removeItem("pixel-member");
   updateAccountButton();
@@ -241,21 +253,48 @@ function updateAccountButton() {
 
 function updateMemberAccess() {
   $("#memberInboxButton").classList.toggle("hidden", !state.member);
-  $("#pointsButton").classList.toggle("hidden", !state.member);
+  $("#pointsButton").classList.toggle("hidden", !state.member && !state.user);
   $("#pointsBalance").textContent = String(state.points);
-  $("#memberPointsBalance").textContent = `${state.points} pièce${state.points > 1 ? "s" : ""}`;
+  const memberPoints = Number(state.member?.points || 0);
+  const staffPoints = Number(state.user?.points || 0);
+  $("#memberPointsBalance").textContent =
+    `${memberPoints} pièce${memberPoints > 1 ? "s" : ""}`;
+  $("#staffPointsBalance").textContent =
+    `${staffPoints} pièce${staffPoints > 1 ? "s" : ""}`;
   const badge = $("#inboxBadge");
   badge.textContent = String(state.unreadCount);
   badge.classList.toggle("hidden", !state.member || state.unreadCount === 0);
 }
 
 function setMemberPoints(points) {
-  state.points = Math.max(0, Number(points || 0));
+  const nextPoints = Math.max(0, Number(points || 0));
   if (state.member) {
-    state.member.points = state.points;
+    state.member.points = nextPoints;
     localStorage.setItem("pixel-member", JSON.stringify(state.member));
   }
+  if (!state.user) state.points = nextPoints;
   updateMemberAccess();
+}
+
+function setStaffPoints(points) {
+  const nextPoints = Math.max(0, Number(points || 0));
+  if (state.user) {
+    state.user.points = nextPoints;
+    sessionStorage.setItem("pixel-user", JSON.stringify(state.user));
+  }
+  state.points = nextPoints;
+  updateMemberAccess();
+}
+
+function petAccountKind() {
+  if (state.user && state.token) return "staff";
+  if (state.member && state.memberToken) return "member";
+  return null;
+}
+
+function setPetAccountPoints(points) {
+  if (petAccountKind() === "staff") setStaffPoints(points);
+  else setMemberPoints(points);
 }
 
 function navigate(page) {
@@ -292,13 +331,14 @@ async function loadAnnouncements() {
       );
       return;
     }
-    if (!data.announcements.length) {
+    const announcements = asArray(data.announcements);
+    if (!announcements.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Aucune annonce pour le moment." })
       );
       return;
     }
-    list.replaceChildren(...data.announcements.map(renderAnnouncement));
+    list.replaceChildren(...announcements.map(renderAnnouncement));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -321,11 +361,11 @@ function renderAnnouncement(announcement) {
   if (announcement.content) {
     card.append(element("p", { className: "announcement-content", text: announcement.content }));
   }
-  announcement.embeds.forEach((embed) => {
+  asArray(announcement.embeds).forEach((embed) => {
     const body = [embed.title, embed.description].filter(Boolean).join("\n");
     if (body) card.append(element("p", { className: "announcement-content", text: body }));
   });
-  announcement.attachments
+  asArray(announcement.attachments)
     .filter((attachment) => attachment.contentType.startsWith("image/"))
     .forEach((attachment) => {
       card.append(
@@ -409,7 +449,7 @@ $("#accountButton").addEventListener("click", () => {
 });
 $("#memberInboxButton").addEventListener("click", () => navigate("member-inbox"));
 $("#pointsButton").addEventListener("click", () => {
-  selectAccountTab("member");
+  selectAccountTab(state.user ? "staff" : "member");
   updateAccountDialog();
   loginDialog.showModal();
 });
@@ -439,6 +479,9 @@ function updateAccountDialog() {
   $("#staffDialogIdentity").textContent = state.user
     ? `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`
     : "";
+  const staffPoints = Number(state.user?.points || 0);
+  $("#staffPointsBalance").textContent =
+    `${staffPoints} pièce${staffPoints > 1 ? "s" : ""}`;
   $("#notificationStatus").textContent =
     localStorage.getItem("pixel-notifications-enabled") === "true"
       ? "Notifications activées sur cet appareil."
@@ -513,7 +556,7 @@ $("#closeBugReport").addEventListener("click", () => bugReportDialog.close());
 $("#openXpConversionButton").addEventListener("click", () => {
   loginDialog.close();
   $("#xpConversionForm").reset();
-  $("#xpPointsAmount").max = String(Math.max(1, state.points));
+  $("#xpPointsAmount").max = String(Math.max(1, Number(state.member?.points || 0)));
   $("#xpConversionPreview").textContent = "1 pièce = 15 XP";
   setFormStatus($(".form-status", $("#xpConversionForm")), "");
   xpConversionDialog.showModal();
@@ -625,7 +668,9 @@ async function openStaffWorkspace() {
   try {
     const data = await api("/auth/me");
     state.user = data.user;
+    state.points = Number(data.user?.points || 0);
     sessionStorage.setItem("pixel-user", JSON.stringify(data.user));
+    updateMemberAccess();
   } catch {
     clearSession();
     navigate("home");
@@ -713,6 +758,7 @@ $("#enableNotificationsButton").addEventListener("click", enableMemberNotificati
 $("#refreshMemberInbox").addEventListener("click", () => loadMemberInbox({ notify: false }));
 
 async function notifyForNewMemberMail(messages) {
+  messages = asArray(messages);
   if (
     !state.member ||
     localStorage.getItem("pixel-notifications-enabled") !== "true" ||
@@ -811,17 +857,18 @@ async function loadMemberInbox({ notify = true } = {}) {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des messages…" }));
   try {
     const data = await api("/members/inbox", { auth: "member" });
-    state.memberMessages = data.messages;
-    state.unreadCount = data.unreadCount;
+    const messages = asArray(data.messages);
+    state.memberMessages = messages;
+    state.unreadCount = Number(data.unreadCount || 0);
     setMemberPoints(data.points);
-    if (!data.messages.length) {
+    if (!messages.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Tu n’as reçu aucun message pour le moment." })
       );
     } else {
-      list.replaceChildren(...data.messages.map(renderMemberMessage));
+      list.replaceChildren(...messages.map(renderMemberMessage));
     }
-    if (notify) await notifyForNewMemberMail(data.messages);
+    if (notify) await notifyForNewMemberMail(messages);
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -905,7 +952,7 @@ async function loadApplications() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/staff/applications");
-    state.applications = data.applications;
+    state.applications = asArray(data.applications);
     if (!state.applications.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Aucune candidature reçue." })
@@ -970,6 +1017,7 @@ function field(label, value) {
 }
 
 function renderApplicationDetail(application, notes) {
+  notes = asArray(notes);
   const content = $("#applicationDetailContent");
   const statusSelect = element("select");
   Object.entries(statusLabels).forEach(([value, label]) => {
@@ -1157,14 +1205,15 @@ async function loadMessages() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/staff/messages");
-    if (!data.messages.length) {
+    const messages = asArray(data.messages);
+    if (!messages.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "La messagerie est vide." })
       );
       return;
     }
     list.replaceChildren(
-      ...data.messages.map((message) =>
+      ...messages.map((message) =>
         element("article", { className: "message-card" }, [
           element("strong", {
             text: `${message.username}${message.role === "admin" ? " • Admin" : ""}`
@@ -1185,13 +1234,14 @@ async function loadStaffAlerts() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des demandes…" }));
   try {
     const data = await api("/staff/alerts");
-    if (!data.alerts.length) {
+    const alerts = asArray(data.alerts);
+    if (!alerts.length) {
       list.replaceChildren(
         element("div", { className: "empty-state compact", text: "Aucune demande membre." })
       );
       return;
     }
-    list.replaceChildren(...data.alerts.map(renderStaffAlert));
+    list.replaceChildren(...alerts.map(renderStaffAlert));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state compact", text: error.message }));
   }
@@ -1205,7 +1255,9 @@ async function loadStaffRatings() {
   }));
   try {
     const data = await api("/staff/ratings");
-    $("#staffRatingAverage").textContent = data.count
+    const ratings = asArray(data.ratings);
+    const count = Number(data.count || ratings.length);
+    $("#staffRatingAverage").textContent = count
       ? `${Number(data.average).toLocaleString("fr-FR", {
           minimumFractionDigits: 1,
           maximumFractionDigits: 2
@@ -1213,15 +1265,15 @@ async function loadStaffRatings() {
       : "— / 5";
     $("#staffRatingStars").textContent = starText(data.average);
     $("#staffRatingCount").textContent =
-      `${data.count} avis${data.count > 1 ? " reçus" : data.count ? " reçu" : ""}`;
-    if (!data.ratings.length) {
+      `${count} avis${count > 1 ? " reçus" : count ? " reçu" : ""}`;
+    if (!ratings.length) {
       list.replaceChildren(element("div", {
         className: "empty-state",
         text: "Aucune évaluation reçue pour le moment."
       }));
       return;
     }
-    list.replaceChildren(...data.ratings.map((rating) =>
+    list.replaceChildren(...ratings.map((rating) =>
       element("article", { className: "staff-rating-card" }, [
         element("div", { className: "staff-rating-head" }, [
           element("div", {}, [
@@ -1325,7 +1377,14 @@ async function loadAccounts() {
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
     const data = await api("/admin/accounts");
-    list.replaceChildren(...data.accounts.map(renderAccount));
+    const accounts = asArray(data.accounts);
+    if (!accounts.length) {
+      list.replaceChildren(
+        element("div", { className: "empty-state", text: "Aucun compte staff." })
+      );
+      return;
+    }
+    list.replaceChildren(...accounts.map(renderAccount));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
@@ -1389,7 +1448,7 @@ const defaultPet = {
   xp: 0,
   level: 1,
   interactions: 0,
-  lastAction: "Pixel vient d’arriver dans son atelier.",
+  lastAction: "Pixel vient de te rejoindre.",
   updatedAt: Date.now()
 };
 
@@ -1429,12 +1488,12 @@ function petMood(pet) {
 function petEnvironment() {
   const hour = new Date().getHours();
   if (hour >= 7 && hour < 17) {
-    return { className: "pet-day", label: hour < 12 ? "Matin dans son atelier" : "Après-midi dans son atelier" };
+    return { className: "pet-day", label: hour < 12 ? "Matin avec Pixel" : "Après-midi avec Pixel" };
   }
   if (hour >= 17 && hour < 21) {
-    return { className: "pet-evening", label: "Soirée dans son atelier" };
+    return { className: "pet-evening", label: "Soirée avec Pixel" };
   }
-  return { className: "pet-night", label: "Nuit calme dans son atelier" };
+  return { className: "pet-night", label: "Nuit calme avec Pixel" };
 }
 
 function petXpGoal(pet) {
@@ -1514,11 +1573,12 @@ function completePetInteraction(pet, xp, diary, animation, reaction, particle) {
 let petActionPending = false;
 
 async function handlePetAction(action) {
-  if (!state.member) {
+  const accountKind = petAccountKind();
+  if (!accountKind) {
     selectAccountTab("member");
     updateAccountDialog();
     loginDialog.showModal();
-    toast("Connecte un compte membre pour interagir avec Pixel.");
+    toast("Connecte un compte membre ou staff pour interagir avec Pixel.");
     return;
   }
   if (petActionPending) return;
@@ -1527,34 +1587,34 @@ async function handlePetAction(action) {
   actionButtons.forEach((button) => { button.disabled = true; });
   setFormStatus($("#petActionStatus"), "Pixel se prépare…");
   try {
-    const result = await api("/members/pixel/action", {
+    const result = await api(`/${accountKind}/pixel/action`, {
       method: "POST",
-      auth: "member",
+      auth: accountKind,
       body: JSON.stringify({ action })
     });
-    setMemberPoints(result.points);
-  const pet = currentPet();
-  if (action === "feed") {
-    pet.hunger = Math.min(100, pet.hunger + 18);
-    pet.joy = Math.min(100, pet.joy + 3);
-    completePetInteraction(pet, 6, "Pixel a dégusté une orange avec plaisir.", "pet-eat", "Miam ! 🍊", "🍊");
-  }
-  if (action === "bounce") {
-    pet.joy = Math.min(100, pet.joy + 13);
-    pet.energy = Math.max(5, pet.energy - 5);
-    completePetInteraction(pet, 8, "Pixel a joué et bondi dans tout l’atelier.", "pet-bounce", "Youpi ! ✨", "✨");
-  }
-  if (action === "walk") {
-    pet.joy = Math.min(100, pet.joy + 16);
-    pet.hunger = Math.max(5, pet.hunger - 4);
-    pet.energy = Math.max(5, pet.energy - 8);
-    completePetInteraction(pet, 12, "Vous êtes partis vous promener autour de PDD.", "pet-walk", "En route ! 👟", "💨");
-  }
-  if (action === "sleep") {
-    pet.energy = Math.min(100, pet.energy + 24);
-    pet.hunger = Math.max(5, pet.hunger - 3);
-    completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤");
-  }
+    setPetAccountPoints(result.points);
+    const pet = currentPet();
+    if (action === "feed") {
+      pet.hunger = Math.min(100, pet.hunger + 18);
+      pet.joy = Math.min(100, pet.joy + 3);
+      completePetInteraction(pet, 6, "Pixel a dégusté une orange avec plaisir.", "pet-eat", "Miam ! 🍊", "🍊");
+    }
+    if (action === "bounce") {
+      pet.joy = Math.min(100, pet.joy + 13);
+      pet.energy = Math.max(5, pet.energy - 5);
+      completePetInteraction(pet, 8, "Pixel a joué et bondi dans tous les sens.", "pet-bounce", "Youpi ! ✨", "✨");
+    }
+    if (action === "walk") {
+      pet.joy = Math.min(100, pet.joy + 16);
+      pet.hunger = Math.max(5, pet.hunger - 4);
+      pet.energy = Math.max(5, pet.energy - 8);
+      completePetInteraction(pet, 12, "Vous êtes partis vous promener autour de PDD.", "pet-walk", "En route ! 👟", "💨");
+    }
+    if (action === "sleep") {
+      pet.energy = Math.min(100, pet.energy + 24);
+      pet.hunger = Math.max(5, pet.hunger - 3);
+      completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤");
+    }
     if (action === "pet") {
       pet.joy = Math.min(100, pet.joy + 5);
       completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛");
@@ -1584,23 +1644,24 @@ const shopEffects = {
 
 $$("[data-shop-item]").forEach((button) => {
   button.addEventListener("click", async () => {
-    if (!state.member) {
+    const accountKind = petAccountKind();
+    if (!accountKind) {
       selectAccountTab("member");
       updateAccountDialog();
       loginDialog.showModal();
-      toast("Connecte un compte membre pour utiliser tes pièces.");
+      toast("Connecte un compte membre ou staff pour utiliser tes pièces.");
       return;
     }
     const item = button.dataset.shopItem;
     button.disabled = true;
     setFormStatus($("#pixelShopStatus"), "Achat en cours…");
     try {
-      const result = await api("/members/shop/purchase", {
+      const result = await api(`/${accountKind}/shop/purchase`, {
         method: "POST",
-        auth: "member",
+        auth: accountKind,
         body: JSON.stringify({ item })
       });
-      setMemberPoints(result.points);
+      setPetAccountPoints(result.points);
       const effect = shopEffects[item];
       const pet = currentPet();
       pet.hunger = Math.min(100, pet.hunger + effect.hunger);
@@ -1647,17 +1708,40 @@ function schedulePixelIdleMovement() {
 
 schedulePixelIdleMovement();
 
-let pixelSwipeStartX = null;
+let pixelSwipeStart = null;
 $("#page-pixel").addEventListener("touchstart", (event) => {
-  pixelSwipeStartX = event.changedTouches[0]?.clientX ?? null;
+  const touch = event.changedTouches[0];
+  if (!touch) {
+    pixelSwipeStart = null;
+    return;
+  }
+  pixelSwipeStart = {
+    x: touch.clientX,
+    y: touch.clientY,
+    startedAt: Date.now(),
+    interactive: Boolean(event.target.closest("button, input, textarea, select, a, dialog"))
+  };
 }, { passive: true });
 $("#page-pixel").addEventListener("touchend", (event) => {
-  if (pixelSwipeStartX === null) return;
-  const endX = event.changedTouches[0]?.clientX ?? pixelSwipeStartX;
-  const distance = endX - pixelSwipeStartX;
-  pixelSwipeStartX = null;
-  if (Math.abs(distance) < 85) return;
-  navigate(distance < 0 ? "application" : "announcements");
+  if (!pixelSwipeStart) return;
+  const touch = event.changedTouches[0];
+  const start = pixelSwipeStart;
+  pixelSwipeStart = null;
+  if (!touch || start.interactive) return;
+  const distanceX = touch.clientX - start.x;
+  const distanceY = touch.clientY - start.y;
+  const horizontalDistance = Math.abs(distanceX);
+  const verticalDistance = Math.abs(distanceY);
+  const elapsed = Date.now() - start.startedAt;
+  if (
+    horizontalDistance < 110 ||
+    horizontalDistance < verticalDistance * 1.4 ||
+    elapsed > 850
+  ) return;
+  navigate(distanceX < 0 ? "application" : "announcements");
+}, { passive: true });
+$("#page-pixel").addEventListener("touchcancel", () => {
+  pixelSwipeStart = null;
 }, { passive: true });
 
 const guideDialog = $("#guideDialog");
@@ -1704,35 +1788,37 @@ let activityPaused = false;
 const afkDialog = $("#afkDialog");
 
 async function beginActiveSession() {
-  if (!state.member) return;
+  const accountKind = petAccountKind();
+  if (!accountKind) return;
   lastUserInteraction = Date.now();
   activityPaused = false;
   try {
-    const result = await api("/members/activity/reward", {
+    const result = await api(`/${accountKind}/activity/reward`, {
       method: "POST",
-      auth: "member",
+      auth: accountKind,
       body: JSON.stringify({ mode: "start" })
     });
-    setMemberPoints(result.points);
+    setPetAccountPoints(result.points);
   } catch {
     // La surveillance du serveur indiquera si la connexion est indisponible.
   }
 }
 
 async function rewardActiveMinute() {
+  const accountKind = petAccountKind();
   if (
-    !state.member ||
+    !accountKind ||
     activityPaused ||
     document.visibilityState !== "visible" ||
     Date.now() - lastUserInteraction >= 180_000
   ) return;
   try {
-    const result = await api("/members/activity/reward", {
+    const result = await api(`/${accountKind}/activity/reward`, {
       method: "POST",
-      auth: "member",
+      auth: accountKind,
       body: JSON.stringify({ mode: "minute" })
     });
-    setMemberPoints(result.points);
+    setPetAccountPoints(result.points);
     if (result.awarded) {
       toast(`+${result.awarded} pièces pour ton activité !`);
     }
@@ -1751,7 +1837,7 @@ function registerUserInteraction() {
 
 window.setInterval(() => {
   if (
-    state.member &&
+    petAccountKind() &&
     !activityPaused &&
     document.visibilityState === "visible" &&
     Date.now() - lastUserInteraction >= 180_000
@@ -1797,8 +1883,14 @@ window.setInterval(() => {
   }
 }, 30_000);
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+if (
+  "serviceWorker" in navigator &&
+  import.meta.env.PROD &&
+  ["http:", "https:"].includes(window.location.protocol)
+) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  });
 }
 
 updateAccountButton();
