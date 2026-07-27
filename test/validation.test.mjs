@@ -21,6 +21,16 @@ test("une inscription membre ne peut fournir aucun rôle staff", () => {
   assert.equal(result.success, false);
 });
 
+test("un identifiant membre accepte les accents et les espaces", () => {
+  const result = memberRegistrationSchema.safeParse({
+    displayName: "Étoile Pixel",
+    username: "Étoile Pixel",
+    password: "mot-de-passe-membre"
+  });
+
+  assert.equal(result.success, true);
+});
+
 test("l’acceptation crée uniquement des identifiants sans rôle administrateur", () => {
   const valid = acceptApplicationSchema.safeParse({
     username: "nouveau.modo",
