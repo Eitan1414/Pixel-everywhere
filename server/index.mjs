@@ -92,6 +92,7 @@ function publicUser(user) {
     active: Boolean(user.active),
     mustChangePassword: Boolean(user.must_change_password),
     isOwnerAdmin: isOwnerAdmin(user),
+    points: Number(user.points || 0),
     createdAt: user.created_at
   };
 }
@@ -119,7 +120,8 @@ function publicMember(member) {
 function currentUser(req) {
   return db
     .prepare(`
-      SELECT id, username, role, active, must_change_password, created_at
+      SELECT id, username, role, active, must_change_password, points,
+        last_activity_reward_at, created_at
       FROM staff_users
       WHERE id = ?
     `)
@@ -399,42 +401,7 @@ app.post(
   "/api/members/activity/reward",
   authenticateMember,
   requireActiveMember,
-  (req, res) => {
-    const input = parse(activityRewardSchema, req, res);
-    if (!input) return;
-    if (input.mode === "start") {
-      db.prepare(`
-        UPDATE member_users
-        SET last_activity_reward_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(req.currentMember.id);
-      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
-    }
-    const lastReward = req.currentMember.last_activity_reward_at
-      ? new Date(`${req.currentMember.last_activity_reward_at}Z`).getTime()
-      : 0;
-    const elapsed = Date.now() - lastReward;
-
-    if (!lastReward) {
-      db.prepare(`
-        UPDATE member_users
-        SET last_activity_reward_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `).run(req.currentMember.id);
-      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
-    }
-    if (elapsed < 55_000) {
-      return res.json({ awarded: 0, points: Number(req.currentMember.points || 0) });
-    }
-
-    db.prepare(`
-      UPDATE member_users
-      SET points = points + 5, last_activity_reward_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(req.currentMember.id);
-    const updated = currentMember(req);
-    res.json({ awarded: 5, points: Number(updated.points) });
-  }
+  (req, res) => rewardActivity(req, res, "member")
 );
 
 const shopItems = {
@@ -451,87 +418,168 @@ const petActions = {
   walk: { cost: 15, cooldownSeconds: 60, label: "Promener Pixel" }
 };
 
+function rewardActivity(req, res, accountKind) {
+  const staff = accountKind === "staff";
+  const account = staff ? req.currentUser : req.currentMember;
+  const table = staff ? "staff_users" : "member_users";
+  const refreshAccount = staff ? currentUser : currentMember;
+  const input = parse(activityRewardSchema, req, res);
+  if (!input) return;
+
+  if (input.mode === "start") {
+    db.prepare(`
+      UPDATE ${table}
+      SET last_activity_reward_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(account.id);
+    return res.json({ awarded: 0, points: Number(account.points || 0) });
+  }
+
+  const lastReward = account.last_activity_reward_at
+    ? new Date(`${account.last_activity_reward_at}Z`).getTime()
+    : 0;
+  const elapsed = Date.now() - lastReward;
+
+  if (!lastReward) {
+    db.prepare(`
+      UPDATE ${table}
+      SET last_activity_reward_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(account.id);
+    return res.json({ awarded: 0, points: Number(account.points || 0) });
+  }
+  if (elapsed < 55_000) {
+    return res.json({ awarded: 0, points: Number(account.points || 0) });
+  }
+
+  db.prepare(`
+    UPDATE ${table}
+    SET points = points + 5, last_activity_reward_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(account.id);
+  const updated = refreshAccount(req);
+  return res.json({ awarded: 5, points: Number(updated.points) });
+}
+
+function purchasePixelItem(req, res, accountKind) {
+  const staff = accountKind === "staff";
+  const account = staff ? req.currentUser : req.currentMember;
+  const table = staff ? "staff_users" : "member_users";
+  const refreshAccount = staff ? currentUser : currentMember;
+  const input = parse(shopPurchaseSchema, req, res);
+  if (!input) return;
+  const product = shopItems[input.item];
+  if (Number(account.points) < product.cost) {
+    return res.status(409).json({ error: "Tu n’as pas assez de pièces." });
+  }
+  db.prepare(`
+    UPDATE ${table}
+    SET points = points - ?
+    WHERE id = ? AND points >= ?
+  `).run(product.cost, account.id, product.cost);
+  const updated = refreshAccount(req);
+  return res.json({
+    ok: true,
+    item: input.item,
+    label: product.label,
+    cost: product.cost,
+    points: Number(updated.points)
+  });
+}
+
+function performPixelAction(req, res, accountKind) {
+  const staff = accountKind === "staff";
+  const account = staff ? req.currentUser : req.currentMember;
+  const accountTable = staff ? "staff_users" : "member_users";
+  const actionTable = staff ? "staff_pet_actions" : "member_pet_actions";
+  const actorColumn = staff ? "staff_id" : "member_id";
+  const refreshAccount = staff ? currentUser : currentMember;
+  const input = parse(petActionSchema, req, res);
+  if (!input) return;
+  const action = petActions[input.action];
+  const previous = db.prepare(`
+    SELECT last_used_at
+    FROM ${actionTable}
+    WHERE ${actorColumn} = ? AND action = ?
+  `).get(account.id, input.action);
+
+  if (previous) {
+    const lastUsedAt = new Date(`${previous.last_used_at}Z`).getTime();
+    const remainingMs = action.cooldownSeconds * 1000 - (Date.now() - lastUsedAt);
+    if (remainingMs > 0) {
+      const retryAfter = Math.ceil(remainingMs / 1000);
+      return res.status(429).json({
+        error: `Pixel doit souffler encore ${retryAfter} seconde${retryAfter > 1 ? "s" : ""} avant cette action.`,
+        code: "PET_ACTION_COOLDOWN",
+        retryAfter
+      });
+    }
+  }
+  if (Number(account.points) < action.cost) {
+    return res.status(409).json({
+      error: `${action.label} demande ${action.cost} pièces.`
+    });
+  }
+
+  db.transaction(() => {
+    db.prepare(`
+      UPDATE ${accountTable}
+      SET points = points - ?
+      WHERE id = ? AND points >= ?
+    `).run(action.cost, account.id, action.cost);
+    db.prepare(`
+      INSERT INTO ${actionTable} (${actorColumn}, action, last_used_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(${actorColumn}, action)
+      DO UPDATE SET last_used_at = CURRENT_TIMESTAMP
+    `).run(account.id, input.action);
+  });
+  const updated = refreshAccount(req);
+  return res.json({
+    ok: true,
+    action: input.action,
+    cost: action.cost,
+    cooldownSeconds: action.cooldownSeconds,
+    points: Number(updated.points)
+  });
+}
+
 app.post(
   "/api/members/shop/purchase",
   authenticateMember,
   requireActiveMember,
-  (req, res) => {
-    const input = parse(shopPurchaseSchema, req, res);
-    if (!input) return;
-    const product = shopItems[input.item];
-    if (Number(req.currentMember.points) < product.cost) {
-      return res.status(409).json({ error: "Tu n’as pas assez de pièces." });
-    }
-    db.prepare(`
-      UPDATE member_users
-      SET points = points - ?
-      WHERE id = ? AND points >= ?
-    `).run(product.cost, req.currentMember.id, product.cost);
-    const updated = currentMember(req);
-    res.json({
-      ok: true,
-      item: input.item,
-      label: product.label,
-      cost: product.cost,
-      points: Number(updated.points)
-    });
-  }
+  (req, res) => purchasePixelItem(req, res, "member")
 );
 
 app.post(
   "/api/members/pixel/action",
   authenticateMember,
   requireActiveMember,
-  (req, res) => {
-    const input = parse(petActionSchema, req, res);
-    if (!input) return;
-    const action = petActions[input.action];
-    const previous = db.prepare(`
-      SELECT last_used_at
-      FROM member_pet_actions
-      WHERE member_id = ? AND action = ?
-    `).get(req.currentMember.id, input.action);
+  (req, res) => performPixelAction(req, res, "member")
+);
 
-    if (previous) {
-      const lastUsedAt = new Date(`${previous.last_used_at}Z`).getTime();
-      const remainingMs = action.cooldownSeconds * 1000 - (Date.now() - lastUsedAt);
-      if (remainingMs > 0) {
-        const retryAfter = Math.ceil(remainingMs / 1000);
-        return res.status(429).json({
-          error: `Pixel doit souffler encore ${retryAfter} seconde${retryAfter > 1 ? "s" : ""} avant cette action.`,
-          code: "PET_ACTION_COOLDOWN",
-          retryAfter
-        });
-      }
-    }
-    if (Number(req.currentMember.points) < action.cost) {
-      return res.status(409).json({
-        error: `${action.label} demande ${action.cost} pièces.`
-      });
-    }
+app.post(
+  "/api/staff/activity/reward",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => rewardActivity(req, res, "staff")
+);
 
-    db.transaction(() => {
-      db.prepare(`
-        UPDATE member_users
-        SET points = points - ?
-        WHERE id = ? AND points >= ?
-      `).run(action.cost, req.currentMember.id, action.cost);
-      db.prepare(`
-        INSERT INTO member_pet_actions (member_id, action, last_used_at)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        ON CONFLICT(member_id, action)
-        DO UPDATE SET last_used_at = CURRENT_TIMESTAMP
-      `).run(req.currentMember.id, input.action);
-    });
-    const updated = currentMember(req);
-    res.json({
-      ok: true,
-      action: input.action,
-      cost: action.cost,
-      cooldownSeconds: action.cooldownSeconds,
-      points: Number(updated.points)
-    });
-  }
+app.post(
+  "/api/staff/shop/purchase",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => purchasePixelItem(req, res, "staff")
+);
+
+app.post(
+  "/api/staff/pixel/action",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  (req, res) => performPixelAction(req, res, "staff")
 );
 
 app.post(
