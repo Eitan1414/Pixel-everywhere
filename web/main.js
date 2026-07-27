@@ -10,6 +10,7 @@ const state = {
   memberMessages: [],
   memberApplications: [],
   unreadCount: 0,
+  points: Number(JSON.parse(localStorage.getItem("pixel-member") || "null")?.points || 0),
   applications: [],
   activeApplication: null,
   pet: JSON.parse(localStorage.getItem("pixel-pet") || "null")
@@ -202,12 +203,14 @@ function clearSession() {
 function saveMemberSession(token, member) {
   state.memberToken = token;
   state.member = member;
+  state.points = Number(member.points || 0);
   localStorage.setItem("pixel-member-token", token);
   localStorage.setItem("pixel-member", JSON.stringify(member));
   updateAccountButton();
   updateAccountDialog();
   updateMemberAccess();
   loadMemberInbox({ notify: false });
+  beginActiveSession();
 }
 
 function clearMemberSession() {
@@ -216,11 +219,13 @@ function clearMemberSession() {
   state.memberMessages = [];
   state.memberApplications = [];
   state.unreadCount = 0;
+  state.points = 0;
   localStorage.removeItem("pixel-member-token");
   localStorage.removeItem("pixel-member");
   updateAccountButton();
   updateAccountDialog();
   updateMemberAccess();
+  if ($("#afkDialog").open) $("#afkDialog").close();
 }
 
 function updateAccountButton() {
@@ -235,9 +240,21 @@ function updateAccountButton() {
 
 function updateMemberAccess() {
   $("#memberInboxButton").classList.toggle("hidden", !state.member);
+  $("#pointsButton").classList.toggle("hidden", !state.member);
+  $("#pointsBalance").textContent = String(state.points);
+  $("#memberPointsBalance").textContent = `${state.points} pièce${state.points > 1 ? "s" : ""}`;
   const badge = $("#inboxBadge");
   badge.textContent = String(state.unreadCount);
   badge.classList.toggle("hidden", !state.member || state.unreadCount === 0);
+}
+
+function setMemberPoints(points) {
+  state.points = Math.max(0, Number(points || 0));
+  if (state.member) {
+    state.member.points = state.points;
+    localStorage.setItem("pixel-member", JSON.stringify(state.member));
+  }
+  updateMemberAccess();
 }
 
 function navigate(page) {
@@ -389,6 +406,11 @@ $("#accountButton").addEventListener("click", () => {
   loginDialog.showModal();
 });
 $("#memberInboxButton").addEventListener("click", () => navigate("member-inbox"));
+$("#pointsButton").addEventListener("click", () => {
+  selectAccountTab("member");
+  updateAccountDialog();
+  loginDialog.showModal();
+});
 $("#closeLogin").addEventListener("click", () => loginDialog.close());
 
 function selectAccountTab(tab) {
@@ -476,6 +498,80 @@ $("#openMemberAccountButton").addEventListener("click", () => {
 $("#openMemberInboxButton").addEventListener("click", () => {
   loginDialog.close();
   navigate("member-inbox");
+});
+const bugReportDialog = $("#bugReportDialog");
+const xpConversionDialog = $("#xpConversionDialog");
+$("#openBugReportButton").addEventListener("click", () => {
+  loginDialog.close();
+  $("#bugReportForm").reset();
+  setFormStatus($(".form-status", $("#bugReportForm")), "");
+  bugReportDialog.showModal();
+});
+$("#closeBugReport").addEventListener("click", () => bugReportDialog.close());
+$("#openXpConversionButton").addEventListener("click", () => {
+  loginDialog.close();
+  $("#xpConversionForm").reset();
+  $("#xpPointsAmount").max = String(Math.max(1, state.points));
+  $("#xpConversionPreview").textContent = "1 pièce = 15 XP";
+  setFormStatus($(".form-status", $("#xpConversionForm")), "");
+  xpConversionDialog.showModal();
+});
+$("#closeXpConversion").addEventListener("click", () => xpConversionDialog.close());
+$("#xpPointsAmount").addEventListener("input", (event) => {
+  const points = Math.max(0, Number(event.currentTarget.value || 0));
+  $("#xpConversionPreview").textContent =
+    `${points} pièce${points > 1 ? "s" : ""} = ${(points * 15).toLocaleString("fr-FR")} XP PDD`;
+});
+
+$("#bugReportForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = $(".form-status", form);
+  const button = $("button[type='submit']", form);
+  button.disabled = true;
+  setFormStatus(status, "Transmission à tout le staff…");
+  try {
+    const result = await api("/members/bug-reports", {
+      method: "POST",
+      auth: "member",
+      body: JSON.stringify(Object.fromEntries(new FormData(form)))
+    });
+    form.reset();
+    setFormStatus(status, result.message, "success");
+    window.setTimeout(() => bugReportDialog.close(), 1100);
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#xpConversionForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const status = $(".form-status", form);
+  const button = $("button[type='submit']", form);
+  button.disabled = true;
+  setFormStatus(status, "Envoi de la demande…");
+  try {
+    const result = await api("/members/xp-conversions", {
+      method: "POST",
+      auth: "member",
+      body: JSON.stringify(Object.fromEntries(new FormData(form)))
+    });
+    setMemberPoints(result.points);
+    form.reset();
+    setFormStatus(
+      status,
+      `${result.pointsSpent} pièces réservées pour ${result.xpAmount.toLocaleString("fr-FR")} XP.`,
+      "success"
+    );
+    window.setTimeout(() => xpConversionDialog.close(), 1300);
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
 });
 $("#openStaffButton").addEventListener("click", () => {
   loginDialog.close();
@@ -714,7 +810,7 @@ async function loadMemberInbox({ notify = true } = {}) {
     const data = await api("/members/inbox", { auth: "member" });
     state.memberMessages = data.messages;
     state.unreadCount = data.unreadCount;
-    updateMemberAccess();
+    setMemberPoints(data.points);
     if (!data.messages.length) {
       list.replaceChildren(
         element("div", { className: "empty-state", text: "Tu n’as reçu aucun message pour le moment." })
@@ -980,6 +1076,7 @@ $("#rejectApplicationForm").addEventListener("submit", async (event) => {
 });
 
 async function loadMessages() {
+  loadStaffAlerts();
   const list = $("#staffMessagesList");
   list.replaceChildren(element("div", { className: "loading-card", text: "Chargement…" }));
   try {
@@ -1005,6 +1102,78 @@ async function loadMessages() {
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
+}
+
+async function loadStaffAlerts() {
+  const list = $("#staffAlertsList");
+  list.replaceChildren(element("div", { className: "loading-card", text: "Chargement des demandes…" }));
+  try {
+    const data = await api("/staff/alerts");
+    if (!data.alerts.length) {
+      list.replaceChildren(
+        element("div", { className: "empty-state compact", text: "Aucune demande membre." })
+      );
+      return;
+    }
+    list.replaceChildren(...data.alerts.map(renderStaffAlert));
+  } catch (error) {
+    list.replaceChildren(element("div", { className: "empty-state compact", text: error.message }));
+  }
+}
+
+function renderStaffAlert(alert) {
+  const isBug = alert.alert_type === "bug_report";
+  const card = element("article", {
+    className: `staff-alert-card ${alert.resolved ? "resolved" : ""}`.trim()
+  }, [
+    element("div", { className: "staff-alert-head" }, [
+      element("strong", { text: isBug ? "🐞 Signalement de bug" : "✦ Conversion XP PDD" }),
+      element("time", { text: formatDate(alert.created_at) })
+    ]),
+    element("p", { text: alert.body })
+  ]);
+  if (alert.resolved) {
+    card.append(element("small", { className: "resolved-label", text: "Déjà traité par le staff" }));
+    return card;
+  }
+
+  const actions = element("div", { className: "staff-alert-actions" });
+  const approve = element("button", {
+    type: "button",
+    className: "primary-button",
+    text: isBug ? "Valider • +50 pièces" : "Marquer les XP ajoutés"
+  });
+  const reject = element("button", {
+    type: "button",
+    className: "danger-button",
+    text: isBug ? "Refuser la récompense" : "Refuser et rembourser"
+  });
+  const decide = async (decision) => {
+    approve.disabled = true;
+    reject.disabled = true;
+    try {
+      const path = isBug
+        ? `/staff/bug-reports/${alert.reference_id}/decision`
+        : `/staff/xp-conversions/${alert.reference_id}/decision`;
+      await api(path, {
+        method: "POST",
+        body: JSON.stringify({ decision })
+      });
+      toast(isBug && decision === "approved"
+        ? "Bug validé : 50 pièces attribuées."
+        : "Demande traitée et membre prévenu.");
+      await loadStaffAlerts();
+    } catch (error) {
+      toast(error.message);
+      approve.disabled = false;
+      reject.disabled = false;
+    }
+  };
+  approve.addEventListener("click", () => decide(isBug ? "approved" : "completed"));
+  reject.addEventListener("click", () => decide("rejected"));
+  actions.append(approve, reject);
+  card.append(actions);
+  return card;
 }
 
 $("#staffMessageForm").addEventListener("submit", async (event) => {
@@ -1247,6 +1416,56 @@ $$("[data-pet-action]").forEach((button) => {
   button.addEventListener("click", () => handlePetAction(button.dataset.petAction));
 });
 
+const shopEffects = {
+  treat: { hunger: 12, joy: 6, xp: 4, diary: "Pixel a savouré une délicieuse friandise.", reaction: "Délicieux ! 🍪", particle: "🍪" },
+  meal: { hunger: 28, joy: 10, xp: 8, diary: "Pixel a dégusté un bon repas bien chaud.", reaction: "Quel bon repas ! 🍜", particle: "🍜" },
+  feast: { hunger: 45, joy: 22, xp: 15, diary: "Pixel a profité d’un véritable festin PDD.", reaction: "Incroyable festin ! 🍱", particle: "⭐" }
+};
+
+$$("[data-shop-item]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    if (!state.member) {
+      selectAccountTab("member");
+      updateAccountDialog();
+      loginDialog.showModal();
+      toast("Connecte un compte membre pour utiliser tes pièces.");
+      return;
+    }
+    const item = button.dataset.shopItem;
+    button.disabled = true;
+    setFormStatus($("#pixelShopStatus"), "Achat en cours…");
+    try {
+      const result = await api("/members/shop/purchase", {
+        method: "POST",
+        auth: "member",
+        body: JSON.stringify({ item })
+      });
+      setMemberPoints(result.points);
+      const effect = shopEffects[item];
+      const pet = currentPet();
+      pet.hunger = Math.min(100, pet.hunger + effect.hunger);
+      pet.joy = Math.min(100, pet.joy + effect.joy);
+      completePetInteraction(
+        pet,
+        effect.xp,
+        effect.diary,
+        "pet-eat",
+        effect.reaction,
+        effect.particle
+      );
+      setFormStatus(
+        $("#pixelShopStatus"),
+        `${result.label} acheté pour ${result.cost} pièces.`,
+        "success"
+      );
+    } catch (error) {
+      setFormStatus($("#pixelShopStatus"), error.message, "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+});
+
 $("#petMascot").addEventListener("click", () => {
   const pet = currentPet();
   pet.joy = Math.min(100, pet.joy + 2);
@@ -1279,8 +1498,10 @@ async function restoreMemberSession() {
   try {
     const data = await api("/members/me", { auth: "member" });
     state.member = data.member;
+    state.points = Number(data.member.points || 0);
     localStorage.setItem("pixel-member", JSON.stringify(data.member));
     await loadMemberInbox({ notify: true });
+    await beginActiveSession();
   } catch {
     clearMemberSession();
   }
@@ -1289,6 +1510,76 @@ async function restoreMemberSession() {
   updateMemberAccess();
   prepareApplicationPage();
 }
+
+let lastUserInteraction = Date.now();
+let activityPaused = false;
+const afkDialog = $("#afkDialog");
+
+async function beginActiveSession() {
+  if (!state.member) return;
+  lastUserInteraction = Date.now();
+  activityPaused = false;
+  try {
+    const result = await api("/members/activity/reward", {
+      method: "POST",
+      auth: "member",
+      body: JSON.stringify({ mode: "start" })
+    });
+    setMemberPoints(result.points);
+  } catch {
+    // La surveillance du serveur indiquera si la connexion est indisponible.
+  }
+}
+
+async function rewardActiveMinute() {
+  if (
+    !state.member ||
+    activityPaused ||
+    document.visibilityState !== "visible" ||
+    Date.now() - lastUserInteraction >= 180_000
+  ) return;
+  try {
+    const result = await api("/members/activity/reward", {
+      method: "POST",
+      auth: "member",
+      body: JSON.stringify({ mode: "minute" })
+    });
+    setMemberPoints(result.points);
+    if (result.awarded) {
+      toast(`+${result.awarded} pièces pour ton activité !`);
+    }
+  } catch {
+    // Une minute non synchronisée n’est pas créditée.
+  }
+}
+
+function registerUserInteraction() {
+  if (!activityPaused) lastUserInteraction = Date.now();
+}
+
+["pointerdown", "keydown", "touchstart", "scroll"].forEach((eventName) => {
+  window.addEventListener(eventName, registerUserInteraction, { passive: true });
+});
+
+window.setInterval(() => {
+  if (
+    state.member &&
+    !activityPaused &&
+    document.visibilityState === "visible" &&
+    Date.now() - lastUserInteraction >= 180_000
+  ) {
+    activityPaused = true;
+    if (!afkDialog.open) afkDialog.showModal();
+  }
+}, 5_000);
+
+window.setInterval(rewardActiveMinute, 60_000);
+
+$("#resumeActivityButton").addEventListener("click", async () => {
+  afkDialog.close();
+  await beginActiveSession();
+  toast("Gain de pièces repris : +5 par minute active.");
+});
 
 LocalNotifications.addListener("localNotificationActionPerformed", () => {
   if (state.member) navigate("member-inbox");
@@ -1311,6 +1602,12 @@ document.addEventListener("visibilitychange", () => {
 
 window.setInterval(() => checkServerAvailability(), 30_000);
 window.setTimeout(() => checkServerAvailability(), 1200);
+
+window.setInterval(() => {
+  if (state.user && !state.user.mustChangePassword && document.visibilityState === "visible") {
+    loadStaffAlerts();
+  }
+}, 30_000);
 
 if ("serviceWorker" in navigator && import.meta.env.PROD) {
   window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
