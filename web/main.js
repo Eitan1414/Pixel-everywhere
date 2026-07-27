@@ -459,7 +459,7 @@ async function openStaffWorkspace() {
     `${state.user.username} • ${state.user.role === "admin" ? "Administrateur" : "Modérateur"}`;
   $("#passwordChangePanel").classList.toggle("hidden", !state.user.mustChangePassword);
   $("#staffWorkspace").classList.toggle("hidden", state.user.mustChangePassword);
-  $("#accountsTabButton").classList.toggle("hidden", state.user.role !== "admin");
+  $("#accountsTabButton").classList.toggle("hidden", !state.user.isOwnerAdmin);
 
   if (!state.user.mustChangePassword) loadApplications();
 }
@@ -693,6 +693,8 @@ const applicationDialog = $("#applicationDialog");
 $("#closeApplication").addEventListener("click", () => applicationDialog.close());
 const acceptApplicationDialog = $("#acceptApplicationDialog");
 $("#closeAcceptApplication").addEventListener("click", () => acceptApplicationDialog.close());
+const rejectApplicationDialog = $("#rejectApplicationDialog");
+$("#closeRejectApplication").addEventListener("click", () => rejectApplicationDialog.close());
 
 async function openApplication(application) {
   state.activeApplication = application;
@@ -718,12 +720,15 @@ function renderApplicationDetail(application, notes) {
   const content = $("#applicationDetailContent");
   const statusSelect = element("select");
   Object.entries(statusLabels).forEach(([value, label]) => {
-    if (value === "accepted" && application.status !== "accepted") return;
+    if (
+      ["accepted", "rejected"].includes(value) &&
+      application.status !== value
+    ) return;
     const option = element("option", { value, text: label });
     option.selected = value === application.status;
     statusSelect.append(option);
   });
-  statusSelect.disabled = application.status === "accepted";
+  statusSelect.disabled = ["accepted", "rejected"].includes(application.status);
   statusSelect.addEventListener("change", async () => {
     try {
       await api(`/staff/applications/${application.id}/status`, {
@@ -774,7 +779,7 @@ function renderApplicationDetail(application, notes) {
   let acceptButton;
   if (
     state.user?.role === "admin" &&
-    application.status !== "accepted" &&
+    !["accepted", "rejected"].includes(application.status) &&
     application.member_id
   ) {
     acceptButton = element("button", {
@@ -789,6 +794,28 @@ function renderApplicationDetail(application, notes) {
       $("#acceptApplicationForm").reset();
       setFormStatus($(".form-status", $("#acceptApplicationForm")), "");
       acceptApplicationDialog.showModal();
+    });
+  }
+
+  let rejectButton;
+  if (
+    state.user?.role === "admin" &&
+    !["accepted", "rejected"].includes(application.status) &&
+    application.member_id
+  ) {
+    rejectButton = element("button", {
+      type: "button",
+      className: "danger-button rejection-button",
+      text: "Refuser et prévenir le candidat"
+    });
+    rejectButton.addEventListener("click", () => {
+      state.activeApplication = application;
+      $("#rejectApplicationRecipient").textContent =
+        `Destinataire : ${application.member_display_name} (@${application.member_username}).`;
+      $("#rejectApplicationPreview").textContent =
+        `La candidature sera refusée au nom de ${state.user.username}. Le membre recevra immédiatement la décision dans sa messagerie privée.`;
+      setFormStatus($(".form-status", $("#rejectApplicationForm")), "");
+      rejectApplicationDialog.showModal();
     });
   }
 
@@ -810,7 +837,7 @@ function renderApplicationDetail(application, notes) {
       field("Reçue le", formatDate(application.created_at))
     ]),
     element("label", {}, [document.createTextNode("Statut"), statusSelect]),
-    acceptButton,
+    element("div", { className: "decision-actions" }, [acceptButton, rejectButton]),
     element("h3", { text: "Notes du staff" }),
     notesList,
     element("div", { className: "application-actions" }, [noteInput, noteButton])
@@ -837,6 +864,32 @@ $("#acceptApplicationForm").addEventListener("submit", async (event) => {
     acceptApplicationDialog.close();
     applicationDialog.close();
     toast("Candidature acceptée et identifiants envoyés au membre.");
+    await loadApplications();
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#rejectApplicationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const application = state.activeApplication;
+  if (!application) return;
+  const form = event.currentTarget;
+  const status = $(".form-status", form);
+  const button = $("button[type='submit']", form);
+  button.disabled = true;
+  setFormStatus(status, "Envoi de la décision au candidat…");
+  try {
+    await api(`/admin/applications/${application.id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    application.status = "rejected";
+    rejectApplicationDialog.close();
+    applicationDialog.close();
+    toast("Candidature refusée et candidat prévenu.");
     await loadApplications();
   } catch (error) {
     setFormStatus(status, error.message, "error");
