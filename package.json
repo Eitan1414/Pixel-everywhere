@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
+  "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n WEB,API -c cyan,magenta \"vite --host 0.0.0.0\" \"node --watch server/index.mjs\"",
@@ -12,6 +13,8 @@
     "cap:init": "cap add android",
     "cap:sync": "npm run build && cap sync android",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
+    "mac:preview": "npm run build && electron .",
+    "mac:build": "npm run build && electron-builder --mac --publish never",
     "test": "node --test"
   },
   "dependencies": {
@@ -31,7 +34,36 @@
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",
     "concurrently": "^9.2.1",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "vite": "^7.1.2"
+  },
+  "build": {
+    "appId": "com.pdd.pixeleverywhere",
+    "productName": "Pixel Everywhere",
+    "asar": true,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "www/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "icon": "public/assets/alpha-logo.png",
+      "identity": null,
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "artifactName": "Pixel-Everywhere-${version}-${arch}.${ext}"
+    }
   },
   "engines": {
     "node": ">=20"
