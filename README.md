@@ -12,6 +12,8 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 - messagerie membre privée avec badge non lu et notifications locales ;
 - acceptation d’une candidature avec création obligatoire d’identifiants
   modérateur temporaires et envoi automatique par **PDD Staff** ;
+- refus confirmé dans une fenêtre administrateur, avec décision professionnelle
+  envoyée automatiquement au membre par **PDD Staff** ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
@@ -119,6 +121,12 @@ inscription. L’acceptation est réservée à un administrateur : elle crée to
 un compte modérateur avec mot de passe temporaire, puis envoie les identifiants
 dans la messagerie du membre. Un administrateur ne peut pas désactiver son propre
 compte depuis l’application.
+
+Hors traitement des candidatures, seul le compte défini par
+`OWNER_ADMIN_USERNAME` (`Eitan14` par défaut) peut ouvrir le panneau de gestion,
+créer manuellement des comptes modérateur ou administrateur et activer/désactiver
+ces comptes. Les autres administrateurs peuvent accepter ou refuser une
+candidature, mais ne peuvent pas créer librement un compte staff.
 
 Les notifications locales avertissent le membre lorsque l’application est
 ouverte ou reprise. Les notifications reçues lorsque l’application est
