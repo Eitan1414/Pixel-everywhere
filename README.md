@@ -14,9 +14,9 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 - messagerie réservée à l’équipe ;
 - panneau administrateur pour créer et désactiver les comptes du staff ;
 - changement obligatoire du mot de passe temporaire à la première connexion ;
-- Tamagotchi Pixel interactif avec faim, joie et énergie ;
+- Tamagotchi Pixel immersif avec atelier jour/nuit, faim, joie, énergie, niveau et XP ;
 - assistant Pixel pour naviguer dans l’application ;
-- animation de démarrage avec Pixel et le logo PDD 2 ;
+- animation de démarrage dessinée avec Pixel et le logo PDD 2 ;
 - identité visuelle Alpha et crédits complets de l’équipe PDD.
 
 ## Sécurité des comptes
