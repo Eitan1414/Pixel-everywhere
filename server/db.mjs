@@ -217,6 +217,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (recipient_id) REFERENCES staff_users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS member_pet_actions (
+    member_id INTEGER NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('feed', 'pet', 'bounce', 'walk', 'sleep')),
+    last_used_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (member_id, action),
+    FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE
+  );
 `);
 
 const memberColumns = db.prepare("PRAGMA table_info(member_users)").all();
