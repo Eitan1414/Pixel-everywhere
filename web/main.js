@@ -51,7 +51,14 @@ async function api(path, options = {}) {
   }
   if (state.token) headers.Authorization = `Bearer ${state.token}`;
 
-  const response = await fetch(`${apiBase}${path}`, { ...options, headers });
+  let response;
+  try {
+    response = await fetch(`${apiBase}${path}`, { ...options, headers });
+  } catch {
+    throw new Error(
+      "Serveur Pixel Everywhere inaccessible. Vérifie que Termux est ouvert et que npm start fonctionne."
+    );
+  }
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || "Une erreur est survenue.");
@@ -550,4 +557,3 @@ if ("serviceWorker" in navigator && import.meta.env.PROD) {
 }
 
 updateStaffButton();
-
