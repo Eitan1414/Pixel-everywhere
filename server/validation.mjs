@@ -1,13 +1,20 @@
 import { z } from "zod";
 
+const memberUsernameSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .max(40)
+  .regex(/^[\p{L}\p{N}_. -]+$/u, "L’identifiant membre contient un caractère non autorisé.");
+
 export const loginSchema = z.object({
-  username: z.string().trim().min(3).max(32),
+  username: z.string().trim().min(3).max(40),
   password: z.string().min(8).max(128)
 });
 
 export const memberRegistrationSchema = z.object({
   displayName: z.string().trim().min(2).max(40),
-  username: z.string().trim().min(3).max(32).regex(/^[A-Za-z0-9_.-]+$/),
+  username: memberUsernameSchema,
   password: z.string().min(8).max(128)
 }).strict();
 
