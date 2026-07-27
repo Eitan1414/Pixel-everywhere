@@ -26,18 +26,5 @@ sed -i 's/#FFFFFF/#08090C/' \
 
 for target in android/app/src/main/res/drawable*/splash.png; do
   dimensions="$(identify -format '%wx%h' "$target")"
-  width="${dimensions%x*}"
-  height="${dimensions#*x}"
-  if [ "$width" -lt "$height" ]; then
-    side=$((width * 80 / 100))
-  else
-    side=$((height * 80 / 100))
-  fi
-  convert "$source_image" \
-    -resize "${side}x${side}" \
-    -gravity center \
-    -background "#08090C" \
-    -extent "$dimensions" \
-    "$target"
+  convert -size "$dimensions" xc:"#000000" "$target"
 done
-
