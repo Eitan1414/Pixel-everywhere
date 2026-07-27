@@ -533,6 +533,42 @@ button {
   font-size: 0.65rem;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.inbox-button {
+  position: relative;
+  display: grid;
+  width: 41px;
+  height: 41px;
+  place-items: center;
+  border: 1px solid rgba(255, 107, 25, 0.38);
+  border-radius: 50%;
+  color: var(--orange-2);
+  font-size: 1.05rem;
+  background: rgba(255, 107, 25, 0.09);
+  cursor: pointer;
+}
+
+.inbox-button b {
+  position: absolute;
+  top: -5px;
+  right: -4px;
+  display: grid;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  place-items: center;
+  border: 2px solid #0b0c10;
+  border-radius: 999px;
+  color: white;
+  font-size: 0.65rem;
+  background: var(--danger);
+}
+
 main {
   padding: 22px 18px;
 }
@@ -820,6 +856,115 @@ h2 {
   border-radius: 14px;
   color: #bfeff1;
   background: rgba(18, 214, 223, 0.07);
+}
+
+.member-gate {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  padding: 18px;
+}
+
+.member-gate img {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.member-gate h3,
+.member-gate p {
+  margin-bottom: 8px;
+}
+
+.member-gate p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.application-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 13px;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+}
+
+.application-summary div {
+  display: grid;
+  gap: 3px;
+}
+
+.application-summary small {
+  color: var(--muted);
+}
+
+.member-inbox-list {
+  display: grid;
+  gap: 12px;
+}
+
+.member-mail {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 19px;
+  background: linear-gradient(145deg, #171a22, #101217);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.18);
+}
+
+.member-mail.unread {
+  border-color: rgba(255, 107, 25, 0.55);
+  background: linear-gradient(145deg, rgba(255, 107, 25, 0.12), #11131a 55%);
+  cursor: pointer;
+}
+
+.member-mail-sender {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.member-mail-sender img {
+  width: 47px;
+  height: 47px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  object-fit: cover;
+  background: #000;
+}
+
+.member-mail-sender div {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+
+.member-mail time {
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.member-mail h3 {
+  margin: 15px 0 8px;
+  color: var(--orange-2);
+}
+
+.member-mail p {
+  margin: 0;
+  color: #d9dce3;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.unread-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 14px var(--orange);
 }
 
 .form-card,
@@ -1142,6 +1287,25 @@ dialog::backdrop {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
+}
+
+.acceptance-button {
+  width: 100%;
+  margin: 14px 0 19px;
+}
+
+.acceptance-card {
+  padding-top: 27px;
+}
+
+.acceptance-explainer {
+  padding: 12px;
+  border: 1px solid rgba(18, 214, 223, 0.25);
+  border-radius: 13px;
+  color: #bfeff1;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  background: rgba(18, 214, 223, 0.06);
 }
 
 .note-list,
@@ -1977,12 +2141,16 @@ dialog::backdrop {
   }
 
   .staff-button {
-    max-width: 92px;
+    width: 42px;
+    height: 42px;
+    justify-content: center;
     overflow: hidden;
-    padding: 8px 10px;
-    font-size: 0.76rem;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .staff-button span {
+    font-size: 0.72rem;
   }
 
   .bottom-nav {
