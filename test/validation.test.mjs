@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   acceptApplicationSchema,
   activityRewardSchema,
+  appRatingSchema,
   memberRegistrationSchema,
   petActionSchema,
   xpConversionSchema
@@ -56,4 +57,19 @@ test("le gain d’activité n’accepte que le démarrage ou une minute active",
 test("seules les actions Pixel connues peuvent dépenser des pièces", () => {
   assert.equal(petActionSchema.safeParse({ action: "walk" }).success, true);
   assert.equal(petActionSchema.safeParse({ action: "spam" }).success, false);
+});
+
+test("une évaluation accepte uniquement de 1 à 5 étoiles et un commentaire", () => {
+  assert.equal(appRatingSchema.safeParse({
+    stars: 5,
+    comment: "Une application très agréable."
+  }).success, true);
+  assert.equal(appRatingSchema.safeParse({
+    stars: 6,
+    comment: "Note invalide."
+  }).success, false);
+  assert.equal(appRatingSchema.safeParse({
+    stars: 4,
+    comment: ""
+  }).success, false);
 });
