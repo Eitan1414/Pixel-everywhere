@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "concurrently -n WEB,API -c cyan,magenta \"vite --host 0.0.0.0\" \"node --watch server/index.mjs\"",
     "start": "node server/index.mjs",
+    "termux:upgrade-server": "bash scripts/termux-upgrade-server.sh",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "cap:init": "cap add android",
