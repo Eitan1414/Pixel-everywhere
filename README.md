@@ -119,6 +119,18 @@ tunnel HTTPS `https://reprimand-overprice-quickly.ngrok-free.dev`. Les autres
 administrateurs peuvent ainsi utiliser l’application depuis leur propre
 appareil tant que Termux, le serveur Node.js et ngrok restent actifs.
 
+## Compiler l’application macOS avec GitHub Actions
+
+Le workflow `.github/workflows/macos.yml` génère une application Electron
+universelle compatible avec les Mac Intel et Apple Silicon.
+
+1. Ouvrir **Actions > Compiler Pixel Everywhere macOS > Run workflow**.
+2. Télécharger l’artefact **Pixel-Everywhere-macOS**.
+3. Décompresser l’archive ZIP puis ouvrir `Pixel Everywhere.app`.
+
+L’application n’est pas signée avec un certificat Apple. Au premier lancement,
+utiliser si nécessaire le clic droit puis **Ouvrir** dans le Finder.
+
 ## Comptes et autorisations
 
 | Type de compte | Tamagotchi | Envoyer une candidature | Messagerie membre | Espace staff | Créer des comptes staff | Accepter une candidature |
