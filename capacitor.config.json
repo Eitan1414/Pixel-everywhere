@@ -5,6 +5,7 @@
   "bundledWebRuntime": false,
   "server": {
     "androidScheme": "https",
+    "cleartext": true,
     "allowNavigation": [
       "*.ngrok-free.app",
       "*.ngrok-free.dev",
