@@ -145,27 +145,6 @@
           </div>
           <article class="pet-card card">
             <div id="petStage" class="pet-stage pet-day">
-              <div class="pet-sky" aria-hidden="true">
-                <span class="pet-sun"></span>
-                <span class="pet-moon">☾</span>
-                <i class="pet-cloud cloud-one"></i>
-                <i class="pet-cloud cloud-two"></i>
-                <span class="pet-stars">· ✦ ·　✧　·</span>
-              </div>
-              <div class="pet-room" aria-hidden="true">
-                <div class="pet-picture"><span>★</span><small>PDD</small></div>
-                <div class="pet-shelf"><i></i><i></i><i></i></div>
-                <div class="pet-rug"></div>
-              </div>
-              <div class="pet-sketch-house" aria-hidden="true">
-                <div class="sketch-window"><i></i><i></i><span>☁</span></div>
-                <div class="sketch-curtain left"></div>
-                <div class="sketch-curtain right"></div>
-                <div class="sketch-table"><span>✎</span></div>
-                <div class="sketch-plant"><i></i><span>♡</span></div>
-                <div class="sketch-wall-doodles">★　PDD　☾</div>
-                <div class="sketch-floor-lines"></div>
-              </div>
               <button class="pet-object pet-bowl" type="button" data-pet-action="feed" aria-label="Donner à manger à Pixel">🍊</button>
               <button class="pet-object pet-ball" type="button" data-pet-action="bounce" aria-label="Jouer avec Pixel">★</button>
               <button class="pet-object pet-bed" type="button" data-pet-action="sleep" aria-label="Faire dormir Pixel">Zz</button>
@@ -212,10 +191,10 @@
             </section>
             <div class="pet-diary">
               <span aria-hidden="true">✎</span>
-              <div><small>Journal de Pixel</small><p id="petDiary">Pixel vient d’arriver dans son atelier.</p></div>
+              <div><small>Journal de Pixel</small><p id="petDiary">Pixel vient de te rejoindre.</p></div>
             </div>
           </article>
-          <p class="pet-hint">Touche Pixel pour le caresser. Glisse vers la gauche ou la droite pour changer de catégorie. Son atelier évolue selon l’heure réelle.</p>
+          <p class="pet-hint">Touche Pixel pour le caresser. Un geste clairement horizontal permet de changer de catégorie ; le défilement vertical reste dans le Tamagotchi.</p>
         </section>
 
         <section id="page-application" class="page">
@@ -505,6 +484,8 @@
           <div id="staffSignedIn" class="member-profile hidden">
             <p>Session staff active</p>
             <strong id="staffDialogIdentity"></strong>
+            <div class="member-wallet"><span>◆</span><strong id="staffPointsBalance">0 pièce</strong></div>
+            <small class="account-help">Ce compte staff peut gagner des pièces et interagir avec le Tamagotchi Pixel.</small>
             <button id="openStaffButton" class="primary-button" type="button">Ouvrir l’espace staff</button>
           </div>
           <form id="loginForm" class="account-form active">
