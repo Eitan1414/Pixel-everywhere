@@ -14,7 +14,6 @@ jobs:
   macos:
     runs-on: macos-14
     env:
-      VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
     steps:
@@ -25,6 +24,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Installer les dépendances
         run: npm install --no-audit --no-fund
@@ -43,11 +43,29 @@ jobs:
       - name: Tester le projet
         run: npm test
 
-      - name: Construire les applications macOS Intel et Apple Silicon
+      - name: Construire et contrôler le bundle web macOS
         shell: bash
         run: |
           set -euo pipefail
           npm run build
+
+          test -f www/index.html
+          grep -q 'id="serverSettingsPanel"' www/index.html
+          grep -q 'Serveur PDD' www/index.html
+
+          SETTINGS_BUNDLE="$(grep -rl --include='*.js' 'pixel-api-base-url' www/assets | head -n 1 || true)"
+          test -n "$SETTINGS_BUNDLE"
+          echo "Panneau Serveur PDD intégré dans : $SETTINGS_BUNDLE"
+
+          if grep -R -q 'reprimand-overprice-quickly.ngrok-free.dev' www; then
+            echo "Une ancienne adresse ngrok est encore intégrée au bundle." >&2
+            exit 1
+          fi
+
+      - name: Construire les applications macOS Intel et Apple Silicon
+        shell: bash
+        run: |
+          set -euo pipefail
           rm -rf release
           npx electron-builder --mac dir --x64 --config.directories.output=release/x64
           npx electron-builder --mac dir --arm64 --config.directories.output=release/arm64
@@ -77,14 +95,17 @@ jobs:
             test -x "$app_path/Contents/MacOS/$executable_name"
             file "$app_path/Contents/MacOS/$executable_name"
             lipo -archs "$app_path/Contents/MacOS/$executable_name" | grep -qw "$expected_arch"
+
+            test -f "$app_path/Contents/Resources/app.asar"
+            codesign -dv --verbose=4 "$app_path" 2>&1 | grep -q 'Signature=adhoc'
           }
 
           verify_and_sign "$X64_APP" "x86_64"
           verify_and_sign "$ARM64_APP" "arm64"
 
           mkdir -p release/final
-          X64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-x64.zip"
-          ARM64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-arm64.zip"
+          X64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-x64-signed.zip"
+          ARM64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-arm64-signed.zip"
 
           ditto -c -k --sequesterRsrc --keepParent "$X64_APP" "$X64_ZIP"
           ditto -c -k --sequesterRsrc --keepParent "$ARM64_APP" "$ARM64_ZIP"
@@ -109,9 +130,9 @@ jobs:
 
           shasum -a 256 "$X64_ZIP" "$ARM64_ZIP" > release/final/SHA256SUMS.txt
 
-      - name: Publier les applications macOS vérifiées
+      - name: Publier les applications macOS signées et vérifiées
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-macOS-verified
+          name: Pixel-Everywhere-macOS-signed-verified
           path: release/final/*
           if-no-files-found: error
