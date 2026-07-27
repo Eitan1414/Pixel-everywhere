@@ -50,10 +50,16 @@
             <small>Pixel Difficult Drawer — Official Application</small>
           </span>
         </button>
-        <button id="accountButton" class="staff-button" type="button">
-          <span aria-hidden="true">●</span>
-          Compte
-        </button>
+        <div class="topbar-actions">
+          <button id="memberInboxButton" class="inbox-button hidden" type="button" aria-label="Ouvrir ma messagerie">
+            <span aria-hidden="true">✉</span>
+            <b id="inboxBadge" class="hidden">0</b>
+          </button>
+          <button id="accountButton" class="staff-button" type="button">
+            <span aria-hidden="true">●</span>
+            Compte
+          </button>
+        </div>
       </header>
 
       <main id="mainContent">
@@ -190,9 +196,18 @@
             </div>
           </div>
           <div class="privacy-note">
-            Ta candidature sera uniquement visible par l’équipe de modération de PDD.
+            Ta candidature sera uniquement visible par l’équipe de modération de PDD. Un compte membre connecté est obligatoire.
           </div>
-          <form id="applicationForm" class="card form-card">
+          <article id="applicationMemberGate" class="card member-gate hidden">
+            <img src="/assets/pixel-mascot.png" alt="" />
+            <div>
+              <h3>Connecte ton compte membre</h3>
+              <p>Crée ou connecte un compte membre avant de pouvoir envoyer une candidature.</p>
+              <button id="openMemberAccountButton" class="primary-button" type="button">Connexion / inscription membre</button>
+            </div>
+          </article>
+          <div id="memberApplicationSummary" class="application-summary hidden"></div>
+          <form id="applicationForm" class="card form-card hidden">
             <label>
               Quel âge as-tu ?
               <input name="age" type="number" min="13" max="99" required inputmode="numeric" />
@@ -216,6 +231,20 @@
             <button class="primary-button" type="submit">Envoyer ma candidature</button>
             <p id="applicationStatus" class="form-status" aria-live="polite"></p>
           </form>
+        </section>
+
+        <section id="page-member-inbox" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Espace membre privé</p>
+              <h2>Ma messagerie</h2>
+            </div>
+            <button id="refreshMemberInbox" class="icon-button" type="button" aria-label="Actualiser">↻</button>
+          </div>
+          <div id="memberInboxGate" class="privacy-note">
+            Cette messagerie est accessible uniquement avec ton compte membre.
+          </div>
+          <div id="memberInboxList" class="member-inbox-list"></div>
         </section>
 
         <section id="page-credits" class="page">
@@ -355,6 +384,9 @@
             <img src="/assets/pixel-mascot.png" alt="" />
             <p>Connecté en tant que</p>
             <strong id="memberIdentity"></strong>
+            <button id="openMemberInboxButton" class="primary-button" type="button">Ouvrir ma messagerie</button>
+            <button id="enableNotificationsButton" class="text-button" type="button">Activer les notifications</button>
+            <small id="notificationStatus" class="account-help"></small>
             <button id="memberLogoutButton" class="text-button" type="button">Déconnecter le compte membre</button>
           </div>
           <div id="memberGuest">
@@ -418,6 +450,30 @@
       <article class="application-detail">
         <button id="closeApplication" type="button" class="dialog-close" aria-label="Fermer">×</button>
         <div id="applicationDetailContent"></div>
+      </article>
+    </dialog>
+
+    <dialog id="acceptApplicationDialog">
+      <article class="application-detail acceptance-card">
+        <button id="closeAcceptApplication" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Validation administrateur</p>
+        <h2>Accepter la candidature</h2>
+        <p id="acceptApplicationRecipient" class="account-help"></p>
+        <form id="acceptApplicationForm" class="compact-form">
+          <label>
+            Identifiant staff à créer
+            <input name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]+" required autocomplete="off" />
+          </label>
+          <label>
+            Mot de passe temporaire
+            <input name="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password" />
+          </label>
+          <p class="acceptance-explainer">
+            Un compte <strong>modérateur</strong> sera créé. Les identifiants seront envoyés automatiquement dans la messagerie privée du membre.
+          </p>
+          <button class="primary-button" type="submit">Créer le compte et accepter</button>
+          <p class="form-status" aria-live="polite"></p>
+        </form>
       </article>
     </dialog>
 
