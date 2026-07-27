@@ -57,6 +57,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          # Le paquet final est vérifié après réextraction afin de préserver les droits macOS.
           VERSION="$(node -p "require('./package.json').version")"
           X64_APP="$(find release/x64 -type d -name 'Pixel Everywhere.app' -print -quit)"
           ARM64_APP="$(find release/arm64 -type d -name 'Pixel Everywhere.app' -print -quit)"
