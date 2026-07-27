@@ -1649,14 +1649,37 @@ dialog::backdrop {
   background: linear-gradient(155deg, #1d2029, #0f1117 72%);
 }
 
+#page-pixel {
+  min-height: calc(100dvh - 150px);
+}
+
+#page-pixel .pet-card {
+  margin-right: -8px;
+  margin-left: -8px;
+}
+
 .pet-stage {
   position: relative;
-  min-height: 385px;
+  height: clamp(480px, 64dvh, 680px);
+  min-height: 480px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 19px;
   isolation: isolate;
   transition: background 600ms ease;
+}
+
+.pet-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  content: "";
+  opacity: 0.2;
+  background:
+    repeating-linear-gradient(7deg, transparent 0 18px, rgba(47, 35, 40, 0.16) 19px 20px),
+    repeating-linear-gradient(93deg, transparent 0 37px, rgba(255, 255, 255, 0.12) 38px 39px);
+  mix-blend-mode: multiply;
+  pointer-events: none;
 }
 
 .pet-stage.pet-day {
@@ -1758,6 +1781,173 @@ dialog::backdrop {
     linear-gradient(#c87349, #9d513a);
 }
 
+.pet-sketch-house {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  color: rgba(61, 38, 43, 0.72);
+  pointer-events: none;
+}
+
+.sketch-window {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  display: grid;
+  width: 33%;
+  height: 24%;
+  place-items: center;
+  border: 5px solid currentColor;
+  border-radius: 48% 45% 9px 12px;
+  background: rgba(175, 229, 241, 0.68);
+  box-shadow: 4px 5px 0 rgba(61, 38, 43, 0.18);
+  transform: translateX(-50%) rotate(-1deg);
+}
+
+.sketch-window::before,
+.sketch-window::after {
+  position: absolute;
+  content: "";
+  background: currentColor;
+}
+
+.sketch-window::before {
+  width: 4px;
+  height: 100%;
+}
+
+.sketch-window::after {
+  width: 100%;
+  height: 4px;
+}
+
+.sketch-window i {
+  position: absolute;
+  right: 8%;
+  bottom: 10%;
+  left: 8%;
+  height: 23%;
+  border-radius: 50% 50% 0 0;
+  background: #78aa6e;
+}
+
+.sketch-window i:nth-child(2) {
+  right: 34%;
+  left: -5%;
+  height: 16%;
+  background: #97bf78;
+}
+
+.sketch-window span {
+  position: absolute;
+  top: 12%;
+  right: 12%;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.3rem;
+}
+
+.sketch-curtain {
+  position: absolute;
+  top: 15%;
+  width: 13%;
+  height: 32%;
+  border: 4px solid currentColor;
+  border-radius: 48% 15% 45% 17%;
+  background: repeating-linear-gradient(84deg, #f6a475 0 10px, #ee815e 11px 17px);
+}
+
+.sketch-curtain.left {
+  left: 27%;
+  transform: rotate(4deg);
+}
+
+.sketch-curtain.right {
+  right: 27%;
+  transform: scaleX(-1) rotate(4deg);
+}
+
+.sketch-table {
+  position: absolute;
+  right: 7%;
+  bottom: 13%;
+  width: 22%;
+  height: 13%;
+  border-top: 7px solid currentColor;
+  transform: rotate(1deg);
+}
+
+.sketch-table::before,
+.sketch-table::after {
+  position: absolute;
+  top: 0;
+  width: 5px;
+  height: 100%;
+  content: "";
+  background: currentColor;
+}
+
+.sketch-table::before { left: 13%; transform: rotate(5deg); }
+.sketch-table::after { right: 13%; transform: rotate(-5deg); }
+
+.sketch-table span {
+  position: absolute;
+  top: -34px;
+  left: 36%;
+  color: #406790;
+  font-size: 1.8rem;
+  transform: rotate(-12deg);
+}
+
+.sketch-plant {
+  position: absolute;
+  bottom: 12%;
+  left: 7%;
+  width: 14%;
+  height: 19%;
+  border-bottom: 22px solid #a86149;
+  border-radius: 0 0 45% 45%;
+}
+
+.sketch-plant i {
+  position: absolute;
+  bottom: 18px;
+  left: 50%;
+  width: 5px;
+  height: 70%;
+  background: currentColor;
+}
+
+.sketch-plant span {
+  position: absolute;
+  bottom: 47%;
+  left: 29%;
+  color: #477f51;
+  font-size: 2.4rem;
+  font-weight: 950;
+  transform: rotate(-18deg);
+}
+
+.sketch-wall-doodles {
+  position: absolute;
+  top: 8%;
+  left: 4%;
+  color: rgba(255, 248, 225, 0.8);
+  font-family: "Comic Sans MS", cursive;
+  font-size: clamp(0.7rem, 3vw, 1rem);
+  letter-spacing: 0.13em;
+  transform: rotate(-5deg);
+}
+
+.sketch-floor-lines {
+  position: absolute;
+  inset: 52% 0 0;
+  opacity: 0.2;
+  background:
+    repeating-linear-gradient(94deg, transparent 0 55px, #4f3031 56px 59px),
+    repeating-linear-gradient(5deg, transparent 0 43px, #4f3031 44px 46px);
+}
+
 .pet-night .pet-room {
   background:
     repeating-linear-gradient(90deg, transparent 0 54px, rgba(0, 0, 0, 0.12) 55px 57px),
@@ -1844,6 +2034,7 @@ dialog::backdrop {
   transform: translateX(-50%);
   transform-origin: 50% 90%;
   cursor: pointer;
+  transition: left 1.75s cubic-bezier(0.35, 0.8, 0.3, 1);
 }
 
 .pet-character-body,
@@ -1857,6 +2048,7 @@ dialog::backdrop {
   inset: 0;
   width: 100%;
   height: 100%;
+  animation: pet-idle-breathe 3.8s ease-in-out infinite;
 }
 
 .pet-character-eye {
@@ -2074,6 +2266,27 @@ dialog::backdrop {
   font-size: 0.72rem;
   line-height: 1.5;
   text-align: center;
+}
+
+.pet-action-status {
+  padding: 8px 4px 0;
+  text-align: center;
+}
+
+.pet-idle-step {
+  animation: pet-idle-step 1.8s ease-in-out;
+}
+
+@keyframes pet-idle-breathe {
+  0%, 100% { transform: translateY(0) rotate(-0.7deg); }
+  50% { transform: translateY(-4px) rotate(0.8deg); }
+}
+
+@keyframes pet-idle-step {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(0); }
+  25% { transform: translateX(-50%) translateY(-8px) rotate(-3deg); }
+  55% { transform: translateX(-50%) translateY(0) rotate(3deg); }
+  78% { transform: translateX(-50%) translateY(-5px) rotate(-2deg); }
 }
 
 .pixel-shop {
