@@ -27,6 +27,7 @@ import {
   noteSchema,
   parse,
   passwordSchema,
+  petActionSchema,
   shopPurchaseSchema,
   statusSchema,
   xpConversionSchema,
@@ -389,6 +390,14 @@ const shopItems = {
   feast: { cost: 50, label: "Festin Pixel" }
 };
 
+const petActions = {
+  feed: { cost: 5, cooldownSeconds: 20, label: "Nourrir Pixel" },
+  pet: { cost: 5, cooldownSeconds: 10, label: "Caresser Pixel" },
+  bounce: { cost: 8, cooldownSeconds: 15, label: "Jouer avec Pixel" },
+  sleep: { cost: 10, cooldownSeconds: 30, label: "Faire dormir Pixel" },
+  walk: { cost: 15, cooldownSeconds: 60, label: "Promener Pixel" }
+};
+
 app.post(
   "/api/members/shop/purchase",
   authenticateMember,
@@ -411,6 +420,62 @@ app.post(
       item: input.item,
       label: product.label,
       cost: product.cost,
+      points: Number(updated.points)
+    });
+  }
+);
+
+app.post(
+  "/api/members/pixel/action",
+  authenticateMember,
+  requireActiveMember,
+  (req, res) => {
+    const input = parse(petActionSchema, req, res);
+    if (!input) return;
+    const action = petActions[input.action];
+    const previous = db.prepare(`
+      SELECT last_used_at
+      FROM member_pet_actions
+      WHERE member_id = ? AND action = ?
+    `).get(req.currentMember.id, input.action);
+
+    if (previous) {
+      const lastUsedAt = new Date(`${previous.last_used_at}Z`).getTime();
+      const remainingMs = action.cooldownSeconds * 1000 - (Date.now() - lastUsedAt);
+      if (remainingMs > 0) {
+        const retryAfter = Math.ceil(remainingMs / 1000);
+        return res.status(429).json({
+          error: `Pixel doit souffler encore ${retryAfter} seconde${retryAfter > 1 ? "s" : ""} avant cette action.`,
+          code: "PET_ACTION_COOLDOWN",
+          retryAfter
+        });
+      }
+    }
+    if (Number(req.currentMember.points) < action.cost) {
+      return res.status(409).json({
+        error: `${action.label} demande ${action.cost} pièces.`
+      });
+    }
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE member_users
+        SET points = points - ?
+        WHERE id = ? AND points >= ?
+      `).run(action.cost, req.currentMember.id, action.cost);
+      db.prepare(`
+        INSERT INTO member_pet_actions (member_id, action, last_used_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(member_id, action)
+        DO UPDATE SET last_used_at = CURRENT_TIMESTAMP
+      `).run(req.currentMember.id, input.action);
+    });
+    const updated = currentMember(req);
+    res.json({
+      ok: true,
+      action: input.action,
+      cost: action.cost,
+      cooldownSeconds: action.cooldownSeconds,
       points: Number(updated.points)
     });
   }
