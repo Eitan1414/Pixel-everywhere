@@ -18,18 +18,20 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
   et toutes les 30 secondes, avec alertes de fermeture et de réouverture ;
 - signalements de bugs membres distribués à tous les comptes staff, avec
   validation rapportant 50 pièces ;
-- économie membre sécurisée : 5 pièces par minute active, pause anti-AFK après
-  3 minutes, boutique de nourriture Pixel et demandes de conversion XP ;
-- interactions Tamagotchi payantes et protégées par des délais serveur, maison
+- économie sécurisée pour les comptes membres et staff : 5 pièces par minute
+  active, pause anti-AFK après 3 minutes et boutique de nourriture Pixel ;
+- demandes de conversion XP réservées aux comptes membres ;
+- interactions Tamagotchi accessibles aux membres, modérateurs et
+  administrateurs, payantes et protégées par des délais serveur ;
 - évaluations membres de 1 à 5 étoiles avec commentaire, moyenne globale et
   consultation détaillée réservée aux modérateurs et administrateurs ;
-  pleine hauteur en croquis et déplacements d’attente aléatoires de Pixel ;
+- Tamagotchi Pixel sans décor de maison, avec déplacements d’attente aléatoires ;
 - espace privé pour lire et classer les candidatures ;
 - notes privées sur chaque candidature ;
 - messagerie réservée à l’équipe ;
 - panneau administrateur pour créer et désactiver les comptes du staff ;
 - changement obligatoire du mot de passe temporaire à la première connexion ;
-- Tamagotchi Pixel immersif avec atelier jour/nuit, faim, joie, énergie, niveau et XP ;
+- Tamagotchi Pixel immersif avec faim, joie, énergie, niveau et XP ;
 - assistant Pixel pour naviguer dans l’application ;
 - animation de démarrage où Pixel flotte, écrit « Hello », regarde l’utilisateur,
   glisse à gauche et révèle le logo PDD 2 avant un fondu au noir ;
@@ -119,11 +121,11 @@ appareil tant que Termux, le serveur Node.js et ngrok restent actifs.
 
 ## Comptes et autorisations
 
-| Type de compte | Envoyer une candidature | Messagerie membre | Espace staff | Créer des comptes staff | Accepter une candidature |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| Membre | Oui | La sienne uniquement | Non | Non | Non |
-| Modérateur | Non | Non | Oui | Non | Non |
-| Administrateur | Non | Non | Oui | Oui | Oui |
+| Type de compte | Tamagotchi | Envoyer une candidature | Messagerie membre | Espace staff | Créer des comptes staff | Accepter une candidature |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Membre | Oui | Oui | La sienne uniquement | Non | Non | Non |
+| Modérateur | Oui | Non | Non | Oui | Non | Non |
+| Administrateur | Oui | Non | Non | Oui | Propriétaire uniquement | Oui |
 
 Les comptes membres et staff utilisent des sessions séparées. Un compte membre
 ne peut pas accéder aux routes privées du staff ni choisir un rôle lors de son
@@ -144,7 +146,8 @@ complètement fermée nécessiteront l’ajout ultérieur de Firebase Cloud Mess
 
 ## Pièces, bugs et XP PDD
 
-- Une minute d’activité réelle rapporte 5 pièces.
+- Une minute d’activité réelle rapporte 5 pièces aux membres, modérateurs et
+  administrateurs connectés.
 - Après 3 minutes sans interaction, le gain est suspendu jusqu’au retour du membre.
 - Un signalement de bug validé par un modérateur ou administrateur rapporte
   exactement 50 pièces, une seule fois.
