@@ -5,6 +5,7 @@ import {
   acceptApplicationSchema,
   activityRewardSchema,
   memberRegistrationSchema,
+  petActionSchema,
   xpConversionSchema
 } from "../server/validation.mjs";
 
@@ -50,4 +51,9 @@ test("le gain d’activité n’accepte que le démarrage ou une minute active",
   assert.equal(activityRewardSchema.safeParse({ mode: "start" }).success, true);
   assert.equal(activityRewardSchema.safeParse({ mode: "minute" }).success, true);
   assert.equal(activityRewardSchema.safeParse({ mode: "afk" }).success, false);
+});
+
+test("seules les actions Pixel connues peuvent dépenser des pièces", () => {
+  assert.equal(petActionSchema.safeParse({ action: "walk" }).success, true);
+  assert.equal(petActionSchema.safeParse({ action: "spam" }).success, false);
 });
