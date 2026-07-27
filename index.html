@@ -10,7 +10,20 @@
     <link rel="stylesheet" href="/web/styles.css" />
     <title>Pixel Everywhere — Alpha</title>
   </head>
-  <body>
+  <body class="startup-running">
+    <div id="startupAnimation" class="startup-animation" aria-label="Animation de démarrage Pixel Everywhere">
+      <div class="startup-backdrop-glow" aria-hidden="true"></div>
+      <div class="startup-scene" aria-hidden="true">
+        <div class="startup-pixel">
+          <img class="startup-pixel-body" src="/assets/pixel-body.png" alt="" />
+          <img class="startup-pixel-eye" src="/assets/pixel-eye.png" alt="" />
+        </div>
+        <img class="startup-wordmark" src="/assets/pdd2-wordmark.png" alt="" />
+      </div>
+      <p class="startup-app-name">Pixel Everywhere <span>ALPHA</span></p>
+      <button id="skipStartup" type="button">Passer</button>
+    </div>
+
     <div class="app-shell">
       <header class="topbar">
         <button class="brand" data-page-target="home" aria-label="Retour à l’accueil">
@@ -33,7 +46,7 @@
         <section id="page-home" class="page active">
           <article class="hero card">
             <div class="hero-glow"></div>
-            <img class="hero-logo" src="/assets/alpha-logo.png" alt="Logo Alpha Pixel Difficult Drawer" />
+            <img class="hero-logo" src="/assets/pdd-logo.jpg" alt="Logo PDD 2 — Pixel Difficult Drawer" />
             <p class="eyebrow">Bienvenue sur PDD</p>
             <h1>Le dessin et le gaming, partout avec toi.</h1>
             <p>
