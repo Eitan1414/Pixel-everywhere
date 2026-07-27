@@ -54,13 +54,24 @@ function setAccountTab(kind) {
   });
 }
 
+function prefillForm(form, kind) {
+  const username = form?.querySelector("input[name='username']");
+  const remembered = localStorage.getItem(storage[kind]);
+  if (username && remembered && !username.value) username.value = remembered;
+}
+
+function prefillRememberedAccounts() {
+  prefillForm(document.querySelector("#memberLoginForm"), "member");
+  prefillForm(document.querySelector("#memberRegisterForm"), "member");
+  prefillForm(document.querySelector("#loginForm"), "staff");
+}
+
 function rememberForm(form, kind) {
   if (!form) return;
   const username = form.querySelector("input[name='username']");
   if (!username) return;
 
-  const remembered = localStorage.getItem(storage[kind]);
-  if (remembered && !username.value) username.value = remembered;
+  prefillForm(form, kind);
 
   if (!form.querySelector(".remembered-account-note")) {
     const note = document.createElement("small");
@@ -90,8 +101,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
   document.querySelector("#accountButton")?.addEventListener("click", () => {
     window.setTimeout(() => {
+      prefillRememberedAccounts();
       const lastKind = localStorage.getItem(storage.lastKind);
       if (lastKind) setAccountTab(lastKind);
     }, 0);
   }, { capture: true });
+
+  ["#memberLogoutButton", "#logoutButton"].forEach((selector) => {
+    document.querySelector(selector)?.addEventListener("click", () => {
+      window.setTimeout(prefillRememberedAccounts, 0);
+    }, { capture: true });
+  });
 });
