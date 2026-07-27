@@ -494,6 +494,20 @@
       </article>
     </dialog>
 
+    <dialog id="serverStatusDialog" class="server-status-dialog">
+      <article class="server-status-card">
+        <div id="serverStatusIcon" class="server-status-icon" aria-hidden="true">!</div>
+        <p id="serverStatusEyebrow" class="eyebrow">État des serveurs</p>
+        <h2 id="serverStatusTitle">Serveurs fermés</h2>
+        <p id="serverStatusMessage"></p>
+        <div class="server-status-actions">
+          <button id="retryServerButton" class="primary-button" type="button">Réessayer maintenant</button>
+          <button id="closeServerStatus" class="text-button hidden" type="button">Fermer</button>
+        </div>
+        <small id="serverLastCheck"></small>
+      </article>
+    </dialog>
+
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script type="module" src="/web/main.js"></script>
   </body>
