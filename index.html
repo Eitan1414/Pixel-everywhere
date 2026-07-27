@@ -51,6 +51,10 @@
           </span>
         </button>
         <div class="topbar-actions">
+          <button id="pointsButton" class="points-chip hidden" type="button" aria-label="Ouvrir mon portefeuille">
+            <span aria-hidden="true">◆</span>
+            <b id="pointsBalance">0</b>
+          </button>
           <button id="memberInboxButton" class="inbox-button hidden" type="button" aria-label="Ouvrir ma messagerie">
             <span aria-hidden="true">✉</span>
             <b id="inboxBadge" class="hidden">0</b>
@@ -180,6 +184,18 @@
               <button type="button" data-pet-action="walk"><span>👟</span><strong>Promener</strong><small>+ joie & XP</small></button>
               <button type="button" data-pet-action="sleep"><span>🌙</span><strong>Dormir</strong><small>+ énergie</small></button>
             </div>
+            <section class="pixel-shop">
+              <div>
+                <p class="eyebrow">Boutique de Pixel</p>
+                <h3>Des petits plaisirs contre des pièces</h3>
+              </div>
+              <div class="pixel-shop-items">
+                <button type="button" data-shop-item="treat"><span>🍪</span><strong>Friandise</strong><small>15 ◆</small></button>
+                <button type="button" data-shop-item="meal"><span>🍜</span><strong>Repas</strong><small>30 ◆</small></button>
+                <button type="button" data-shop-item="feast"><span>🍱</span><strong>Festin</strong><small>50 ◆</small></button>
+              </div>
+              <p id="pixelShopStatus" class="form-status"></p>
+            </section>
             <div class="pet-diary">
               <span aria-hidden="true">✎</span>
               <div><small>Journal de Pixel</small><p id="petDiary">Pixel vient d’arriver dans son atelier.</p></div>
@@ -328,6 +344,11 @@
             </section>
 
             <section id="staff-messages" class="staff-panel">
+              <div class="staff-alerts-heading">
+                <strong>Demandes des membres</strong>
+                <small>Signalements de bugs et conversions XP</small>
+              </div>
+              <div id="staffAlertsList" class="staff-alerts-list"></div>
               <div id="staffMessagesList" class="message-list"></div>
               <form id="staffMessageForm" class="message-composer">
                 <input name="body" maxlength="2000" placeholder="Écrire à l’équipe…" required />
@@ -384,7 +405,10 @@
             <img src="/assets/pixel-mascot.png" alt="" />
             <p>Connecté en tant que</p>
             <strong id="memberIdentity"></strong>
+            <div class="member-wallet"><span>◆</span><strong id="memberPointsBalance">0 pièces</strong></div>
             <button id="openMemberInboxButton" class="primary-button" type="button">Ouvrir ma messagerie</button>
+            <button id="openBugReportButton" class="text-button" type="button">Signaler un bug</button>
+            <button id="openXpConversionButton" class="text-button" type="button">Convertir mes pièces en XP PDD</button>
             <button id="enableNotificationsButton" class="text-button" type="button">Activer les notifications</button>
             <small id="notificationStatus" class="account-help"></small>
             <button id="memberLogoutButton" class="text-button" type="button">Déconnecter le compte membre</button>
@@ -505,6 +529,46 @@
           <button id="closeServerStatus" class="text-button hidden" type="button">Fermer</button>
         </div>
         <small id="serverLastCheck"></small>
+      </article>
+    </dialog>
+
+    <dialog id="bugReportDialog">
+      <article class="application-detail">
+        <button id="closeBugReport" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Pixel Everywhere Alpha</p>
+        <h2>Signaler un bug</h2>
+        <p class="account-help">Décris précisément ce qui s’est passé, sur quelle page et ce que tu faisais. Un bug validé rapporte 50 pièces.</p>
+        <form id="bugReportForm" class="compact-form">
+          <textarea name="description" minlength="20" maxlength="3000" rows="8" required placeholder="Décris le bug avec le plus de détails possible…"></textarea>
+          <button class="primary-button" type="submit">Envoyer à tout le staff</button>
+          <p class="form-status" aria-live="polite"></p>
+        </form>
+      </article>
+    </dialog>
+
+    <dialog id="xpConversionDialog">
+      <article class="application-detail">
+        <button id="closeXpConversion" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <p class="eyebrow">Économie PDD</p>
+        <h2>Convertir en XP serveur</h2>
+        <p class="account-help">1 pièce = 15 XP PDD. Le staff effectuera manuellement l’ajout sur Discord.</p>
+        <form id="xpConversionForm" class="compact-form">
+          <label>Pseudo Discord<input name="discordUsername" minlength="2" maxlength="80" required placeholder="Ex. pixel_artiste" /></label>
+          <label>Nombre de pièces<input id="xpPointsAmount" name="amount" type="number" min="1" required inputmode="numeric" /></label>
+          <div id="xpConversionPreview" class="conversion-preview">1 pièce = 15 XP</div>
+          <button class="primary-button" type="submit">Envoyer la demande au staff</button>
+          <p class="form-status" aria-live="polite"></p>
+        </form>
+      </article>
+    </dialog>
+
+    <dialog id="afkDialog" class="afk-dialog">
+      <article class="server-status-card">
+        <div class="server-status-icon offline" aria-hidden="true">Zz</div>
+        <p class="eyebrow">Mode pause</p>
+        <h2>Gain de pièces arrêté</h2>
+        <p>Aucune interaction depuis 3 minutes. Le gain de 5 pièces par minute est suspendu pour éviter l’AFK.</p>
+        <button id="resumeActivityButton" class="primary-button" type="button">Je suis là — reprendre</button>
       </article>
     </dialog>
 
