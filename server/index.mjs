@@ -1126,7 +1126,6 @@ app.get(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
-  requireOwnerAdmin,
   (_req, res) => {
     const accounts = db.prepare(`
       SELECT id, username, role, active, must_change_password, created_at
@@ -1143,7 +1142,6 @@ app.post(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
-  requireOwnerAdmin,
   async (req, res) => {
     const input = parse(accountSchema, req, res);
     if (!input) return;
@@ -1174,7 +1172,6 @@ app.patch(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
-  requireOwnerAdmin,
   (req, res) => {
     const accountId = Number(req.params.id);
     if (accountId === req.currentUser.id) {
