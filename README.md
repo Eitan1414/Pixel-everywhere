@@ -16,7 +16,8 @@ une communauté consacrée au dessin, au gaming et au partage de créations.
 - changement obligatoire du mot de passe temporaire à la première connexion ;
 - Tamagotchi Pixel immersif avec atelier jour/nuit, faim, joie, énergie, niveau et XP ;
 - assistant Pixel pour naviguer dans l’application ;
-- animation de démarrage dessinée avec Pixel et le logo PDD 2 ;
+- animation de démarrage où Pixel flotte, écrit « Hello », regarde l’utilisateur,
+  glisse à gauche et révèle le logo PDD 2 avant un fondu au noir ;
 - identité visuelle Alpha et crédits complets de l’équipe PDD.
 
 ## Sécurité des comptes
