@@ -9,28 +9,48 @@ if (isProduction && (!jwtSecret || jwtSecret.length < 32)) {
 
 const secret = jwtSecret || "development-only-secret-do-not-use-in-production";
 
-export function createToken(user) {
+export function createToken(user, kind = "staff") {
   return jwt.sign(
-    { sub: String(user.id), username: user.username, role: user.role },
+    { sub: String(user.id), username: user.username, role: user.role, kind },
     secret,
     { expiresIn: "8h", issuer: "pixel-everywhere" }
   );
 }
 
-export function authenticate(req, res, next) {
+function readToken(req, res, kind) {
   const header = req.get("authorization") || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
 
   if (!token) {
-    return res.status(401).json({ error: "Connexion requise." });
+    res.status(401).json({ error: "Connexion requise." });
+    return null;
   }
 
   try {
-    req.staff = jwt.verify(token, secret, { issuer: "pixel-everywhere" });
-    next();
+    const payload = jwt.verify(token, secret, { issuer: "pixel-everywhere" });
+    if (payload.kind !== kind) {
+      res.status(401).json({ error: "Cette session ne correspond pas à cet espace." });
+      return null;
+    }
+    return payload;
   } catch {
     res.status(401).json({ error: "Session expirée ou invalide." });
+    return null;
   }
+}
+
+export function authenticate(req, res, next) {
+  const payload = readToken(req, res, "staff");
+  if (!payload) return;
+  req.staff = payload;
+  next();
+}
+
+export function authenticateMember(req, res, next) {
+  const payload = readToken(req, res, "member");
+  if (!payload) return;
+  req.member = payload;
+  next();
 }
 
 export function requireAdmin(req, res, next) {
@@ -39,4 +59,3 @@ export function requireAdmin(req, res, next) {
   }
   next();
 }
-
