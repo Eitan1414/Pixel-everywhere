@@ -1387,7 +1387,28 @@ function completePetInteraction(pet, xp, diary, animation, reaction, particle) {
   renderPet();
 }
 
-function handlePetAction(action) {
+let petActionPending = false;
+
+async function handlePetAction(action) {
+  if (!state.member) {
+    selectAccountTab("member");
+    updateAccountDialog();
+    loginDialog.showModal();
+    toast("Connecte un compte membre pour interagir avec Pixel.");
+    return;
+  }
+  if (petActionPending) return;
+  petActionPending = true;
+  const actionButtons = $$(`[data-pet-action="${action}"]`);
+  actionButtons.forEach((button) => { button.disabled = true; });
+  setFormStatus($("#petActionStatus"), "Pixel se prépare…");
+  try {
+    const result = await api("/members/pixel/action", {
+      method: "POST",
+      auth: "member",
+      body: JSON.stringify({ action })
+    });
+    setMemberPoints(result.points);
   const pet = currentPet();
   if (action === "feed") {
     pet.hunger = Math.min(100, pet.hunger + 18);
@@ -1409,6 +1430,21 @@ function handlePetAction(action) {
     pet.energy = Math.min(100, pet.energy + 24);
     pet.hunger = Math.max(5, pet.hunger - 3);
     completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤");
+  }
+    if (action === "pet") {
+      pet.joy = Math.min(100, pet.joy + 5);
+      completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛");
+    }
+    setFormStatus(
+      $("#petActionStatus"),
+      `${result.cost} pièces utilisées • délai ${result.cooldownSeconds} secondes.`,
+      "success"
+    );
+  } catch (error) {
+    setFormStatus($("#petActionStatus"), error.message, "error");
+  } finally {
+    petActionPending = false;
+    actionButtons.forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -1467,10 +1503,38 @@ $$("[data-shop-item]").forEach((button) => {
 });
 
 $("#petMascot").addEventListener("click", () => {
-  const pet = currentPet();
-  pet.joy = Math.min(100, pet.joy + 2);
-  completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛");
+  handlePetAction("pet");
 });
+
+function schedulePixelIdleMovement() {
+  const delay = 3_500 + Math.round(Math.random() * 4_500);
+  window.setTimeout(() => {
+    const mascot = $("#petMascot");
+    const pixelPageVisible = $("#page-pixel").classList.contains("active");
+    if (pixelPageVisible && !petActionPending) {
+      const target = 29 + Math.round(Math.random() * 42);
+      mascot.style.left = `${target}%`;
+      mascot.classList.add("pet-idle-step");
+      window.setTimeout(() => mascot.classList.remove("pet-idle-step"), 1900);
+    }
+    schedulePixelIdleMovement();
+  }, delay);
+}
+
+schedulePixelIdleMovement();
+
+let pixelSwipeStartX = null;
+$("#page-pixel").addEventListener("touchstart", (event) => {
+  pixelSwipeStartX = event.changedTouches[0]?.clientX ?? null;
+}, { passive: true });
+$("#page-pixel").addEventListener("touchend", (event) => {
+  if (pixelSwipeStartX === null) return;
+  const endX = event.changedTouches[0]?.clientX ?? pixelSwipeStartX;
+  const distance = endX - pixelSwipeStartX;
+  pixelSwipeStartX = null;
+  if (Math.abs(distance) < 85) return;
+  navigate(distance < 0 ? "application" : "announcements");
+}, { passive: true });
 
 const guideDialog = $("#guideDialog");
 $("#pixelGuideButton").addEventListener("click", () => guideDialog.showModal());
