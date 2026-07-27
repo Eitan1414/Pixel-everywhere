@@ -83,8 +83,19 @@ function publicUser(user) {
     role: user.role,
     active: Boolean(user.active),
     mustChangePassword: Boolean(user.must_change_password),
+    isOwnerAdmin: isOwnerAdmin(user),
     createdAt: user.created_at
   };
+}
+
+function isOwnerAdmin(user) {
+  const ownerUsername = (
+    process.env.OWNER_ADMIN_USERNAME ||
+    process.env.INITIAL_ADMIN_USERNAME ||
+    "Eitan14"
+  ).trim();
+  return user.role === "admin" &&
+    user.username.localeCompare(ownerUsername, undefined, { sensitivity: "accent" }) === 0;
 }
 
 function publicMember(member) {
@@ -130,6 +141,15 @@ function staffOnly(req, res, next) {
     return res.status(403).json({
       error: "Tu dois modifier ton mot de passe avant d’accéder à cet espace.",
       code: "PASSWORD_CHANGE_REQUIRED"
+    });
+  }
+  next();
+}
+
+function requireOwnerAdmin(req, res, next) {
+  if (!isOwnerAdmin(req.currentUser)) {
+    return res.status(403).json({
+      error: "Seul le propriétaire de l’application peut gérer les comptes staff."
     });
   }
   next();
@@ -436,15 +456,21 @@ app.patch(
         code: "ACCEPTANCE_ACCOUNT_REQUIRED"
       });
     }
+    if (input.status === "rejected") {
+      return res.status(400).json({
+        error: "Le refus doit être confirmé par un administrateur.",
+        code: "REJECTION_CONFIRMATION_REQUIRED"
+      });
+    }
     const application = db
       .prepare("SELECT status FROM applications WHERE id = ?")
       .get(Number(req.params.id));
     if (!application) {
       return res.status(404).json({ error: "Candidature introuvable." });
     }
-    if (application.status === "accepted") {
+    if (["accepted", "rejected"].includes(application.status)) {
       return res.status(409).json({
-        error: "Une candidature acceptée ne peut plus être modifiée."
+        error: "Une candidature terminée ne peut plus être modifiée."
       });
     }
 
@@ -483,8 +509,8 @@ app.post(
         error: "Cette ancienne candidature n’est reliée à aucun compte membre."
       });
     }
-    if (application.status === "accepted" || application.staff_account_id) {
-      return res.status(409).json({ error: "Cette candidature a déjà été acceptée." });
+    if (["accepted", "rejected"].includes(application.status) || application.staff_account_id) {
+      return res.status(409).json({ error: "Cette candidature est déjà terminée." });
     }
     const usernameExists = db
       .prepare("SELECT id FROM staff_users WHERE username = ? COLLATE NOCASE")
@@ -550,6 +576,72 @@ app.post(
   }
 );
 
+app.post(
+  "/api/admin/applications/:id/reject",
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  requireAdmin,
+  (req, res) => {
+    const applicationId = Number(req.params.id);
+    const application = db.prepare(`
+      SELECT a.*, m.username AS member_username, m.display_name AS member_display_name
+      FROM applications a
+      LEFT JOIN member_users m ON m.id = a.member_id
+      WHERE a.id = ?
+    `).get(applicationId);
+
+    if (!application) {
+      return res.status(404).json({ error: "Candidature introuvable." });
+    }
+    if (!application.member_id) {
+      return res.status(409).json({
+        error: "Cette ancienne candidature n’est reliée à aucun compte membre."
+      });
+    }
+    if (["accepted", "rejected"].includes(application.status)) {
+      return res.status(409).json({ error: "Cette candidature est déjà terminée." });
+    }
+
+    const subject = "Décision concernant votre candidature";
+    const body = [
+      `Bonjour ${application.member_display_name},`,
+      "",
+      "Nous vous remercions sincèrement pour l’intérêt que vous portez à Pixel Difficult Drawer et pour le temps consacré à votre candidature.",
+      "",
+      `Après étude de votre demande, nous sommes au regret de vous informer que votre candidature n’a pas été retenue par ${req.currentUser.username}.`,
+      "",
+      "Cette décision ne remet pas en cause votre place dans notre communauté. Nous espérons avoir le plaisir de vous retrouver sur PDD, de découvrir vos créations et de partager de nouveaux événements avec vous.",
+      "",
+      "Vous pourrez proposer une nouvelle candidature ultérieurement si une autre occasion se présente.",
+      "",
+      "Au plaisir de vous revoir chez PDD,",
+      "L’équipe PDD Staff"
+    ].join("\n");
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE applications
+        SET status = 'rejected', updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).run(applicationId);
+      db.prepare(`
+        INSERT INTO member_messages
+          (member_id, application_id, sender_name, sender_logo, subject, body)
+        VALUES (?, ?, 'PDD Staff', '/assets/pdd-logo.jpg', ?, ?)
+      `).run(application.member_id, applicationId, subject, body);
+    });
+
+    res.status(201).json({
+      ok: true,
+      recipient: {
+        username: application.member_username,
+        displayName: application.member_display_name
+      }
+    });
+  }
+);
+
 app.get(
   "/api/staff/messages",
   authenticate,
@@ -589,6 +681,7 @@ app.get(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
+  requireOwnerAdmin,
   (_req, res) => {
     const accounts = db.prepare(`
       SELECT id, username, role, active, must_change_password, created_at
@@ -605,6 +698,7 @@ app.post(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
+  requireOwnerAdmin,
   async (req, res) => {
     const input = parse(accountSchema, req, res);
     if (!input) return;
@@ -635,6 +729,7 @@ app.patch(
   requireActiveStaff,
   staffOnly,
   requireAdmin,
+  requireOwnerAdmin,
   (req, res) => {
     const accountId = Number(req.params.id);
     if (accountId === req.currentUser.id) {
