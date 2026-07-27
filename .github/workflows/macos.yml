@@ -43,12 +43,75 @@ jobs:
       - name: Tester le projet
         run: npm test
 
-      - name: Compiler les applications macOS Intel et Apple Silicon
-        run: npm run mac:build
+      - name: Construire les applications macOS Intel et Apple Silicon
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run build
+          rm -rf release
+          npx electron-builder --mac dir --x64 --config.directories.output=release/x64
+          npx electron-builder --mac dir --arm64 --config.directories.output=release/arm64
 
-      - name: Publier les applications macOS
+      - name: Signer, vérifier et archiver les applications
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="$(node -p "require('./package.json').version")"
+          X64_APP="$(find release/x64 -type d -name 'Pixel Everywhere.app' -print -quit)"
+          ARM64_APP="$(find release/arm64 -type d -name 'Pixel Everywhere.app' -print -quit)"
+
+          test -n "$X64_APP"
+          test -n "$ARM64_APP"
+
+          verify_and_sign() {
+            local app_path="$1"
+            local expected_arch="$2"
+
+            xattr -cr "$app_path"
+            codesign --force --deep --sign - --timestamp=none "$app_path"
+            codesign --verify --deep --strict --verbose=2 "$app_path"
+
+            local executable_name
+            executable_name="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$app_path/Contents/Info.plist")"
+            test -x "$app_path/Contents/MacOS/$executable_name"
+            file "$app_path/Contents/MacOS/$executable_name"
+            lipo -archs "$app_path/Contents/MacOS/$executable_name" | grep -qw "$expected_arch"
+          }
+
+          verify_and_sign "$X64_APP" "x86_64"
+          verify_and_sign "$ARM64_APP" "arm64"
+
+          mkdir -p release/final
+          X64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-x64.zip"
+          ARM64_ZIP="release/final/Pixel-Everywhere-${VERSION}-macOS-arm64.zip"
+
+          ditto -c -k --sequesterRsrc --keepParent "$X64_APP" "$X64_ZIP"
+          ditto -c -k --sequesterRsrc --keepParent "$ARM64_APP" "$ARM64_ZIP"
+
+          unzip -t "$X64_ZIP"
+          unzip -t "$ARM64_ZIP"
+
+          rm -rf release/verification
+          mkdir -p release/verification/x64 release/verification/arm64
+          ditto -x -k "$X64_ZIP" release/verification/x64
+          ditto -x -k "$ARM64_ZIP" release/verification/arm64
+
+          X64_CHECK="$(find release/verification/x64 -type d -name 'Pixel Everywhere.app' -print -quit)"
+          ARM64_CHECK="$(find release/verification/arm64 -type d -name 'Pixel Everywhere.app' -print -quit)"
+          codesign --verify --deep --strict --verbose=2 "$X64_CHECK"
+          codesign --verify --deep --strict --verbose=2 "$ARM64_CHECK"
+
+          X64_EXEC="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$X64_CHECK/Contents/Info.plist")"
+          ARM64_EXEC="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$ARM64_CHECK/Contents/Info.plist")"
+          test -x "$X64_CHECK/Contents/MacOS/$X64_EXEC"
+          test -x "$ARM64_CHECK/Contents/MacOS/$ARM64_EXEC"
+
+          shasum -a 256 "$X64_ZIP" "$ARM64_ZIP" > release/final/SHA256SUMS.txt
+
+      - name: Publier les applications macOS vérifiées
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-macOS
-          path: release/*.zip
+          name: Pixel-Everywhere-macOS-verified
+          path: release/final/*
           if-no-files-found: error
