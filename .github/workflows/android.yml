@@ -33,7 +33,9 @@ jobs:
           java-version: 21
 
       - name: Installer les dépendances
-        run: npm install
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: npm install --no-audit --no-fund
 
       - name: Installer ImageMagick
         run: |
