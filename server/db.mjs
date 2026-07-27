@@ -1,16 +1,100 @@
-import Database from "better-sqlite3";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import initSqlJs from "sql.js";
 
 const dataDirectory = path.resolve(process.env.DATA_DIRECTORY || "data");
 fs.mkdirSync(dataDirectory, { recursive: true });
 
-export const db = new Database(path.join(dataDirectory, "pixel-everywhere.db"));
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+const databasePath = path.join(dataDirectory, "pixel-everywhere.db");
+const sqlJsModulePath = fileURLToPath(import.meta.resolve("sql.js"));
+const sqlJsDirectory = path.dirname(sqlJsModulePath);
+const SQL = await initSqlJs({
+  locateFile: (file) => path.join(sqlJsDirectory, file)
+});
+const databaseBytes = fs.existsSync(databasePath)
+  ? fs.readFileSync(databasePath)
+  : undefined;
+const sqlite = databaseBytes
+  ? new SQL.Database(databaseBytes)
+  : new SQL.Database();
+
+function persist() {
+  const temporaryPath = `${databasePath}.tmp`;
+  fs.writeFileSync(temporaryPath, Buffer.from(sqlite.export()));
+  fs.renameSync(temporaryPath, databasePath);
+}
+
+function normalizeParameters(parameters) {
+  if (parameters.length === 1 && Array.isArray(parameters[0])) {
+    return parameters[0];
+  }
+  return parameters;
+}
+
+function mapDatabaseError(error) {
+  if (error.message?.includes("UNIQUE constraint failed")) {
+    error.code = "SQLITE_CONSTRAINT_UNIQUE";
+  }
+  return error;
+}
+
+export const db = {
+  exec(sql) {
+    try {
+      sqlite.exec(sql);
+      persist();
+    } catch (error) {
+      throw mapDatabaseError(error);
+    }
+  },
+
+  prepare(sql) {
+    return {
+      run(...parameters) {
+        try {
+          sqlite.run(sql, normalizeParameters(parameters));
+          const changes = sqlite.getRowsModified();
+          const row = sqlite.exec("SELECT last_insert_rowid() AS id");
+          const lastInsertRowid = row[0]?.values[0]?.[0] || 0;
+          persist();
+          return { changes, lastInsertRowid };
+        } catch (error) {
+          throw mapDatabaseError(error);
+        }
+      },
+
+      get(...parameters) {
+        const statement = sqlite.prepare(sql);
+        try {
+          statement.bind(normalizeParameters(parameters));
+          return statement.step() ? statement.getAsObject() : undefined;
+        } finally {
+          statement.free();
+        }
+      },
+
+      all(...parameters) {
+        const statement = sqlite.prepare(sql);
+        const rows = [];
+        try {
+          statement.bind(normalizeParameters(parameters));
+          while (statement.step()) {
+            rows.push(statement.getAsObject());
+          }
+          return rows;
+        } finally {
+          statement.free();
+        }
+      }
+    };
+  }
+};
 
 db.exec(`
+  PRAGMA foreign_keys = ON;
+
   CREATE TABLE IF NOT EXISTS staff_users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
@@ -75,4 +159,3 @@ export async function seedInitialAdmin() {
 
   console.log(`Compte administrateur initial créé pour ${username}.`);
 }
-
