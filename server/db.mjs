@@ -179,7 +179,53 @@ db.exec(`
     FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE,
     FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE SET NULL
   );
+
+  CREATE TABLE IF NOT EXISTS bug_reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending', 'approved', 'rejected')),
+    reviewed_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TEXT,
+    FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES staff_users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS xp_conversion_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    member_id INTEGER NOT NULL,
+    discord_username TEXT NOT NULL,
+    amount INTEGER NOT NULL CHECK (amount > 0),
+    status TEXT NOT NULL DEFAULT 'pending'
+      CHECK (status IN ('pending', 'completed', 'rejected')),
+    reviewed_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TEXT,
+    FOREIGN KEY (member_id) REFERENCES member_users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES staff_users(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS staff_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    recipient_id INTEGER NOT NULL,
+    alert_type TEXT NOT NULL CHECK (alert_type IN ('bug_report', 'xp_conversion')),
+    reference_id INTEGER NOT NULL,
+    body TEXT NOT NULL,
+    resolved INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (recipient_id) REFERENCES staff_users(id) ON DELETE CASCADE
+  );
 `);
+
+const memberColumns = db.prepare("PRAGMA table_info(member_users)").all();
+if (!memberColumns.some((column) => column.name === "points")) {
+  db.exec("ALTER TABLE member_users ADD COLUMN points INTEGER NOT NULL DEFAULT 0");
+}
+if (!memberColumns.some((column) => column.name === "last_activity_reward_at")) {
+  db.exec("ALTER TABLE member_users ADD COLUMN last_activity_reward_at TEXT");
+}
 
 const applicationColumns = db.prepare("PRAGMA table_info(applications)").all();
 if (!applicationColumns.some((column) => column.name === "member_id")) {
