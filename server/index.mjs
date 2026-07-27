@@ -7,12 +7,18 @@ import bcrypt from "bcryptjs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { db, seedInitialAdmin } from "./db.mjs";
-import { authenticate, createToken, requireAdmin } from "./auth.mjs";
+import {
+  authenticate,
+  authenticateMember,
+  createToken,
+  requireAdmin
+} from "./auth.mjs";
 import { fetchAnnouncements } from "./discord.mjs";
 import {
   accountSchema,
   applicationSchema,
   loginSchema,
+  memberRegistrationSchema,
   messageSchema,
   noteSchema,
   parse,
@@ -80,6 +86,15 @@ function publicUser(user) {
   };
 }
 
+function publicMember(member) {
+  return {
+    id: member.id,
+    username: member.username,
+    displayName: member.display_name,
+    createdAt: member.created_at
+  };
+}
+
 function currentUser(req) {
   return db
     .prepare(`
@@ -126,7 +141,7 @@ app.post("/api/auth/login", loginLimiter, async (req, res) => {
     return res.status(401).json({ error: "Identifiant ou mot de passe incorrect." });
   }
 
-  res.json({ token: createToken(user), user: publicUser(user) });
+  res.json({ token: createToken(user, "staff"), user: publicUser(user) });
 });
 
 app.get(
@@ -160,9 +175,62 @@ app.post(
     `).run(passwordHash, user.id);
 
     const updated = { ...user, password_hash: passwordHash, must_change_password: 0 };
-    res.json({ token: createToken(updated), user: publicUser(updated) });
+    res.json({ token: createToken(updated, "staff"), user: publicUser(updated) });
   }
 );
+
+app.post("/api/members/register", loginLimiter, async (req, res) => {
+  const input = parse(memberRegistrationSchema, req, res);
+  if (!input) return;
+
+  const passwordHash = await bcrypt.hash(input.password, 12);
+  try {
+    const result = db.prepare(`
+      INSERT INTO member_users (username, password_hash, display_name)
+      VALUES (?, ?, ?)
+    `).run(input.username, passwordHash, input.displayName);
+    const member = db
+      .prepare("SELECT id, username, display_name, created_at FROM member_users WHERE id = ?")
+      .get(result.lastInsertRowid);
+    res.status(201).json({
+      token: createToken({ ...member, role: "member" }, "member"),
+      member: publicMember(member)
+    });
+  } catch (error) {
+    if (error.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      return res.status(409).json({ error: "Cet identifiant membre existe déjà." });
+    }
+    throw error;
+  }
+});
+
+app.post("/api/members/login", loginLimiter, async (req, res) => {
+  const input = parse(loginSchema, req, res);
+  if (!input) return;
+
+  const member = db
+    .prepare("SELECT * FROM member_users WHERE username = ? COLLATE NOCASE")
+    .get(input.username);
+  const valid = member && (await bcrypt.compare(input.password, member.password_hash));
+  if (!valid) {
+    return res.status(401).json({ error: "Identifiant ou mot de passe membre incorrect." });
+  }
+
+  res.json({
+    token: createToken({ ...member, role: "member" }, "member"),
+    member: publicMember(member)
+  });
+});
+
+app.get("/api/members/me", authenticateMember, (req, res) => {
+  const member = db
+    .prepare("SELECT id, username, display_name, created_at FROM member_users WHERE id = ?")
+    .get(Number(req.member.sub));
+  if (!member) {
+    return res.status(404).json({ error: "Compte membre introuvable." });
+  }
+  res.json({ member: publicMember(member) });
+});
 
 let announcementCache = { expiresAt: 0, value: null };
 app.get("/api/announcements", async (_req, res) => {
