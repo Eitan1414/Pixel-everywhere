@@ -1,4 +1,4 @@
-const CACHE = "pixel-everywhere-alpha-v3";
+const CACHE = "pixel-everywhere-alpha-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
