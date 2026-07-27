@@ -57,6 +57,23 @@ jobs:
       - name: Construire l’interface
         run: npm run build
 
+      - name: Publier le bundle web de contrôle
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Web-Bundle-Debug
+          path: www
+          if-no-files-found: error
+
+      - name: Vérifier le bundle Serveur PDD
+        run: |
+          set -euo pipefail
+          test -f www/index.html
+          grep -q 'id="serverSettingsPanel"' www/index.html
+          grep -q 'Serveur PDD' www/index.html
+          ! grep -q 'web/server-settings.js' www/index.html
+          ! grep -q 'web/enhancements.js' www/index.html
+          grep -R -q 'pixel-api-base-url' www/assets
+
       - name: Générer le projet Android
         run: |
           npx cap add android
@@ -68,6 +85,18 @@ jobs:
       - name: Compiler l’APK
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
+
+      - name: Vérifier le contenu réel de l’APK
+        run: |
+          set -euo pipefail
+          rm -rf apk-check
+          mkdir apk-check
+          unzip -q android/app/build/outputs/apk/debug/app-debug.apk 'assets/public/*' -d apk-check
+          test -f apk-check/assets/public/index.html
+          grep -q 'id="serverSettingsPanel"' apk-check/assets/public/index.html
+          grep -q 'Serveur PDD' apk-check/assets/public/index.html
+          ! grep -q 'web/server-settings.js' apk-check/assets/public/index.html
+          grep -R -q 'pixel-api-base-url' apk-check/assets/public/assets
 
       - name: Publier l’APK
         uses: actions/upload-artifact@v4
