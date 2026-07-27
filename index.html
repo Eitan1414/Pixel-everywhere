@@ -4,25 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0b0f" />
-    <meta name="description" content="Pixel Everywhere, l'application officielle de Pixel Difficult Drawer." />
+    <meta name="description" content="Pixel Everywhere, l’application officielle de Pixel Difficult Drawer." />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/assets/icon-192.png" />
     <link rel="stylesheet" href="/web/styles.css" />
-    <title>Pixel Everywhere</title>
+    <title>Pixel Everywhere — Alpha</title>
   </head>
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <button class="brand" data-page-target="home" aria-label="Retour à l'accueil">
-          <img src="/assets/icon-192.png" alt="" />
+        <button class="brand" data-page-target="home" aria-label="Retour à l’accueil">
+          <img src="/assets/alpha-logo.png" alt="Logo Alpha de PDD" />
           <span>
-            <strong>Pixel Everywhere</strong>
-            <small>Pixel Difficult Drawer</small>
+            <span class="brand-title">
+              <strong>Pixel Everywhere</strong>
+              <em>ALPHA</em>
+            </span>
+            <small>Pixel Difficult Drawer — Official Application</small>
           </span>
         </button>
-        <button id="staffButton" class="staff-button" type="button">
-          <span aria-hidden="true">◆</span>
-          Staff
+        <button id="accountButton" class="staff-button" type="button">
+          <span aria-hidden="true">●</span>
+          Compte
         </button>
       </header>
 
@@ -30,7 +33,7 @@
         <section id="page-home" class="page active">
           <article class="hero card">
             <div class="hero-glow"></div>
-            <img class="hero-logo" src="/assets/pdd-logo.jpg" alt="Logo Pixel Difficult Drawer" />
+            <img class="hero-logo" src="/assets/alpha-logo.png" alt="Logo Alpha Pixel Difficult Drawer" />
             <p class="eyebrow">Bienvenue sur PDD</p>
             <h1>Le dessin et le gaming, partout avec toi.</h1>
             <p>
@@ -52,9 +55,17 @@
               <span class="feature-icon orange">!</span>
               <span><strong>Annonces</strong><small>Les nouveautés officielles du serveur</small></span>
             </button>
+            <button class="feature-card pixel-feature" data-page-target="pixel">
+              <img src="/assets/pixel-mascot.png" alt="" />
+              <span><strong>Pixel</strong><small>Prends soin de la mascotte de PDD</small></span>
+            </button>
             <button class="feature-card" data-page-target="application">
               <span class="feature-icon cyan">✦</span>
               <span><strong>Rejoindre le staff</strong><small>Envoie ta candidature aux modérateurs</small></span>
+            </button>
+            <button class="feature-card" data-page-target="credits">
+              <span class="feature-icon purple">★</span>
+              <span><strong>L’équipe</strong><small>Découvre les créateurs de l’application</small></span>
             </button>
           </div>
         </section>
@@ -68,6 +79,50 @@
             <button id="refreshAnnouncements" class="icon-button" aria-label="Actualiser">↻</button>
           </div>
           <div id="announcementsList" class="stack"></div>
+          <p class="announcement-footer">
+            Pour accéder à tous les salons et participer aux événements, veuillez rejoindre le
+            serveur Discord. Le lien est disponible dans la catégorie
+            <button type="button" data-page-target="home">Accueil</button>.
+          </p>
+        </section>
+
+        <section id="page-pixel" class="page">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Mascotte virtuelle</p>
+              <h2>Mon Pixel</h2>
+            </div>
+            <span id="petMoodBadge" class="mood-badge">Heureux</span>
+          </div>
+          <article class="pet-card card">
+            <div class="pet-sparkles" aria-hidden="true"><span>✦</span><span>·</span><span>✦</span></div>
+            <div id="petStage" class="pet-stage">
+              <img id="petMascot" src="/assets/pixel-mascot.png" alt="Pixel, la mascotte virtuelle de PDD" />
+              <div id="petReaction" class="pet-reaction" aria-live="polite">Salut !</div>
+            </div>
+            <p id="petMessage" class="pet-message">Pixel est très content de te voir !</p>
+            <div class="pet-stats">
+              <div class="pet-stat">
+                <span><strong>Faim</strong><small id="hungerValue">82%</small></span>
+                <div><i id="hungerBar"></i></div>
+              </div>
+              <div class="pet-stat">
+                <span><strong>Joie</strong><small id="joyValue">88%</small></span>
+                <div><i id="joyBar"></i></div>
+              </div>
+              <div class="pet-stat">
+                <span><strong>Énergie</strong><small id="energyValue">76%</small></span>
+                <div><i id="energyBar"></i></div>
+              </div>
+            </div>
+            <div class="pet-actions">
+              <button type="button" data-pet-action="feed"><span>🍊</span>Nourrir</button>
+              <button type="button" data-pet-action="bounce"><span>✨</span>Faire bondir</button>
+              <button type="button" data-pet-action="walk"><span>👟</span>Promener</button>
+              <button type="button" data-pet-action="sleep"><span>🌙</span>Dormir</button>
+            </div>
+          </article>
+          <p class="pet-hint">Les besoins de Pixel évoluent doucement, même lorsque l’application est fermée.</p>
         </section>
 
         <section id="page-application" class="page">
@@ -109,30 +164,47 @@
         <section id="page-credits" class="page">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Pixel Everywhere</p>
+              <p class="eyebrow">Les personnes derrière PDD</p>
               <h2>Crédits</h2>
             </div>
           </div>
+          <article class="credits-intro card">
+            <img src="/assets/alpha-logo.png" alt="" />
+            <div>
+              <strong>Pixel Everywhere</strong>
+              <p>L’application officielle de Pixel Difficult Drawer, créée avec passion pour sa communauté.</p>
+            </div>
+          </article>
           <div class="credit-list">
+            <p class="credit-group-title">Création et direction</p>
             <article class="credit-card featured">
               <span class="avatar-mark">E</span>
-              <div><strong>Eitan 2.0</strong><small>Programming • Creator of the server/app</small></div>
+              <div><strong>Eitan 2.0</strong><small>Programmation et créateur du serveur et de l’application</small></div>
             </article>
             <article class="credit-card">
               <span class="avatar-mark">T</span>
-              <div><strong>thib549</strong><small>Co-creator</small></div>
+              <div><strong>thib549</strong><small>Co-créateur</small></div>
             </article>
             <article class="credit-card">
               <span class="avatar-mark">K</span>
-              <div><strong>kamiko</strong><small>Co-creator</small></div>
+              <div><strong>Kamiko</strong><small>Co-créateur</small></div>
             </article>
             <article class="credit-card">
               <span class="avatar-mark">S</span>
-              <div><strong>simgi</strong><small>Director of staff</small></div>
+              <div><strong>Simgi</strong><small>Directeur du staff</small></div>
+            </article>
+            <p class="credit-group-title">Modération responsable</p>
+            <article class="credit-card">
+              <span class="avatar-mark">B</span>
+              <div><strong>Baba</strong><small>Modérateur responsable</small></div>
+            </article>
+            <article class="credit-card">
+              <span class="avatar-mark">T</span>
+              <div><strong>Touille</strong><small>Modérateur responsable</small></div>
             </article>
             <article class="credit-card">
               <span class="avatar-mark">M</span>
-              <div><strong>baba • touille • Maggie</strong><small>Modérateurs responsables</small></div>
+              <div><strong>Maggie</strong><small>Modératrice responsable</small></div>
             </article>
           </div>
         </section>
@@ -195,31 +267,94 @@
         </section>
       </main>
 
+      <button id="pixelGuideButton" class="pixel-guide-button" type="button" aria-label="Ouvrir l’aide Pixel">
+        <img src="/assets/pixel-mascot.png" alt="" />
+        <span>Besoin d’aide ?</span>
+      </button>
+
       <nav class="bottom-nav" aria-label="Navigation principale">
         <button class="active" data-page-target="home"><span>⌂</span><small>Accueil</small></button>
         <button data-page-target="announcements"><span>!</span><small>Annonces</small></button>
+        <button data-page-target="pixel"><span class="pixel-nav-icon">C</span><small>Pixel</small></button>
         <button data-page-target="application"><span>✦</span><small>Candidature</small></button>
         <button data-page-target="credits"><span>©</span><small>Crédits</small></button>
       </nav>
     </div>
 
     <dialog id="loginDialog">
-      <form id="loginForm" class="login-card">
+      <article class="login-card account-dialog-card">
         <button id="closeLogin" type="button" class="dialog-close" aria-label="Fermer">×</button>
-        <img src="/assets/icon-192.png" alt="" />
-        <p class="eyebrow">Accès réservé</p>
-        <h2>Connexion staff</h2>
-        <label>
-          Identifiant
-          <input name="username" autocomplete="username" required />
-        </label>
-        <label>
-          Mot de passe
-          <input name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <button class="primary-button" type="submit">Se connecter</button>
-        <p class="form-status" aria-live="polite"></p>
-      </form>
+        <div class="login-heading">
+          <img src="/assets/alpha-logo.png" alt="" />
+          <div><p class="eyebrow">Pixel Everywhere</p><h2>Mon compte</h2></div>
+        </div>
+        <div class="account-tabs" role="tablist">
+          <button class="active" type="button" data-account-tab="member">Compte membre</button>
+          <button type="button" data-account-tab="staff">Compte staff</button>
+        </div>
+
+        <section id="account-member" class="account-panel active">
+          <div id="memberSignedIn" class="member-profile hidden">
+            <img src="/assets/pixel-mascot.png" alt="" />
+            <p>Connecté en tant que</p>
+            <strong id="memberIdentity"></strong>
+            <button id="memberLogoutButton" class="text-button" type="button">Déconnecter le compte membre</button>
+          </div>
+          <div id="memberGuest">
+            <div class="member-mode-switch">
+              <button class="active" type="button" data-member-mode="login">Connexion</button>
+              <button type="button" data-member-mode="register">Créer un compte</button>
+            </div>
+            <form id="memberLoginForm" class="account-form active">
+              <label>Identifiant membre<input name="username" autocomplete="username" required /></label>
+              <label>Mot de passe<input name="password" type="password" minlength="8" autocomplete="current-password" required /></label>
+              <button class="primary-button" type="submit">Se connecter comme membre</button>
+              <p class="form-status" aria-live="polite"></p>
+            </form>
+            <form id="memberRegisterForm" class="account-form">
+              <label>Nom affiché<input name="displayName" minlength="2" maxlength="40" autocomplete="name" required /></label>
+              <label>Nouvel identifiant<input name="username" minlength="3" maxlength="32" pattern="[A-Za-z0-9_.-]+" autocomplete="username" required /></label>
+              <label>Mot de passe<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required /></label>
+              <button class="primary-button" type="submit">Créer mon compte membre</button>
+              <p class="form-status" aria-live="polite"></p>
+            </form>
+          </div>
+        </section>
+
+        <section id="account-staff" class="account-panel">
+          <div id="staffSignedIn" class="member-profile hidden">
+            <p>Session staff active</p>
+            <strong id="staffDialogIdentity"></strong>
+            <button id="openStaffButton" class="primary-button" type="button">Ouvrir l’espace staff</button>
+          </div>
+          <form id="loginForm" class="account-form active">
+            <p class="account-help">Réservé aux modérateurs et administrateurs autorisés.</p>
+            <label>Identifiant staff<input name="username" autocomplete="username" required /></label>
+            <label>Mot de passe<input name="password" type="password" autocomplete="current-password" required /></label>
+            <button class="primary-button" type="submit">Se connecter au staff</button>
+            <p class="form-status" aria-live="polite"></p>
+          </form>
+        </section>
+      </article>
+    </dialog>
+
+    <dialog id="guideDialog">
+      <article class="guide-card">
+        <button id="closeGuide" type="button" class="dialog-close" aria-label="Fermer">×</button>
+        <div class="guide-pixel">
+          <img src="/assets/pixel-mascot.png" alt="Pixel" />
+          <div><p class="eyebrow">Assistant Pixel</p><h2>Où veux-tu aller ?</h2></div>
+        </div>
+        <p id="guideTip">Je peux t’aider à naviguer dans Pixel Everywhere.</p>
+        <div class="guide-actions">
+          <button type="button" data-guide-page="home"><strong>Accueil</strong><small>Présentation et invitation Discord</small></button>
+          <button type="button" data-guide-page="announcements"><strong>Annonces</strong><small>Actualités officielles de PDD</small></button>
+          <button type="button" data-guide-page="pixel"><strong>Mon Pixel</strong><small>Nourrir et amuser la mascotte</small></button>
+          <button type="button" data-guide-page="application"><strong>Candidature</strong><small>Postuler auprès des modérateurs</small></button>
+          <button type="button" data-guide-page="credits"><strong>Crédits</strong><small>Découvrir l’équipe du projet</small></button>
+          <button type="button" data-guide-page="staff"><strong>Espace staff</strong><small>Messagerie et gestion privées</small></button>
+        </div>
+      </article>
     </dialog>
 
     <dialog id="applicationDialog">
@@ -233,4 +368,3 @@
     <script type="module" src="/web/main.js"></script>
   </body>
 </html>
-
