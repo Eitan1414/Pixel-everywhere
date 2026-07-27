@@ -153,6 +153,15 @@
                 <div class="pet-shelf"><i></i><i></i><i></i></div>
                 <div class="pet-rug"></div>
               </div>
+              <div class="pet-sketch-house" aria-hidden="true">
+                <div class="sketch-window"><i></i><i></i><span>☁</span></div>
+                <div class="sketch-curtain left"></div>
+                <div class="sketch-curtain right"></div>
+                <div class="sketch-table"><span>✎</span></div>
+                <div class="sketch-plant"><i></i><span>♡</span></div>
+                <div class="sketch-wall-doodles">★　PDD　☾</div>
+                <div class="sketch-floor-lines"></div>
+              </div>
               <button class="pet-object pet-bowl" type="button" data-pet-action="feed" aria-label="Donner à manger à Pixel">🍊</button>
               <button class="pet-object pet-ball" type="button" data-pet-action="bounce" aria-label="Jouer avec Pixel">★</button>
               <button class="pet-object pet-bed" type="button" data-pet-action="sleep" aria-label="Faire dormir Pixel">Zz</button>
@@ -179,11 +188,12 @@
               </div>
             </div>
             <div class="pet-actions">
-              <button type="button" data-pet-action="feed"><span>🍊</span><strong>Nourrir</strong><small>+ faim</small></button>
-              <button type="button" data-pet-action="bounce"><span>✨</span><strong>Jouer</strong><small>+ joie</small></button>
-              <button type="button" data-pet-action="walk"><span>👟</span><strong>Promener</strong><small>+ joie & XP</small></button>
-              <button type="button" data-pet-action="sleep"><span>🌙</span><strong>Dormir</strong><small>+ énergie</small></button>
+              <button type="button" data-pet-action="feed"><span>🍊</span><strong>Nourrir</strong><small>5 ◆ • 20 s</small></button>
+              <button type="button" data-pet-action="bounce"><span>✨</span><strong>Jouer</strong><small>8 ◆ • 15 s</small></button>
+              <button type="button" data-pet-action="walk"><span>👟</span><strong>Promener</strong><small>15 ◆ • 60 s</small></button>
+              <button type="button" data-pet-action="sleep"><span>🌙</span><strong>Dormir</strong><small>10 ◆ • 30 s</small></button>
             </div>
+            <p id="petActionStatus" class="form-status pet-action-status">Caresser Pixel coûte 5 ◆ et possède un délai de 10 secondes.</p>
             <section class="pixel-shop">
               <div>
                 <p class="eyebrow">Boutique de Pixel</p>
@@ -201,7 +211,7 @@
               <div><small>Journal de Pixel</small><p id="petDiary">Pixel vient d’arriver dans son atelier.</p></div>
             </div>
           </article>
-          <p class="pet-hint">Touche Pixel pour le caresser. Son atelier change selon l’heure réelle et ses besoins évoluent lorsque l’application est fermée.</p>
+          <p class="pet-hint">Touche Pixel pour le caresser. Glisse vers la gauche ou la droite pour changer de catégorie. Son atelier évolue selon l’heure réelle.</p>
         </section>
 
         <section id="page-application" class="page">
