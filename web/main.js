@@ -28,7 +28,7 @@ function finishStartupAnimation() {
 
 if (startupAnimation) {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  startupTimer = window.setTimeout(finishStartupAnimation, reducedMotion ? 1600 : 8300);
+  startupTimer = window.setTimeout(finishStartupAnimation, reducedMotion ? 1600 : 10400);
   $("#skipStartup").addEventListener("click", finishStartupAnimation);
 }
 
