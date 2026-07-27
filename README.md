@@ -87,15 +87,13 @@ Une sauvegarde régulière du fichier `data/pixel-everywhere.db` est recommandé
 Le projet contient le workflow `.github/workflows/android.yml`.
 
 1. Mettre le projet dans un dépôt GitHub.
-2. Déployer d’abord le serveur Node.js.
-3. Dans **Settings > Secrets and variables > Actions > Variables**, créer
-   `VITE_API_BASE_URL` avec une adresse de la forme
-   `https://serveur-pixel.example/api`.
-4. Ouvrir **Actions > Compiler Pixel Everywhere > Run workflow**.
-5. Télécharger l’artefact **Pixel-Everywhere-APK** à la fin de la compilation.
+2. Installer et démarrer le serveur Node.js dans Termux sur le même appareil.
+3. Ouvrir **Actions > Compiler Pixel Everywhere > Run workflow**.
+4. Télécharger l’artefact **Pixel-Everywhere-APK** à la fin de la compilation.
 
-L’APK ne peut pas se connecter avec une adresse API en HTTP : le serveur public
-doit utiliser HTTPS.
+L’APK est configuré pour joindre automatiquement le serveur Termux à l’adresse
+`http://127.0.0.1:3000/api`. Cette adresse fonctionne uniquement lorsque
+Termux et Pixel Everywhere sont exécutés sur le même appareil Android.
 
 ## Comptes et autorisations
 
@@ -113,4 +111,3 @@ Un administrateur ne peut pas désactiver son propre compte depuis l’applicati
 - **kamiko** — Co-creator
 - **simgi** — Director of staff
 - **baba / touille / Maggie** — Modérateurs responsables
-
