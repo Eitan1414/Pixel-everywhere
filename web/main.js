@@ -11,6 +11,7 @@ const state = {
   memberApplications: [],
   unreadCount: 0,
   points: Number(JSON.parse(localStorage.getItem("pixel-member") || "null")?.points || 0),
+  memberRating: null,
   applications: [],
   activeApplication: null,
   pet: JSON.parse(localStorage.getItem("pixel-pet") || "null")
@@ -268,6 +269,7 @@ function navigate(page) {
   if (page === "pixel") renderPet();
   if (page === "application") prepareApplicationPage();
   if (page === "member-inbox") loadMemberInbox({ markVisible: true });
+  if (page === "rating") loadRatingPage();
   if (page === "staff") openStaffWorkspace();
 }
 
@@ -673,6 +675,7 @@ $$("[data-staff-tab]").forEach((button) => {
     );
     if (tab === "applications") loadApplications();
     if (tab === "messages") loadMessages();
+    if (tab === "ratings") loadStaffRatings();
     if (tab === "accounts") loadAccounts();
   });
 });
@@ -823,6 +826,79 @@ async function loadMemberInbox({ notify = true } = {}) {
     list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
 }
+
+function starText(value) {
+  const rounded = Math.max(0, Math.min(5, Math.round(Number(value || 0))));
+  return `${"★".repeat(rounded)}${"☆".repeat(5 - rounded)}`;
+}
+
+async function loadRatingPage() {
+  const gate = $("#ratingMemberGate");
+  const form = $("#ratingForm");
+  gate.classList.toggle("hidden", Boolean(state.member));
+  form.classList.toggle("hidden", !state.member);
+
+  try {
+    const summary = await api("/ratings/summary", { auth: "none" });
+    $("#publicRatingStars").textContent = starText(summary.average);
+    $("#publicRatingAverage").textContent = summary.count
+      ? `${Number(summary.average).toLocaleString("fr-FR", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 2
+        })} / 5`
+      : "Aucune note";
+    $("#publicRatingCount").textContent = summary.count
+      ? `${summary.count} avis membre${summary.count > 1 ? "s" : ""}`
+      : "Sois le premier à donner ton avis.";
+  } catch (error) {
+    $("#publicRatingCount").textContent = error.message;
+  }
+
+  if (!state.member) return;
+  try {
+    const data = await api("/members/rating", { auth: "member" });
+    state.memberRating = data.rating;
+    form.reset();
+    if (data.rating) {
+      const radio = $(`input[name="stars"][value="${data.rating.stars}"]`, form);
+      if (radio) radio.checked = true;
+      $("textarea[name='comment']", form).value = data.rating.comment;
+      $("button[type='submit']", form).textContent = "Mettre à jour mon avis";
+      setFormStatus($("#ratingStatus"), "Tu peux modifier ton évaluation à tout moment.");
+    } else {
+      $("button[type='submit']", form).textContent = "Enregistrer mon avis";
+      setFormStatus($("#ratingStatus"), "");
+    }
+  } catch (error) {
+    setFormStatus($("#ratingStatus"), error.message, "error");
+  }
+}
+
+$("#refreshRating").addEventListener("click", loadRatingPage);
+$("#ratingForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = $("button[type='submit']", form);
+  const status = $("#ratingStatus");
+  const values = Object.fromEntries(new FormData(form));
+  button.disabled = true;
+  setFormStatus(status, "Enregistrement de ton avis…");
+  try {
+    const result = await api("/members/rating", {
+      method: "PUT",
+      auth: "member",
+      body: JSON.stringify(values)
+    });
+    state.memberRating = result.rating;
+    setFormStatus(status, result.message, "success");
+    button.textContent = "Mettre à jour mon avis";
+    await loadRatingPage();
+  } catch (error) {
+    setFormStatus(status, error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
 
 async function loadApplications() {
   const list = $("#staffApplicationsList");
@@ -1118,6 +1194,54 @@ async function loadStaffAlerts() {
     list.replaceChildren(...data.alerts.map(renderStaffAlert));
   } catch (error) {
     list.replaceChildren(element("div", { className: "empty-state compact", text: error.message }));
+  }
+}
+
+async function loadStaffRatings() {
+  const list = $("#staffRatingsList");
+  list.replaceChildren(element("div", {
+    className: "loading-card",
+    text: "Chargement des évaluations…"
+  }));
+  try {
+    const data = await api("/staff/ratings");
+    $("#staffRatingAverage").textContent = data.count
+      ? `${Number(data.average).toLocaleString("fr-FR", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 2
+        })} / 5`
+      : "— / 5";
+    $("#staffRatingStars").textContent = starText(data.average);
+    $("#staffRatingCount").textContent =
+      `${data.count} avis${data.count > 1 ? " reçus" : data.count ? " reçu" : ""}`;
+    if (!data.ratings.length) {
+      list.replaceChildren(element("div", {
+        className: "empty-state",
+        text: "Aucune évaluation reçue pour le moment."
+      }));
+      return;
+    }
+    list.replaceChildren(...data.ratings.map((rating) =>
+      element("article", { className: "staff-rating-card" }, [
+        element("div", { className: "staff-rating-head" }, [
+          element("div", {}, [
+            element("strong", { text: rating.member_display_name }),
+            element("small", { text: `@${rating.member_username}` })
+          ]),
+          element("span", {
+            className: "staff-rating-stars",
+            text: starText(rating.stars),
+            title: `${rating.stars} étoile${rating.stars > 1 ? "s" : ""} sur 5`
+          })
+        ]),
+        element("p", { text: rating.comment }),
+        element("time", {
+          text: `Mis à jour le ${formatDate(rating.updated_at)}`
+        })
+      ])
+    ));
+  } catch (error) {
+    list.replaceChildren(element("div", { className: "empty-state", text: error.message }));
   }
 }
 
