@@ -14,7 +14,8 @@ jobs:
   android:
     runs-on: ubuntu-latest
     env:
-      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+      # L’API tourne dans Termux sur le même appareil Android que l’application.
+      VITE_API_BASE_URL: http://127.0.0.1:3000/api
 
     steps:
       - name: Récupérer le projet
@@ -53,6 +54,11 @@ jobs:
         run: |
           npx cap add android
           npx cap sync android
+
+      - name: Autoriser uniquement le serveur Termux local
+        run: |
+          cp scripts/network_security_config.xml android/app/src/main/res/xml/network_security_config.xml
+          sed -i 's/android:supportsRtl="true"/android:supportsRtl="true"\n        android:networkSecurityConfig="@xml\/network_security_config"/' android/app/src/main/AndroidManifest.xml
 
       - name: Appliquer le logo PDD
         run: bash scripts/brand-android.sh
