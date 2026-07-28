@@ -1,4 +1,5 @@
 import "./startup-v2.css";
+import "./desktop-network.js";
 import "./session-stability.js";
 import "./server-settings-v2.js";
 import "./server-recovery.js";

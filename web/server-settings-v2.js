@@ -44,14 +44,17 @@ function activeApiBase() {
 
 function rewriteApiUrl(rawUrl) {
   const active = activeApiBase();
-  if (!active || active === BUILD_API_BASE) return rawUrl;
+  if (!active) return rawUrl;
 
   const value = String(rawUrl);
-  if (BUILD_API_BASE.startsWith("http") && value.startsWith(BUILD_API_BASE)) {
-    return `${active}${value.slice(BUILD_API_BASE.length)}`;
-  }
+  // Les modules récents utilisent volontairement /api/... pour fonctionner dans
+  // le navigateur. Dans Electron, cette URL devenait file:///api/... lorsque
+  // l'adresse enregistrée était identique à celle du build.
   if (value === "/api" || value.startsWith("/api/")) {
     return `${active}${value.slice(4)}`;
+  }
+  if (BUILD_API_BASE.startsWith("http") && value.startsWith(BUILD_API_BASE)) {
+    return `${active}${value.slice(BUILD_API_BASE.length)}`;
   }
 
   try {
