@@ -42,14 +42,37 @@ const sourcePath = path.join(serverDirectory, "index.mjs");
 const runtimePath = path.join(serverDirectory, "index.runtime.mjs");
 let source = fs.readFileSync(sourcePath, "utf8");
 
+const extraImports = [];
 if (!source.includes('from "./suggestions.mjs"')) {
+  extraImports.push('import { registerSuggestionRoutes } from "./suggestions.mjs";');
+}
+if (!source.includes('from "./admin-control.mjs"')) {
+  extraImports.push('import { createManagedLoginLimiter, registerAdminControlRoutes } from "./admin-control.mjs";');
+}
+if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
-    'import "dotenv/config";\nimport { registerSuggestionRoutes } from "./suggestions.mjs";'
+    ['import "dotenv/config";', ...extraImports].join("\n")
   );
 }
 
-const registration = `registerSuggestionRoutes({
+const originalLoginLimiterPattern = /const loginLimiter = rateLimit\(\{[\s\S]*?\n\}\);/;
+const originalLoginLimiterMatch = source.match(originalLoginLimiterPattern);
+if (originalLoginLimiterMatch && !source.includes("managedLoginLimiter")) {
+  source = source.replace(
+    originalLoginLimiterPattern,
+    `${originalLoginLimiterMatch[0].replace("const loginLimiter =", "const fallbackLoginLimiter =")}
+const managedLoginLimiter = createManagedLoginLimiter({ db });
+const loginLimiter = (req, res, next) => {
+  if (req.originalUrl.includes("/login")) return managedLoginLimiter(req, res, next);
+  return fallbackLoginLimiter(req, res, next);
+};`
+  );
+}
+
+const registrations = [];
+if (!source.includes("registerSuggestionRoutes({")) {
+  registrations.push(`registerSuggestionRoutes({
   app,
   db,
   authenticate,
@@ -57,14 +80,24 @@ const registration = `registerSuggestionRoutes({
   requireActiveStaff,
   requireActiveMember,
   staffOnly
-});
-
-`;
-
-if (!source.includes("registerSuggestionRoutes({")) {
+});`);
+}
+if (!source.includes("registerAdminControlRoutes({")) {
+  registrations.push(`registerAdminControlRoutes({
+  app,
+  db,
+  authenticate,
+  authenticateMember,
+  requireActiveStaff,
+  requireActiveMember,
+  staffOnly,
+  requireAdmin
+});`);
+}
+if (registrations.length) {
   source = source.replace(
     'if (process.env.NODE_ENV === "production") {',
-    `${registration}if (process.env.NODE_ENV === "production") {`
+    `${registrations.join("\n\n")}\n\nif (process.env.NODE_ENV === "production") {`
   );
 }
 
