@@ -221,7 +221,33 @@ export function registerCreationRoutes({
           c.id DESC
         LIMIT 120
       `).all();
-      res.json({ creations: rows.map((row) => publicCreation(row, { includeProject: true })) });
+      res.json({ creations: rows.map((row) => publicCreation(row)) });
+    }
+  );
+
+  app.get(
+    "/api/staff/creations/:id/project",
+    authenticate,
+    requireActiveStaff,
+    staffOnly,
+    (req, res) => {
+      const creationId = Number(req.params.id);
+      if (!Number.isInteger(creationId) || creationId <= 0) {
+        return res.status(400).json({ error: "Création invalide." });
+      }
+      const creation = db.prepare(`
+        SELECT id, kind, project_data, frame_count, fps
+        FROM creation_submissions
+        WHERE id = ?
+      `).get(creationId);
+      if (!creation) return res.status(404).json({ error: "Création introuvable." });
+      res.json({
+        id: creation.id,
+        kind: creation.kind,
+        projectData: creation.project_data,
+        frameCount: Number(creation.frame_count || 1),
+        fps: Number(creation.fps || 6)
+      });
     }
   );
 
