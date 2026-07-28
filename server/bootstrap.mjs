@@ -34,5 +34,7 @@ if (!source.includes("registerSuggestionRoutes({")) {
   );
 }
 
-fs.writeFileSync(runtimePath, source);
+const previous = fs.existsSync(runtimePath) ? fs.readFileSync(runtimePath, "utf8") : "";
+if (previous !== source) fs.writeFileSync(runtimePath, source);
+
 await import(`${pathToFileURL(runtimePath).href}?v=${Date.now()}`);
