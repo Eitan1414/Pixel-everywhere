@@ -18,7 +18,7 @@ function decorateDesktopUpdateCards() {
     if (!card.querySelector(".desktop-update-upload-help")) {
       const help = document.createElement("small");
       help.className = "desktop-update-upload-help";
-      help.textContent = "Le sélecteur macOS s’ouvrira au moment de l’envoi.";
+      help.textContent = "Le sélecteur de fichiers de l’ordinateur s’ouvrira au moment de l’envoi.";
       card.querySelector(".update-file-actions")?.insertAdjacentElement("beforebegin", help);
     }
   });
