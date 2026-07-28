@@ -9,7 +9,7 @@ const skipStartupKey = "pixel-skip-startup-once";
 // autres améliorations ni au mémorisateur d’identifiant.
 const nativeAddEventListener = EventTarget.prototype.addEventListener;
 let blockDuplicateMemberAuth = true;
-EventTarget.prototype.addEventListener = function stableAddEventListener(type, listener, options) {
+const stableAddEventListener = function stableAddEventListener(type, listener, options) {
   const capture = options === true || Boolean(options && typeof options === "object" && options.capture);
   const memberForm = this instanceof HTMLFormElement
     && ["memberLoginForm", "memberRegisterForm"].includes(this.id);
@@ -24,6 +24,7 @@ EventTarget.prototype.addEventListener = function stableAddEventListener(type, l
   }
   return nativeAddEventListener.call(this, type, listener, options);
 };
+EventTarget.prototype.addEventListener = stableAddEventListener;
 
 function restoreStaffSession() {
   const token = localStorage.getItem(persistentStaffTokenKey);
