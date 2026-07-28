@@ -1,5 +1,10 @@
 const desktopApiRequest = window.pixelDesktop?.apiRequest;
 
+window.PixelDesktopNetwork = {
+  enabled: typeof desktopApiRequest === "function",
+  transport: typeof desktopApiRequest === "function" ? "renderer-with-ipc-fallback" : "browser"
+};
+
 if (typeof desktopApiRequest === "function") {
   const rendererFetch = window.fetch.bind(window);
 
