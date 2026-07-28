@@ -52,12 +52,22 @@ if (!source.includes('from "./admin-control.mjs"')) {
 if (!source.includes('from "./updates.mjs"')) {
   extraImports.push('import { registerUpdateRoutes } from "./updates.mjs";');
 }
+if (!source.includes('from "./creations.mjs"')) {
+  extraImports.push('import { registerCreationRoutes } from "./creations.mjs";');
+}
 if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
     ['import "dotenv/config";', ...extraImports].join("\n")
   );
 }
+
+// Les projets d’animation contiennent plusieurs PNG encodés. La validation des
+// routes limite ensuite chaque projet à 9 Mo et 24 frames.
+source = source.replace(
+  'app.use(express.json({ limit: "32kb" }));',
+  'app.use(express.json({ limit: "12mb" }));'
+);
 
 const originalLoginLimiterPattern = /const loginLimiter = rateLimit\(\{[\s\S]*?\n\}\);/;
 const originalLoginLimiterMatch = source.match(originalLoginLimiterPattern);
@@ -105,6 +115,17 @@ if (!source.includes("registerUpdateRoutes({")) {
   requireActiveStaff,
   staffOnly,
   requireAdmin
+});`);
+}
+if (!source.includes("registerCreationRoutes({")) {
+  registrations.push(`registerCreationRoutes({
+  app,
+  db,
+  authenticate,
+  authenticateMember,
+  requireActiveStaff,
+  requireActiveMember,
+  staffOnly
 });`);
 }
 if (registrations.length) {

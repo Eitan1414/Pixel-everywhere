@@ -10,4 +10,7 @@ import "./suggestions.css";
 import "./suggestions.js";
 import "./admin-control.css";
 import "./admin-control.js";
+import "./creation-studio.css";
+import "./creation-studio.js";
+import "./creation-studio-lazy.js";
 import "./main.js";
