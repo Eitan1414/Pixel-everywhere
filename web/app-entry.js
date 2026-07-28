@@ -19,5 +19,7 @@ import "./creation-studio-lazy.js";
 import "./desktop-layout.css";
 import "./announcement-center.css";
 import "./announcement-center.js";
+import "./announcement-subcategories.css";
+import "./announcement-subcategories.js";
 import "./main.js";
 import "./offline-access.js";
