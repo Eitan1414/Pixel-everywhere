@@ -55,6 +55,9 @@ if (!source.includes('from "./updates.mjs"')) {
 if (!source.includes('from "./creations.mjs"')) {
   extraImports.push('import { registerCreationRoutes } from "./creations.mjs";');
 }
+if (!source.includes('from "./community-announcements.mjs"')) {
+  extraImports.push('import { registerCommunityAnnouncementRoutes } from "./community-announcements.mjs";');
+}
 if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
@@ -125,6 +128,15 @@ if (!source.includes("registerCreationRoutes({")) {
   authenticateMember,
   requireActiveStaff,
   requireActiveMember,
+  staffOnly
+});`);
+}
+if (!source.includes("registerCommunityAnnouncementRoutes({")) {
+  registrations.push(`registerCommunityAnnouncementRoutes({
+  app,
+  db,
+  authenticate,
+  requireActiveStaff,
   staffOnly
 });`);
 }
