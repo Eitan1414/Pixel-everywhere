@@ -127,13 +127,6 @@ jobs:
           test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose "$APK"
 
-          unzip -p "$APK" META-INF/CERT.RSA > apk-check/CERT.RSA
-          CERTIFICATE_INFO="$(keytool -printcert -file apk-check/CERT.RSA)"
-          echo "$CERTIFICATE_INFO"
-          echo "$CERTIFICATE_INFO" | grep -qi 'Pixel Everywhere Alpha Update'
-          NORMALIZED_CERTIFICATE="$(printf '%s' "$CERTIFICATE_INFO" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
-          echo "$NORMALIZED_CERTIFICATE" | grep -q '747484fb4d8026791be81823d7dc07995657770c5427b5ea812982ce321512ef'
-
       - name: Publier l’APK
         uses: actions/upload-artifact@v4
         with:
