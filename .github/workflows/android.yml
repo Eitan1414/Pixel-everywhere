@@ -128,7 +128,8 @@ jobs:
           SIGNATURE_INFO="$("$APKSIGNER" verify --print-certs "$APK")"
           echo "$SIGNATURE_INFO"
           echo "$SIGNATURE_INFO" | grep -qi 'Pixel Everywhere Alpha Update'
-          echo "$SIGNATURE_INFO" | grep -qi '747484fb4d8026791be81823d7dc07995657770c5427b5ea812982ce321512ef'
+          NORMALIZED_SIGNATURE="$(printf '%s' "$SIGNATURE_INFO" | tr -d ':[:space:]' | tr '[:upper:]' '[:lower:]')"
+          echo "$NORMALIZED_SIGNATURE" | grep -q '747484fb4d8026791be81823d7dc07995657770c5427b5ea812982ce321512ef'
 
       - name: Publier l’APK
         uses: actions/upload-artifact@v4
