@@ -32,28 +32,16 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Restaurer la clé Android persistante
-        uses: actions/cache@v4
-        with:
-          path: ~/.android/debug.keystore
-          key: pixel-everywhere-android-update-key-v1
-
-      - name: Préparer la clé de mise à jour Android
+      - name: Préparer la clé Alpha Android stable
         run: |
           set -euo pipefail
           mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkeypair \
-              -keystore ~/.android/debug.keystore \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Pixel Everywhere, OU=PDD, O=Pixel Difficult Drawer, L=France, C=FR"
-          fi
-          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey >/dev/null
+          base64 --decode android-signing/pixel-alpha-update.keystore.b64 > ~/.android/debug.keystore
+          chmod 600 ~/.android/debug.keystore
+          keytool -list -v \
+            -keystore ~/.android/debug.keystore \
+            -storepass android \
+            -alias androiddebugkey | grep -q 'Pixel Everywhere Alpha Update'
 
       - name: Installer les dépendances
         env:
@@ -133,6 +121,7 @@ jobs:
           ! grep -q 'web/server-settings.js' apk-check/assets/public/index.html
           grep -R -q 'pixel-api-base-url' apk-check/assets/public/assets
           grep -R -q 'pixel-update-last-check' apk-check/assets/public/assets
+          keytool -printcert -jarfile android/app/build/outputs/apk/debug/app-debug.apk | grep -q 'Pixel Everywhere Alpha Update'
 
       - name: Publier l’APK
         uses: actions/upload-artifact@v4
