@@ -1,0 +1,202 @@
+.suggestion-feature {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 215, 76, 0.16), transparent 42%),
+    rgba(18, 20, 26, 0.88);
+}
+
+.suggestion-icon {
+  color: #ffd86b;
+  background: rgba(255, 208, 75, 0.12);
+}
+
+.bottom-nav {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.bottom-nav button small {
+  font-size: 0.62rem;
+}
+
+.suggestion-list-heading,
+.staff-suggestion-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 19px 0 11px;
+}
+
+.suggestion-list-heading > div,
+.staff-suggestion-heading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.suggestion-list-heading small,
+.staff-suggestion-heading small,
+.suggestion-card-head small,
+.suggestion-no-reply {
+  color: var(--muted);
+}
+
+.suggestion-list {
+  display: grid;
+  gap: 14px;
+}
+
+.suggestion-card {
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(25, 28, 36, 0.96), rgba(14, 16, 21, 0.96));
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.18);
+}
+
+.suggestion-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 13px;
+}
+
+.suggestion-card-head > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.suggestion-card-head strong {
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+}
+
+.suggestion-card time,
+.suggestion-reply time {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.suggestion-status {
+  flex: 0 0 auto;
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.suggestion-status.status-pending {
+  color: #ffd86b;
+  border-color: rgba(255, 216, 107, 0.35);
+  background: rgba(255, 216, 107, 0.08);
+}
+
+.suggestion-status.status-reviewing {
+  color: var(--cyan);
+  border-color: rgba(18, 214, 223, 0.35);
+  background: rgba(18, 214, 223, 0.08);
+}
+
+.suggestion-status.status-planned,
+.suggestion-status.status-accepted {
+  color: #bd8cff;
+  border-color: rgba(189, 140, 255, 0.38);
+  background: rgba(189, 140, 255, 0.09);
+}
+
+.suggestion-status.status-implemented {
+  color: var(--success);
+  border-color: rgba(54, 220, 139, 0.4);
+  background: rgba(54, 220, 139, 0.09);
+}
+
+.suggestion-status.status-rejected {
+  color: #ff8b8b;
+  border-color: rgba(255, 111, 111, 0.38);
+  background: rgba(255, 111, 111, 0.08);
+}
+
+.suggestion-description {
+  margin: 15px 0 0;
+  color: #d9dce3;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.suggestion-thread {
+  display: grid;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.suggestion-reply {
+  padding: 13px 14px;
+  border-left: 3px solid var(--orange);
+  border-radius: 0 14px 14px 0;
+  background: rgba(255, 107, 25, 0.07);
+}
+
+.suggestion-reply > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.suggestion-reply p {
+  margin: 8px 0 5px;
+  color: #e4e6eb;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.suggestion-reply small {
+  color: var(--muted);
+  font-size: 0.73rem;
+}
+
+.suggestion-no-reply {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px dashed var(--line);
+  border-radius: 13px;
+  font-size: 0.82rem;
+}
+
+.suggestion-reply-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+}
+
+.staff-suggestion-card .primary-button {
+  margin-top: 2px;
+}
+
+@media (max-width: 540px) {
+  .bottom-nav button {
+    padding-inline: 2px;
+  }
+
+  .bottom-nav button span {
+    font-size: 1rem;
+  }
+
+  .bottom-nav button small {
+    font-size: 0.55rem;
+  }
+
+  .suggestion-card-head,
+  .suggestion-reply > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .suggestion-status {
+    white-space: normal;
+  }
+}
