@@ -97,10 +97,11 @@ ipcMain.handle("pixel:api-request", async (_event, request = {}) => {
 
 function createWindow() {
   const window = new BrowserWindow({
-    width: 460,
-    height: 900,
-    minWidth: 360,
-    minHeight: 640,
+    width: 1240,
+    height: 820,
+    minWidth: 900,
+    minHeight: 650,
+    center: true,
     title: "Pixel Everywhere",
     backgroundColor: "#08090c",
     show: false,
