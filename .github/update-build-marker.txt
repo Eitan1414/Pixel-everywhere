@@ -1,0 +1,1 @@
+Build de vérification de la clé Android persistante après fusion de la version 0.2.0.
