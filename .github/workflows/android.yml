@@ -32,6 +32,29 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      - name: Restaurer la clé Android persistante
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: pixel-everywhere-android-update-key-v1
+
+      - name: Préparer la clé de mise à jour Android
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.android
+          if [ ! -f ~/.android/debug.keystore ]; then
+            keytool -genkeypair \
+              -keystore ~/.android/debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Pixel Everywhere, OU=PDD, O=Pixel Difficult Drawer, L=France, C=FR"
+          fi
+          keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey >/dev/null
+
       - name: Installer les dépendances
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
@@ -73,11 +96,23 @@ jobs:
           ! grep -q 'web/server-settings.js' www/index.html
           ! grep -q 'web/enhancements.js' www/index.html
           grep -R -q 'pixel-api-base-url' www/assets
+          grep -R -q 'pixel-update-last-check' www/assets
+          grep -R -q 'Mises à jour automatiques' www/assets
 
       - name: Générer le projet Android
         run: |
           npx cap add android
           npx cap sync android
+
+      - name: Appliquer la version Android
+        run: |
+          set -euo pipefail
+          VERSION_NAME="$(node -p "require('./package.json').version")"
+          VERSION_CODE="$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number); console.log((a||0)*10000+(b||0)*100+(c||0))")"
+          sed -i -E "s/versionCode [0-9]+/versionCode ${VERSION_CODE}/" android/app/build.gradle
+          sed -i -E "s/versionName \"[^\"]+\"/versionName \"${VERSION_NAME}\"/" android/app/build.gradle
+          grep -q "versionCode ${VERSION_CODE}" android/app/build.gradle
+          grep -q "versionName \"${VERSION_NAME}\"" android/app/build.gradle
 
       - name: Appliquer le logo Alpha PDD
         run: bash scripts/brand-android.sh
@@ -97,6 +132,7 @@ jobs:
           grep -q 'Serveur PDD' apk-check/assets/public/index.html
           ! grep -q 'web/server-settings.js' apk-check/assets/public/index.html
           grep -R -q 'pixel-api-base-url' apk-check/assets/public/assets
+          grep -R -q 'pixel-update-last-check' apk-check/assets/public/assets
 
       - name: Publier l’APK
         uses: actions/upload-artifact@v4
