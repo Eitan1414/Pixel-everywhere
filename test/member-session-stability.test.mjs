@@ -18,23 +18,23 @@ class MemoryStorage {
   }
 }
 
-class FakeEventTarget {
-  constructor() {
-    this.listeners = [];
-  }
-  addEventListener(type, listener, options) {
-    this.listeners.push({ type, listener, options });
-  }
-}
-
-class FakeForm extends FakeEventTarget {
-  constructor(id) {
-    super();
-    this.id = id;
-  }
-}
-
 function createContext({ fetchImpl = async () => new Response("{}", { status: 200 }) } = {}) {
+  class FakeEventTarget {
+    constructor() {
+      this.listeners = [];
+    }
+    addEventListener(type, listener, options) {
+      this.listeners.push({ type, listener, options });
+    }
+  }
+
+  class FakeForm extends FakeEventTarget {
+    constructor(id) {
+      super();
+      this.id = id;
+    }
+  }
+
   const localStorage = new MemoryStorage();
   const sessionStorage = new MemoryStorage();
   const window = new FakeEventTarget();
@@ -65,11 +65,11 @@ function createContext({ fetchImpl = async () => new Response("{}", { status: 20
   });
 
   vm.runInContext(source, context, { filename: "session-stability.js" });
-  return { context, localStorage, window };
+  return { FakeForm, localStorage, window };
 }
 
 test("le gestionnaire membre historique en capture est bloqué sans analyser son nom", () => {
-  createContext();
+  const { FakeForm } = createContext();
 
   const memberForm = new FakeForm("memberLoginForm");
   memberForm.addEventListener("submit", function fonctionMinifiee() {}, { capture: true });
