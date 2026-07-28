@@ -1,4 +1,5 @@
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const fs = require("fs");
 const path = require("path");
 
 const ALLOWED_API_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
@@ -9,6 +10,13 @@ const ALLOWED_API_HEADERS = new Set([
   "ngrok-skip-browser-warning"
 ]);
 const MAX_API_BODY_BYTES = 12 * 1024 * 1024;
+const MAX_UPDATE_FILE_BYTES = 350 * 1024 * 1024;
+const UPDATE_UPLOAD_TIMEOUT = 20 * 60 * 1000;
+const UPDATE_TARGETS = {
+  android: { extension: ".apk", contentType: "application/vnd.android.package-archive", filters: [{ name: "Application Android", extensions: ["apk"] }] },
+  "macos-arm64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Apple Silicon", extensions: ["zip"] }] },
+  "macos-x64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Intel", extensions: ["zip"] }] }
+};
 
 function safeExternalUrl(value) {
   try {
@@ -27,6 +35,15 @@ function safeApiUrl(value) {
   } catch {
     return "";
   }
+}
+
+function safeUpdateUpload(value, requestedTarget) {
+  const safe = safeApiUrl(value);
+  if (!safe) return null;
+  const url = new URL(safe);
+  const match = url.pathname.match(/^\/api\/admin\/update-files\/(android|macos-arm64|macos-x64)$/);
+  if (!match || match[1] !== requestedTarget) return null;
+  return { url: url.toString(), target: match[1], config: UPDATE_TARGETS[match[1]] };
 }
 
 ipcMain.handle("pixel:get-runtime", () => ({
@@ -90,6 +107,78 @@ ipcMain.handle("pixel:api-request", async (_event, request = {}) => {
       throw new Error("Le serveur PDD met trop de temps à répondre.");
     }
     throw new Error(error?.message || "Connexion au serveur PDD impossible.");
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
+// Les APK et archives macOS dépassent largement la limite du relais JSON.
+// Electron ouvre donc un sélecteur natif, puis transmet directement le fichier
+// au serveur sous forme de flux, sans le charger entièrement en mémoire.
+ipcMain.handle("pixel:select-update-file", async (event, request = {}) => {
+  const target = String(request.target || "");
+  const upload = safeUpdateUpload(request.url, target);
+  if (!upload) throw new Error("Adresse d’envoi de mise à jour refusée.");
+
+  const parent = BrowserWindow.fromWebContents(event.sender);
+  const selection = await dialog.showOpenDialog(parent || undefined, {
+    title: "Choisir le fichier de mise à jour",
+    properties: ["openFile"],
+    filters: upload.config.filters
+  });
+  if (selection.canceled || !selection.filePaths[0]) return { canceled: true };
+
+  const filePath = selection.filePaths[0];
+  if (path.extname(filePath).toLowerCase() !== upload.config.extension) {
+    throw new Error(`Le fichier choisi doit être au format ${upload.config.extension}.`);
+  }
+
+  const stats = fs.statSync(filePath);
+  if (!stats.isFile() || !stats.size) throw new Error("Le fichier choisi est vide ou inaccessible.");
+  if (stats.size > MAX_UPDATE_FILE_BYTES) throw new Error("Ce fichier dépasse la limite de 350 Mo.");
+
+  const headers = {
+    "content-type": upload.config.contentType,
+    "content-length": String(stats.size)
+  };
+  const authorization = String(request.authorization || "").trim();
+  if (authorization) headers.authorization = authorization;
+  if (upload.url.includes(".ngrok-free.")) {
+    headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPDATE_UPLOAD_TIMEOUT);
+  try {
+    const response = await fetch(upload.url, {
+      method: "PUT",
+      headers,
+      body: fs.createReadStream(filePath),
+      duplex: "half",
+      signal: controller.signal,
+      redirect: "follow"
+    });
+    const responseBody = await response.text();
+    let data = {};
+    try {
+      data = responseBody ? JSON.parse(responseBody) : {};
+    } catch {
+      data = {};
+    }
+    if (!response.ok) {
+      throw new Error(data.error || `Le serveur a refusé le fichier (${response.status}).`);
+    }
+    return {
+      canceled: false,
+      filename: path.basename(filePath),
+      size: stats.size,
+      data
+    };
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("L’envoi a dépassé vingt minutes. Vérifie la connexion puis recommence.");
+    }
+    throw new Error(error?.message || "Impossible d’envoyer le fichier de mise à jour.");
   } finally {
     clearTimeout(timeout);
   }
