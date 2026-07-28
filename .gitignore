@@ -2,9 +2,9 @@ node_modules/
 www/
 data/*.db
 data/*.db-*
+updates/
 .env
 .DS_Store
 android/.gradle/
 android/build/
 android/app/build/
-
