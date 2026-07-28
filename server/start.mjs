@@ -86,6 +86,23 @@ const loginLimiter = (req, res, next) => {
   );
 }
 
+// La liste staff joint les candidatures aux comptes membres. Les deux tables ont
+// une colonne created_at : sans alias SQLite refuse le tri comme ambigu.
+source = source.replace(
+  `CASE status
+          WHEN 'pending' THEN 0
+          WHEN 'reviewing' THEN 1
+          ELSE 2
+        END,
+        datetime(created_at) DESC`,
+  `CASE a.status
+          WHEN 'pending' THEN 0
+          WHEN 'reviewing' THEN 1
+          ELSE 2
+        END,
+        datetime(a.created_at) DESC`
+);
+
 const registrations = [];
 if (!source.includes("registerSuggestionRoutes({")) {
   registrations.push(`registerSuggestionRoutes({
