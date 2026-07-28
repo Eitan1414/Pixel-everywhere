@@ -1,0 +1,55 @@
+name: Compiler Pixel Everywhere Windows
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Installer les dépendances
+        run: npm install
+
+      - name: Tester le projet
+        run: npm test
+
+      - name: Construire l’installateur Windows 64 bits
+        run: npm run win:build
+
+      - name: Vérifier l’installateur Windows
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path release -Filter "Pixel-Everywhere-*-Windows-x64-Setup.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "L’installateur Windows x64 est introuvable dans release/."
+          }
+          if ($installer.Length -lt 1MB) {
+            throw "L’installateur Windows semble incomplet."
+          }
+          Write-Host "Installateur vérifié : $($installer.Name) — $([math]::Round($installer.Length / 1MB, 1)) Mo"
+
+      - name: Publier l’installateur Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-Windows-x64
+          path: release/Pixel-Everywhere-*-Windows-x64-Setup.exe
+          if-no-files-found: error
+          retention-days: 14
