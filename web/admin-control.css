@@ -1,0 +1,242 @@
+#liveControlTabButton[hidden] {
+  display: none !important;
+}
+
+.live-control-heading,
+.live-control-section-title,
+.member-control-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.live-control-heading {
+  margin-bottom: 16px;
+}
+
+.live-control-heading h3,
+.live-control-heading p,
+.live-control-heading small,
+.live-control-section-title strong,
+.live-control-section-title small {
+  margin: 0;
+}
+
+.live-control-heading small,
+.live-control-section-title small,
+.live-session-card small,
+.login-lockout-card small,
+.member-control-card small {
+  color: var(--muted);
+}
+
+.live-control-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.live-control-summary article {
+  display: grid;
+  gap: 3px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  text-align: center;
+  background: rgba(18, 20, 26, 0.88);
+}
+
+.live-control-summary strong {
+  color: var(--cyan);
+  font-size: 1.45rem;
+}
+
+.live-control-summary small {
+  color: var(--muted);
+}
+
+.live-control-section {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.live-control-section-title > div,
+.member-control-identity,
+.live-session-identity,
+.live-session-location,
+.live-session-time,
+.login-lockout-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.live-session-list,
+.login-lockout-list,
+.member-control-list {
+  display: grid;
+  gap: 10px;
+}
+
+.live-session-card {
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1.1fr) minmax(150px, 1fr) minmax(140px, auto);
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(16, 18, 24, 0.92);
+}
+
+.live-session-card.online {
+  border-color: rgba(43, 214, 146, 0.38);
+  background: linear-gradient(145deg, rgba(43, 214, 146, 0.08), rgba(16, 18, 24, 0.95));
+}
+
+.live-presence-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #70747d;
+}
+
+.live-session-card.online .live-presence-dot {
+  background: var(--success);
+  box-shadow: 0 0 13px rgba(43, 214, 146, 0.7);
+}
+
+.live-session-time {
+  text-align: right;
+}
+
+.live-session-time > span {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.live-session-card.online .live-session-time > span {
+  color: var(--success);
+}
+
+.login-lockout-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px;
+  border: 1px solid rgba(255, 174, 74, 0.35);
+  border-radius: 18px;
+  background: rgba(255, 145, 45, 0.07);
+}
+
+.login-lockout-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.login-lockout-actions button {
+  width: auto;
+  min-height: 39px;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #151821;
+  cursor: pointer;
+}
+
+.login-lockout-actions .primary-button {
+  border: 0;
+}
+
+.member-control-title input {
+  width: min(260px, 48%);
+}
+
+.member-control-card {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.1fr) auto minmax(120px, 0.7fr) minmax(150px, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(16, 18, 24, 0.92);
+}
+
+.member-control-card label {
+  font-size: 0.76rem;
+}
+
+.member-control-card input {
+  padding: 10px 11px;
+}
+
+.member-control-card .primary-button {
+  width: auto;
+  min-width: 95px;
+  padding: 11px 13px;
+}
+
+.member-control-card .form-status {
+  grid-column: 1 / -1;
+}
+
+.member-balance {
+  display: grid;
+  min-width: 88px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 208, 75, 0.28);
+  border-radius: 14px;
+  text-align: center;
+  background: rgba(255, 208, 75, 0.07);
+}
+
+.member-balance strong {
+  color: #ffd86b;
+  font-size: 1.1rem;
+}
+
+.member-balance small {
+  font-size: 0.7rem;
+}
+
+@media (max-width: 720px) {
+  .live-control-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .live-session-card,
+  .member-control-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .live-session-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .live-session-location,
+  .live-session-time {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .login-lockout-card,
+  .live-control-section-title,
+  .member-control-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .member-control-title input {
+    width: 100%;
+  }
+
+  .member-control-card .primary-button {
+    width: 100%;
+  }
+}
