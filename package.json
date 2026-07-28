@@ -5,8 +5,8 @@
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n WEB,API -c cyan,magenta \"vite --host 0.0.0.0\" \"node --watch server/index.mjs\"",
-    "start": "node server/index.mjs",
+    "dev": "concurrently -n WEB,API -c cyan,magenta \"vite --host 0.0.0.0\" \"node --watch server/bootstrap.mjs\"",
+    "start": "node server/bootstrap.mjs",
     "termux:upgrade-server": "bash scripts/termux-upgrade-server.sh",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
