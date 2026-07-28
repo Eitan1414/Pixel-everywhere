@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -14,7 +14,8 @@
     "cap:sync": "npm run build && cap sync android",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
     "test": "node --test",
-    "mac:build": "npm run build && electron-builder --mac zip --x64 && electron-builder --mac zip --arm64"
+    "mac:build": "npm run build && electron-builder --mac zip --x64 && electron-builder --mac zip --arm64",
+    "win:build": "npm run build && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
@@ -60,6 +61,25 @@
       "category": "public.app-category.social-networking",
       "icon": "public/assets/alpha-logo.png",
       "artifactName": "Pixel-Everywhere-${version}-macOS-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "public/assets/alpha-logo.png",
+      "artifactName": "Pixel-Everywhere-${version}-Windows-${arch}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Pixel Everywhere"
     }
   }
 }
