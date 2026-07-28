@@ -20,3 +20,4 @@ import "./desktop-layout.css";
 import "./announcement-center.css";
 import "./announcement-center.js";
 import "./main.js";
+import "./offline-access.js";
