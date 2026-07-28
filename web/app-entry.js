@@ -15,4 +15,6 @@ import "./creation-studio.css";
 import "./creation-studio.js";
 import "./creation-studio-lazy.js";
 import "./desktop-layout.css";
+import "./announcement-center.css";
+import "./announcement-center.js";
 import "./main.js";
