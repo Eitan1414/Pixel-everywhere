@@ -15,7 +15,8 @@ const UPDATE_UPLOAD_TIMEOUT = 20 * 60 * 1000;
 const UPDATE_TARGETS = {
   android: { extension: ".apk", contentType: "application/vnd.android.package-archive", filters: [{ name: "Application Android", extensions: ["apk"] }] },
   "macos-arm64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Apple Silicon", extensions: ["zip"] }] },
-  "macos-x64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Intel", extensions: ["zip"] }] }
+  "macos-x64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Intel", extensions: ["zip"] }] },
+  "windows-x64": { extension: ".exe", contentType: "application/vnd.microsoft.portable-executable", filters: [{ name: "Installateur Windows 64 bits", extensions: ["exe"] }] }
 };
 
 function safeExternalUrl(value) {
@@ -41,7 +42,7 @@ function safeUpdateUpload(value, requestedTarget) {
   const safe = safeApiUrl(value);
   if (!safe) return null;
   const url = new URL(safe);
-  const match = url.pathname.match(/^\/api\/admin\/update-files\/(android|macos-arm64|macos-x64)$/);
+  const match = url.pathname.match(/^\/api\/admin\/update-files\/(android|macos-arm64|macos-x64|windows-x64)$/);
   if (!match || match[1] !== requestedTarget) return null;
   return { url: url.toString(), target: match[1], config: UPDATE_TARGETS[match[1]] };
 }
@@ -112,9 +113,9 @@ ipcMain.handle("pixel:api-request", async (_event, request = {}) => {
   }
 });
 
-// Les APK et archives macOS dépassent largement la limite du relais JSON.
-// Electron ouvre donc un sélecteur natif, puis transmet directement le fichier
-// au serveur sous forme de flux, sans le charger entièrement en mémoire.
+// Les APK, archives macOS et installateurs Windows dépassent largement la
+// limite du relais JSON. Electron ouvre donc un sélecteur natif, puis transmet
+// directement le fichier au serveur sous forme de flux, sans le charger en mémoire.
 ipcMain.handle("pixel:select-update-file", async (event, request = {}) => {
   const target = String(request.target || "");
   const upload = safeUpdateUpload(request.url, target);
