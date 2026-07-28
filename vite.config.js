@@ -1,5 +1,10 @@
+import fs from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
+
+const packageJson = JSON.parse(
+  fs.readFileSync(new URL("./package.json", import.meta.url), "utf8")
+);
 
 const serverSettingsPanel = `
         <section id="serverSettingsPanel" class="server-settings-panel open" aria-label="Réglage du serveur PDD">
@@ -23,6 +28,9 @@ const serverSettingsPanel = `
 export default defineConfig({
   base: "./",
   publicDir: "public",
+  define: {
+    __PIXEL_APP_VERSION__: JSON.stringify(packageJson.version)
+  },
   resolve: {
     alias: [
       {

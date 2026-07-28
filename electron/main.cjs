@@ -1,5 +1,27 @@
-const { app, BrowserWindow, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    return ["http:", "https:"].includes(url.protocol) ? url.toString() : "";
+  } catch {
+    return "";
+  }
+}
+
+ipcMain.handle("pixel:get-runtime", () => ({
+  platform: process.platform,
+  arch: process.arch,
+  version: app.getVersion()
+}));
+
+ipcMain.handle("pixel:open-external", async (_event, value) => {
+  const url = safeExternalUrl(value);
+  if (!url) throw new Error("Lien de mise à jour invalide.");
+  await shell.openExternal(url);
+  return { ok: true };
+});
 
 function createWindow() {
   const window = new BrowserWindow({
@@ -11,6 +33,7 @@ function createWindow() {
     backgroundColor: "#08090c",
     show: false,
     webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -19,7 +42,8 @@ function createWindow() {
 
   window.once("ready-to-show", () => window.show());
   window.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    const external = safeExternalUrl(url);
+    if (external) shell.openExternal(external);
     return { action: "deny" };
   });
 

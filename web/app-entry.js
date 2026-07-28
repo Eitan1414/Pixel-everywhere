@@ -2,6 +2,8 @@ import "./startup-v2.css";
 import "./session-stability.js";
 import "./server-settings-v2.js";
 import "./server-recovery.js";
+import "./app-updater.css";
+import "./app-updater.js";
 import "./enhancements.js";
 import "./pixel-live.js";
 import "./suggestions.css";
