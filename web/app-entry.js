@@ -5,6 +5,7 @@ import "./server-settings-v2.js";
 import "./server-recovery.js";
 import "./app-updater.css";
 import "./app-updater.js";
+import "./update-upload-desktop.js";
 import "./enhancements.js";
 import "./pixel-live.js";
 import "./suggestions.css";
