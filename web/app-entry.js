@@ -3,4 +3,6 @@ import "./server-settings-v2.js";
 import "./server-recovery.js";
 import "./enhancements.js";
 import "./pixel-live.js";
+import "./suggestions.css";
+import "./suggestions.js";
 import "./main.js";
