@@ -49,6 +49,9 @@ if (!source.includes('from "./suggestions.mjs"')) {
 if (!source.includes('from "./admin-control.mjs"')) {
   extraImports.push('import { createManagedLoginLimiter, registerAdminControlRoutes } from "./admin-control.mjs";');
 }
+if (!source.includes('from "./updates.mjs"')) {
+  extraImports.push('import { registerUpdateRoutes } from "./updates.mjs";');
+}
 if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
@@ -90,6 +93,16 @@ if (!source.includes("registerAdminControlRoutes({")) {
   authenticateMember,
   requireActiveStaff,
   requireActiveMember,
+  staffOnly,
+  requireAdmin
+});`);
+}
+if (!source.includes("registerUpdateRoutes({")) {
+  registrations.push(`registerUpdateRoutes({
+  app,
+  db,
+  authenticate,
+  requireActiveStaff,
   staffOnly,
   requireAdmin
 });`);
