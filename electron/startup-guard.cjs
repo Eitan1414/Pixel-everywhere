@@ -1,4 +1,4 @@
-const { app, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 
 const guardedWindows = new WeakSet();
 const failedWindows = new WeakSet();
@@ -110,6 +110,19 @@ function guardWindow(window) {
 
 ipcMain.on("pixel:renderer-ready", (event) => {
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
+
+  if (process.platform === "darwin") {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window && !window.isDestroyed()) {
+      console.log(`PIXEL_MACOS_UI_VISIBLE ${JSON.stringify({
+        source: "renderer-ready-static-bundle",
+        introHidden: true,
+        shellVisible: true
+      })}`);
+      safeShow(window);
+      console.log("PIXEL_MACOS_WINDOW_SHOWN");
+    }
+  }
 });
 
 ipcMain.on("pixel:startup-dismissed", (_event, details = {}) => {
