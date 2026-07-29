@@ -1,0 +1,108 @@
+name: Compiler Pixel Everywhere iOS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-14
+    timeout-minutes: 35
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dépendances
+        run: |
+          npm install --no-audit --no-fund
+          npm install --no-save --no-audit --no-fund @capacitor/ios@7.4.3
+
+      - name: Restaurer les ressources graphiques
+        run: |
+          mkdir -p public/assets
+          base64 -D < assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
+          base64 -D < assets-encoded/alpha-logo.png.b64 > public/assets/alpha-logo.png
+          base64 -D < assets-encoded/pixel-mascot.png.b64 > public/assets/pixel-mascot.png
+          base64 -D < assets-encoded/pdd2-wordmark.png.b64 > public/assets/pdd2-wordmark.png
+          base64 -D < assets-encoded/pixel-body.png.b64 > public/assets/pixel-body.png
+          base64 -D < assets-encoded/pixel-eye.png.b64 > public/assets/pixel-eye.png
+
+      - name: Tester et construire l’interface
+        run: |
+          npm test
+          npm run build
+          test -f www/index.html
+
+      - name: Générer le projet iOS Capacitor
+        run: |
+          npx cap add ios
+          npx cap sync ios
+          test -f ios/App/App.xcworkspace/contents.xcworkspacedata
+
+      - name: Compiler l’application iPhone sans signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          VERSION_CODE="$(node -e "const [a,b,c]=require('./package.json').version.split('.').map(Number); console.log((a||0)*10000+(b||0)*100+(c||0))")"
+
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' \
+            PRODUCT_BUNDLE_IDENTIFIER=com.pdd.pixeleverywhere \
+            MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$VERSION_CODE" \
+            build
+
+      - name: Créer et vérifier le fichier IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          APP_PATH="$(find build/ios/Build/Products/Release-iphoneos -maxdepth 1 -type d -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+
+          rm -rf release/ios
+          mkdir -p release/ios/Payload
+          cp -R "$APP_PATH" "release/ios/Payload/Pixel Everywhere.app"
+
+          IPA="release/Pixel-Everywhere-${VERSION}-iOS-unsigned.ipa"
+          (
+            cd release/ios
+            /usr/bin/zip -qry "../$(basename "$IPA")" Payload
+          )
+
+          test -s "$IPA"
+          unzip -t "$IPA"
+          unzip -l "$IPA" | grep -q 'Payload/Pixel Everywhere.app/Info.plist'
+          file "release/ios/Payload/Pixel Everywhere.app/Pixel Everywhere" || true
+          shasum -a 256 "$IPA" > "${IPA}.sha256"
+
+      - name: Publier l’IPA iOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-iOS-IPA
+          path: |
+            release/Pixel-Everywhere-*-iOS-unsigned.ipa
+            release/Pixel-Everywhere-*-iOS-unsigned.ipa.sha256
+          if-no-files-found: error
+          retention-days: 14
