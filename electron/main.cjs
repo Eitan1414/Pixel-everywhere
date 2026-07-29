@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { guardWindow } = require("./startup-guard.cjs");
 
 const ALLOWED_API_METHODS = new Set(["GET", "POST", "PUT", "PATCH", "DELETE"]);
 const ALLOWED_API_HEADERS = new Set([
@@ -204,7 +205,11 @@ function createWindow() {
     }
   });
 
-  window.once("ready-to-show", () => window.show());
+  guardWindow(window);
+
+  if (process.platform !== "darwin") {
+    window.once("ready-to-show", () => window.show());
+  }
   window.webContents.setWindowOpenHandler(({ url }) => {
     const external = safeExternalUrl(url);
     if (external) shell.openExternal(external);

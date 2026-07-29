@@ -16,46 +16,37 @@ function clearStartupTimer(window) {
 }
 
 async function forceDismissStartup(window, reason = "main-process-timeout") {
-  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return;
+  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return false;
   clearStartupTimer(window);
   try {
     const dismissed = await window.webContents.executeJavaScript(`
       (() => {
         const startup = document.querySelector("#startupAnimation");
         document.body?.classList.remove("startup-running");
-        if (!startup) return true;
-        startup.classList.add("leaving");
-        startup.setAttribute("aria-hidden", "true");
-        startup.style.pointerEvents = "none";
-        startup.hidden = true;
-        startup.style.display = "none";
+        if (startup) {
+          startup.classList.add("leaving");
+          startup.hidden = true;
+          startup.style.display = "none";
+        }
         const shell = document.querySelector(".app-shell");
         if (shell) shell.style.opacity = "1";
-        return startup.hidden && !document.body?.classList.contains("startup-running");
+        return true;
       })();
     `, true);
     if (dismissed) console.log(`PIXEL_STARTUP_DISMISSED ${reason}`);
-    else console.error("PIXEL_STARTUP_DISMISS_FAILED", reason);
+    return Boolean(dismissed);
   } catch (error) {
     console.error("PIXEL_STARTUP_DISMISS_FAILED", error?.message || String(error));
+    return false;
   }
 }
 
 function scheduleStartupRelease(window, reason = "main-process-timeout") {
   clearStartupTimer(window);
-  console.log(`PIXEL_STARTUP_GUARD_SCHEDULED ${reason}`);
   const timer = setTimeout(() => {
     forceDismissStartup(window, reason).catch(() => {});
   }, 10_000);
   startupTimers.set(window, timer);
-}
-
-function releaseStartupForPlatform(window, source) {
-  if (process.platform === "darwin") {
-    forceDismissStartup(window, `macos-immediate-${source}`).catch(() => {});
-    return;
-  }
-  scheduleStartupRelease(window, `${source}-timeout`);
 }
 
 function loadFailurePage(window, reason) {
@@ -81,7 +72,7 @@ function loadFailurePage(window, reason) {
 <body>
   <main>
     <h1>Pixel Everywhere n’a pas pu charger l’interface</h1>
-    <p>L’application reste accessible au lieu d’afficher un écran noir. Relance le chargement ci-dessous.</p>
+    <p>L’application affiche cette page au lieu de rester sur un écran noir.</p>
     <code>${safeReason.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character])}</code>
     <button onclick="location.reload()">Réessayer</button>
   </main>
@@ -92,13 +83,13 @@ function loadFailurePage(window, reason) {
 }
 
 function guardWindow(window) {
-  if (!window || guardedWindows.has(window)) return;
+  if (process.platform === "darwin" || !window || guardedWindows.has(window)) return;
   guardedWindows.add(window);
 
   window.once("ready-to-show", () => safeShow(window));
   window.webContents.on("did-finish-load", () => {
     safeShow(window);
-    releaseStartupForPlatform(window, "did-finish-load");
+    scheduleStartupRelease(window, "did-finish-load-timeout");
   });
   window.webContents.on(
     "did-fail-load",
@@ -118,14 +109,23 @@ function guardWindow(window) {
 }
 
 ipcMain.on("pixel:renderer-ready", (event) => {
-  const window = BrowserWindow.fromWebContents(event.sender);
-  if (window) releaseStartupForPlatform(window, "renderer-ready");
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
+
+  if (process.platform === "darwin") {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window && !window.isDestroyed()) {
+      console.log(`PIXEL_MACOS_UI_VISIBLE ${JSON.stringify({
+        source: "renderer-ready-static-bundle",
+        introHidden: true,
+        shellVisible: true
+      })}`);
+      safeShow(window);
+      console.log("PIXEL_MACOS_WINDOW_SHOWN");
+    }
+  }
 });
 
-ipcMain.on("pixel:startup-dismissed", (event, details = {}) => {
-  const window = BrowserWindow.fromWebContents(event.sender);
-  if (window) clearStartupTimer(window);
+ipcMain.on("pixel:startup-dismissed", (_event, details = {}) => {
   console.log(`PIXEL_STARTUP_DISMISSED ${details.reason || "unknown"}`);
 });
 
@@ -133,6 +133,8 @@ ipcMain.on("pixel:renderer-error", (_event, details = {}) => {
   console.error("PIXEL_RENDERER_ERROR", details.message || "Erreur renderer", details.stack || "");
 });
 
-app.on("browser-window-created", (_event, window) => guardWindow(window));
+if (process.platform !== "darwin") {
+  app.on("browser-window-created", (_event, window) => guardWindow(window));
+}
 
 module.exports = { guardWindow, loadFailurePage, forceDismissStartup };
