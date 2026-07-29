@@ -3,10 +3,58 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const guardedWindows = new WeakSet();
 const failedWindows = new WeakSet();
 const startupTimers = new WeakMap();
+const macWindowStates = new WeakMap();
 
 function safeShow(window) {
   if (!window || window.isDestroyed()) return;
   if (!window.isVisible()) window.show();
+}
+
+function getMacWindowState(window) {
+  let state = macWindowStates.get(window);
+  if (!state) {
+    state = {
+      rendererReady: false,
+      uiVisible: false,
+      shown: false,
+      failureTimer: null
+    };
+    macWindowStates.set(window, state);
+  }
+  return state;
+}
+
+function clearMacFailureTimer(window) {
+  const state = macWindowStates.get(window);
+  if (state?.failureTimer) clearTimeout(state.failureTimer);
+  if (state) state.failureTimer = null;
+}
+
+function maybeShowMacWindow(window) {
+  if (process.platform !== "darwin" || !window || window.isDestroyed()) return false;
+  const state = getMacWindowState(window);
+  if (!state.rendererReady || !state.uiVisible) return false;
+
+  clearMacFailureTimer(window);
+  if (!state.shown) {
+    state.shown = true;
+    safeShow(window);
+    console.log("PIXEL_MACOS_WINDOW_SHOWN");
+  }
+  return true;
+}
+
+function scheduleMacVisibilityFailure(window) {
+  if (process.platform !== "darwin" || !window || window.isDestroyed() || failedWindows.has(window)) return;
+  const state = getMacWindowState(window);
+  clearMacFailureTimer(window);
+  state.failureTimer = setTimeout(() => {
+    if (maybeShowMacWindow(window)) return;
+    loadFailurePage(
+      window,
+      "macOS n’a pas confirmé que l’accueil était visible après la suppression de l’introduction."
+    );
+  }, 8_000);
 }
 
 function clearStartupTimer(window) {
@@ -29,9 +77,16 @@ async function forceDismissStartup(window, reason = "main-process-timeout") {
         startup.style.pointerEvents = "none";
         startup.hidden = true;
         startup.style.display = "none";
+        startup.remove();
         const shell = document.querySelector(".app-shell");
-        if (shell) shell.style.opacity = "1";
-        return startup.hidden && !document.body?.classList.contains("startup-running");
+        if (shell) {
+          shell.style.setProperty("display", "block", "important");
+          shell.style.setProperty("visibility", "visible", "important");
+          shell.style.setProperty("opacity", "1", "important");
+          shell.style.setProperty("animation", "none", "important");
+        }
+        return !document.querySelector("#startupAnimation") &&
+          !document.body?.classList.contains("startup-running");
       })();
     `, true);
     if (dismissed) console.log(`PIXEL_STARTUP_DISMISSED ${reason}`);
@@ -50,18 +105,11 @@ function scheduleStartupRelease(window, reason = "main-process-timeout") {
   startupTimers.set(window, timer);
 }
 
-function releaseStartupForPlatform(window, source) {
-  if (process.platform === "darwin") {
-    forceDismissStartup(window, `macos-immediate-${source}`).catch(() => {});
-    return;
-  }
-  scheduleStartupRelease(window, `${source}-timeout`);
-}
-
 function loadFailurePage(window, reason) {
   if (!window || window.isDestroyed() || failedWindows.has(window)) return;
   failedWindows.add(window);
   clearStartupTimer(window);
+  clearMacFailureTimer(window);
   const safeReason = String(reason || "Erreur inconnue").slice(0, 600);
   const html = `<!doctype html>
 <html lang="fr">
@@ -81,7 +129,7 @@ function loadFailurePage(window, reason) {
 <body>
   <main>
     <h1>Pixel Everywhere n’a pas pu charger l’interface</h1>
-    <p>L’application reste accessible au lieu d’afficher un écran noir. Relance le chargement ci-dessous.</p>
+    <p>L’application affiche cette page au lieu de rester sur un écran noir. Relance le chargement ci-dessous.</p>
     <code>${safeReason.replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character])}</code>
     <button onclick="location.reload()">Réessayer</button>
   </main>
@@ -95,10 +143,17 @@ function guardWindow(window) {
   if (!window || guardedWindows.has(window)) return;
   guardedWindows.add(window);
 
-  window.once("ready-to-show", () => safeShow(window));
+  window.once("ready-to-show", () => {
+    if (process.platform !== "darwin") safeShow(window);
+  });
   window.webContents.on("did-finish-load", () => {
+    if (process.platform === "darwin") {
+      forceDismissStartup(window, "macos-before-show").catch(() => {});
+      scheduleMacVisibilityFailure(window);
+      return;
+    }
     safeShow(window);
-    releaseStartupForPlatform(window, "did-finish-load");
+    scheduleStartupRelease(window, "did-finish-load-timeout");
   });
   window.webContents.on(
     "did-fail-load",
@@ -110,17 +165,47 @@ function guardWindow(window) {
   window.webContents.on("render-process-gone", (_event, details) => {
     loadFailurePage(window, `Le moteur d’affichage s’est arrêté : ${details?.reason || "inconnu"}.`);
   });
-  window.on("unresponsive", () => safeShow(window));
-  window.on("closed", () => clearStartupTimer(window));
+  window.on("unresponsive", () => {
+    if (process.platform === "darwin") {
+      loadFailurePage(window, "Le moteur d’affichage macOS ne répond plus.");
+      return;
+    }
+    safeShow(window);
+  });
+  window.on("closed", () => {
+    clearStartupTimer(window);
+    clearMacFailureTimer(window);
+    macWindowStates.delete(window);
+  });
 
-  const revealTimer = setTimeout(() => safeShow(window), 2500);
-  revealTimer.unref?.();
+  if (process.platform !== "darwin") {
+    const revealTimer = setTimeout(() => safeShow(window), 2500);
+    revealTimer.unref?.();
+  }
 }
 
 ipcMain.on("pixel:renderer-ready", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
-  if (window) releaseStartupForPlatform(window, "renderer-ready");
+  if (window && process.platform === "darwin") {
+    const state = getMacWindowState(window);
+    state.rendererReady = true;
+    maybeShowMacWindow(window);
+  } else if (window) {
+    scheduleStartupRelease(window, "renderer-ready-timeout");
+  }
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
+});
+
+ipcMain.on("pixel:macos-ui-visible", (event, details = {}) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (!window || process.platform !== "darwin") return;
+
+  const state = getMacWindowState(window);
+  state.uiVisible = details.visible === true;
+  const serialized = JSON.stringify(details);
+  if (state.uiVisible) console.log(`PIXEL_MACOS_UI_VISIBLE ${serialized}`);
+  else console.error(`PIXEL_MACOS_UI_INVALID ${serialized}`);
+  maybeShowMacWindow(window);
 });
 
 ipcMain.on("pixel:startup-dismissed", (event, details = {}) => {
