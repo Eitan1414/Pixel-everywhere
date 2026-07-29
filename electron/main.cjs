@@ -204,7 +204,9 @@ function createWindow() {
     }
   });
 
-  window.once("ready-to-show", () => window.show());
+  if (process.platform !== "darwin") {
+    window.once("ready-to-show", () => window.show());
+  }
   window.webContents.setWindowOpenHandler(({ url }) => {
     const external = safeExternalUrl(url);
     if (external) shell.openExternal(external);
