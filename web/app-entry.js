@@ -1,4 +1,5 @@
 import "./startup-v2.css";
+import "./startup-failsafe.css";
 import "./startup-safety.js";
 import "./desktop-network.js";
 import "./windows-support.js";
