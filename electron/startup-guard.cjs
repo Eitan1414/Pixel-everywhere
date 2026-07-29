@@ -44,6 +44,18 @@ function maybeShowMacWindow(window) {
   return true;
 }
 
+function recordMacUiState(window, details = {}, source = "unknown") {
+  if (process.platform !== "darwin" || !window || window.isDestroyed()) return false;
+  const state = getMacWindowState(window);
+  state.uiVisible = details.visible === true;
+  const payload = { ...details, source };
+  const serialized = JSON.stringify(payload);
+  if (state.uiVisible) console.log(`PIXEL_MACOS_UI_VISIBLE ${serialized}`);
+  else console.error(`PIXEL_MACOS_UI_INVALID ${serialized}`);
+  maybeShowMacWindow(window);
+  return state.uiVisible;
+}
+
 function scheduleMacVisibilityFailure(window) {
   if (process.platform !== "darwin" || !window || window.isDestroyed() || failedWindows.has(window)) return;
   const state = getMacWindowState(window);
@@ -64,36 +76,68 @@ function clearStartupTimer(window) {
 }
 
 async function forceDismissStartup(window, reason = "main-process-timeout") {
-  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return;
+  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return null;
   clearStartupTimer(window);
   try {
-    const dismissed = await window.webContents.executeJavaScript(`
+    const details = await window.webContents.executeJavaScript(`
       (() => {
         const startup = document.querySelector("#startupAnimation");
-        document.body?.classList.remove("startup-running");
-        if (!startup) return true;
-        startup.classList.add("leaving");
-        startup.setAttribute("aria-hidden", "true");
-        startup.style.pointerEvents = "none";
-        startup.hidden = true;
-        startup.style.display = "none";
-        startup.remove();
         const shell = document.querySelector(".app-shell");
+
+        document.documentElement.classList.add("pixel-macos-no-intro");
+        document.body?.classList.remove("startup-running");
+        if (startup) {
+          startup.classList.add("leaving");
+          startup.setAttribute("aria-hidden", "true");
+          startup.style.pointerEvents = "none";
+          startup.hidden = true;
+          startup.style.display = "none";
+          startup.remove();
+        }
+
         if (shell) {
           shell.style.setProperty("display", "block", "important");
           shell.style.setProperty("visibility", "visible", "important");
           shell.style.setProperty("opacity", "1", "important");
           shell.style.setProperty("animation", "none", "important");
         }
-        return !document.querySelector("#startupAnimation") &&
-          !document.body?.classList.contains("startup-running");
+
+        const computed = shell ? window.getComputedStyle(shell) : null;
+        return {
+          visible: Boolean(
+            shell &&
+            !document.querySelector("#startupAnimation") &&
+            !document.body?.classList.contains("startup-running") &&
+            computed?.display !== "none" &&
+            computed?.visibility !== "hidden" &&
+            Number.parseFloat(computed?.opacity || "0") > 0
+          ),
+          startupPresent: Boolean(document.querySelector("#startupAnimation")),
+          startupRunning: Boolean(document.body?.classList.contains("startup-running")),
+          display: computed?.display || "missing",
+          visibility: computed?.visibility || "missing",
+          opacity: computed?.opacity || "missing"
+        };
       })();
     `, true);
-    if (dismissed) console.log(`PIXEL_STARTUP_DISMISSED ${reason}`);
-    else console.error("PIXEL_STARTUP_DISMISS_FAILED", reason);
+
+    if (details?.visible) console.log(`PIXEL_STARTUP_DISMISSED ${reason}`);
+    else console.error("PIXEL_STARTUP_DISMISS_FAILED", reason, JSON.stringify(details));
+    if (process.platform === "darwin") recordMacUiState(window, details || {}, reason);
+    return details;
   } catch (error) {
     console.error("PIXEL_STARTUP_DISMISS_FAILED", error?.message || String(error));
+    if (process.platform === "darwin") {
+      recordMacUiState(window, { visible: false, error: error?.message || String(error) }, reason);
+    }
+    return null;
   }
+}
+
+async function prepareMacWindow(window, source) {
+  if (process.platform !== "darwin" || !window || window.isDestroyed() || failedWindows.has(window)) return;
+  await forceDismissStartup(window, source);
+  if (!maybeShowMacWindow(window)) scheduleMacVisibilityFailure(window);
 }
 
 function scheduleStartupRelease(window, reason = "main-process-timeout") {
@@ -146,10 +190,12 @@ function guardWindow(window) {
   window.once("ready-to-show", () => {
     if (process.platform !== "darwin") safeShow(window);
   });
+  window.webContents.on("dom-ready", () => {
+    if (process.platform === "darwin") prepareMacWindow(window, "macos-dom-ready").catch(() => {});
+  });
   window.webContents.on("did-finish-load", () => {
     if (process.platform === "darwin") {
-      forceDismissStartup(window, "macos-before-show").catch(() => {});
-      scheduleMacVisibilityFailure(window);
+      prepareMacWindow(window, "macos-did-finish-load").catch(() => {});
       return;
     }
     safeShow(window);
@@ -189,7 +235,7 @@ ipcMain.on("pixel:renderer-ready", (event) => {
   if (window && process.platform === "darwin") {
     const state = getMacWindowState(window);
     state.rendererReady = true;
-    maybeShowMacWindow(window);
+    prepareMacWindow(window, "macos-renderer-ready").catch(() => {});
   } else if (window) {
     scheduleStartupRelease(window, "renderer-ready-timeout");
   }
@@ -199,13 +245,7 @@ ipcMain.on("pixel:renderer-ready", (event) => {
 ipcMain.on("pixel:macos-ui-visible", (event, details = {}) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   if (!window || process.platform !== "darwin") return;
-
-  const state = getMacWindowState(window);
-  state.uiVisible = details.visible === true;
-  const serialized = JSON.stringify(details);
-  if (state.uiVisible) console.log(`PIXEL_MACOS_UI_VISIBLE ${serialized}`);
-  else console.error(`PIXEL_MACOS_UI_INVALID ${serialized}`);
-  maybeShowMacWindow(window);
+  recordMacUiState(window, details, "preload");
 });
 
 ipcMain.on("pixel:startup-dismissed", (event, details = {}) => {
