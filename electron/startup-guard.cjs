@@ -66,6 +66,10 @@ ipcMain.on("pixel:renderer-ready", (event) => {
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
 });
 
+ipcMain.on("pixel:startup-dismissed", (_event, details = {}) => {
+  console.log(`PIXEL_STARTUP_DISMISSED ${details.reason || "unknown"}`);
+});
+
 ipcMain.on("pixel:renderer-error", (_event, details = {}) => {
   console.error("PIXEL_RENDERER_ERROR", details.message || "Erreur renderer", details.stack || "");
 });
