@@ -53,11 +53,9 @@ jobs:
           grep -q 'id="serverSettingsPanel"' www/index.html
           grep -q 'Serveur PDD' www/index.html
           grep -R -q 'reportRendererReady' www/assets
-          grep -R -q 'reportStartupDismissed' www/assets
-          grep -R -q 'safety-timeout' www/assets
-          grep -R -q 'pixel-startup-overlay-release' www/assets
-          grep -R -q 'pixel-startup-shell-release' www/assets
-          grep -R -q 'pixel-startup-body-release' www/assets
+          grep -q 'pixel:macos-ui-visible' electron/preload.cjs
+          grep -q 'PIXEL_MACOS_WINDOW_SHOWN' electron/startup-guard.cjs
+          grep -q 'process.platform !== "darwin"' electron/main.cjs
 
           SETTINGS_BUNDLE="$(grep -rl --include='*.js' 'pixel-api-base-url' www/assets | head -n 1 || true)"
           test -n "$SETTINGS_BUNDLE"
@@ -76,7 +74,7 @@ jobs:
           npx electron-builder --mac dir --x64 --config.directories.output=release/x64
           npx electron-builder --mac dir --arm64 --config.directories.output=release/arm64
 
-      - name: Lancer réellement l’application macOS
+      - name: Lancer réellement l’application macOS sans intro
         shell: bash
         run: |
           set -euo pipefail
@@ -95,7 +93,9 @@ jobs:
 
           ELECTRON_ENABLE_LOGGING=1 "$EXECUTABLE" --disable-gpu --enable-logging=stderr > "$LOG_FILE" 2>&1 &
           APP_PID=$!
-          READY=0
+          RENDERER_READY=0
+          UI_VISIBLE=0
+          WINDOW_SHOWN=0
 
           cleanup() {
             kill "$APP_PID" 2>/dev/null || true
@@ -104,12 +104,16 @@ jobs:
           trap cleanup EXIT
 
           for _attempt in $(seq 1 30); do
-            if grep -q 'PIXEL_RENDERER_READY' "$LOG_FILE"; then
-              READY=1
+            if grep -q 'PIXEL_RENDERER_READY' "$LOG_FILE"; then RENDERER_READY=1; fi
+            if grep -q 'PIXEL_MACOS_UI_VISIBLE' "$LOG_FILE"; then UI_VISIBLE=1; fi
+            if grep -q 'PIXEL_MACOS_WINDOW_SHOWN' "$LOG_FILE"; then WINDOW_SHOWN=1; fi
+
+            if [ "$RENDERER_READY" -eq 1 ] && [ "$UI_VISIBLE" -eq 1 ] && [ "$WINDOW_SHOWN" -eq 1 ]; then
               break
             fi
+
             if ! kill -0 "$APP_PID" 2>/dev/null; then
-              echo "L’application macOS s’est arrêtée avant d’afficher son interface." >&2
+              echo "L’application macOS s’est arrêtée avant d’afficher son accueil." >&2
               cat "$LOG_FILE"
               exit 1
             fi
@@ -117,14 +121,22 @@ jobs:
           done
 
           cat "$LOG_FILE"
-          if [ "$READY" -ne 1 ]; then
-            echo "Le renderer macOS n’a jamais confirmé que l’interface était prête." >&2
+          if [ "$RENDERER_READY" -ne 1 ]; then
+            echo "Le renderer macOS n’a pas confirmé son chargement." >&2
+            exit 1
+          fi
+          if [ "$UI_VISIBLE" -ne 1 ]; then
+            echo "L’accueil macOS n’a pas été confirmé visible sans l’introduction." >&2
+            exit 1
+          fi
+          if [ "$WINDOW_SHOWN" -ne 1 ]; then
+            echo "La fenêtre macOS n’a pas été ouverte après la confirmation visuelle." >&2
             exit 1
           fi
 
-          sleep 12
+          sleep 5
           if ! kill -0 "$APP_PID" 2>/dev/null; then
-            echo "L’application macOS s’est arrêtée après le chargement de l’interface." >&2
+            echo "L’application macOS s’est arrêtée après l’affichage de l’accueil." >&2
             cat "$LOG_FILE"
             exit 1
           fi
