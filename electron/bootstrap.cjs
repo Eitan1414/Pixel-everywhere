@@ -2,48 +2,34 @@ const { app, BrowserWindow } = require("electron");
 
 require("./startup-guard.cjs");
 
-function showMacOSWindowWhenLoaded() {
-  if (process.platform !== "darwin") return;
+if (process.platform === "darwin") {
+  const originalLoadFile = BrowserWindow.prototype.loadFile;
 
-  let attempts = 0;
-  const finder = setInterval(() => {
-    attempts += 1;
-    const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed());
+  BrowserWindow.prototype.loadFile = function pixelLoadMacOSFile(...args) {
+    const window = this;
+    const result = originalLoadFile.apply(window, args);
 
-    if (!window) {
-      if (attempts >= 200) {
-        clearInterval(finder);
-        console.error("PIXEL_MACOS_WINDOW_NOT_FOUND");
-      }
-      return;
-    }
-
-    clearInterval(finder);
-    let shown = false;
-    const reveal = () => {
-      if (shown || window.isDestroyed()) return;
-      shown = true;
+    Promise.resolve(result).then(() => {
+      if (window.isDestroyed()) return;
       console.log(`PIXEL_MACOS_UI_VISIBLE ${JSON.stringify({
-        source: "static-macos-bundle-before-show",
+        source: "static-bundle-load-file-resolved",
         introHidden: true,
         shellVisible: true
       })}`);
       window.show();
       console.log("PIXEL_MACOS_WINDOW_SHOWN");
-    };
+    }).catch((error) => {
+      console.error("PIXEL_MACOS_LOAD_FAILED", error?.message || String(error));
+      if (!window.isDestroyed()) window.show();
+    });
 
-    if (window.webContents.isLoadingMainFrame()) {
-      window.webContents.once("did-finish-load", reveal);
-    } else {
-      reveal();
-    }
-  }, 25);
+    return result;
+  };
 }
 
 app.whenReady().then(() => {
   require("./automatic-updater.cjs");
   require("./main.cjs");
-  showMacOSWindowWhenLoaded();
 }).catch((error) => {
   console.error("PIXEL_BOOTSTRAP_ERROR", error);
   app.quit();
