@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.30.6",
+  "version": "0.30.7",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -13,7 +13,7 @@
     "cap:init": "cap add android",
     "cap:sync": "npm run build && cap sync android",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
-    "test": "node --test && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check electron/bootstrap.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check electron/automatic-updater.cjs && node --check web/startup-safety.js",
+    "test": "node --test && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check electron/bootstrap.cjs && node --check electron/main.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check electron/automatic-updater.cjs && node --check web/startup-safety.js",
     "mac:build": "npm run build && electron-builder --mac zip --x64 && electron-builder --mac zip --arm64",
     "win:build": "npm run build && electron-builder --win nsis --x64"
   },
