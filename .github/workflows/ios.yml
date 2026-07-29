@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -94,7 +96,6 @@ jobs:
           test -s "$IPA"
           unzip -t "$IPA"
           unzip -l "$IPA" | grep -q 'Payload/Pixel Everywhere.app/Info.plist'
-          file "release/ios/Payload/Pixel Everywhere.app/Pixel Everywhere" || true
           shasum -a 256 "$IPA" > "${IPA}.sha256"
 
       - name: Publier l’IPA iOS
