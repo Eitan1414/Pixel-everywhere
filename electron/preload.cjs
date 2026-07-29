@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 let rendererReady = false;
+let startupDismissed = false;
 
 function rendererErrorDetails(value) {
   if (value instanceof Error) {
@@ -9,13 +10,28 @@ function rendererErrorDetails(value) {
   return { message: String(value || "Erreur renderer"), stack: "" };
 }
 
-function revealStartupFallback() {
-  if (rendererReady) return;
-  const startup = document.querySelector("#startupAnimation");
-  if (startup) startup.hidden = true;
-  document.body?.classList.remove("startup-running");
+function reportStartupDismissed(details = {}) {
+  if (startupDismissed) return;
+  startupDismissed = true;
+  const reason = typeof details === "string" ? details : details?.reason || "unknown";
+  ipcRenderer.send("pixel:startup-dismissed", { reason });
+}
 
-  if (document.querySelector("#pixelRendererFallback")) return;
+function revealStartupFallback() {
+  if (startupDismissed) return;
+
+  const startup = document.querySelector("#startupAnimation");
+  if (startup && !startup.hidden) {
+    startup.classList.add("leaving");
+    startup.setAttribute("aria-hidden", "true");
+    startup.style.pointerEvents = "none";
+    startup.hidden = true;
+    startup.style.display = "none";
+  }
+  document.body?.classList.remove("startup-running");
+  reportStartupDismissed({ reason: rendererReady ? "preload-timeout" : "renderer-failure" });
+
+  if (rendererReady || document.querySelector("#pixelRendererFallback")) return;
   const notice = document.createElement("section");
   notice.id = "pixelRendererFallback";
   notice.setAttribute("role", "alert");
@@ -50,7 +66,7 @@ window.addEventListener("unhandledrejection", (event) => {
   ipcRenderer.send("pixel:renderer-error", rendererErrorDetails(event.reason));
 });
 window.addEventListener("DOMContentLoaded", () => {
-  window.setTimeout(revealStartupFallback, 5000);
+  window.setTimeout(revealStartupFallback, 10_000);
 });
 
 contextBridge.exposeInMainWorld("pixelDesktop", {
@@ -63,6 +79,7 @@ contextBridge.exposeInMainWorld("pixelDesktop", {
     rendererReady = true;
     ipcRenderer.send("pixel:renderer-ready");
   },
+  reportStartupDismissed,
   onUpdateProgress: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on("pixel:update-progress", listener);
