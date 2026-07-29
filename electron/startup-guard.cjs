@@ -41,12 +41,12 @@ async function forceDismissStartup(window, reason = "main-process-timeout") {
   }
 }
 
-function scheduleStartupRelease(window) {
+function scheduleStartupRelease(window, reason = "main-process-timeout") {
   clearStartupTimer(window);
+  console.log(`PIXEL_STARTUP_GUARD_SCHEDULED ${reason}`);
   const timer = setTimeout(() => {
-    forceDismissStartup(window).catch(() => {});
+    forceDismissStartup(window, reason).catch(() => {});
   }, 10_000);
-  timer.unref?.();
   startupTimers.set(window, timer);
 }
 
@@ -90,7 +90,7 @@ function guardWindow(window) {
   window.once("ready-to-show", () => safeShow(window));
   window.webContents.on("did-finish-load", () => {
     safeShow(window);
-    scheduleStartupRelease(window);
+    scheduleStartupRelease(window, "did-finish-load-timeout");
   });
   window.webContents.on(
     "did-fail-load",
@@ -110,6 +110,8 @@ function guardWindow(window) {
 }
 
 ipcMain.on("pixel:renderer-ready", (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window) scheduleStartupRelease(window, "renderer-ready-timeout");
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
 });
 
