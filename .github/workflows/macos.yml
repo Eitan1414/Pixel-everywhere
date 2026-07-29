@@ -53,6 +53,11 @@ jobs:
           grep -q 'id="serverSettingsPanel"' www/index.html
           grep -q 'Serveur PDD' www/index.html
           grep -R -q 'reportRendererReady' www/assets
+          grep -R -q 'reportStartupDismissed' www/assets
+          grep -R -q 'safety-timeout' www/assets
+          grep -R -q 'pixel-startup-overlay-release' www/assets
+          grep -R -q 'pixel-startup-shell-release' www/assets
+          grep -R -q 'pixel-startup-body-release' www/assets
 
           SETTINGS_BUNDLE="$(grep -rl --include='*.js' 'pixel-api-base-url' www/assets | head -n 1 || true)"
           test -n "$SETTINGS_BUNDLE"
@@ -114,6 +119,13 @@ jobs:
           cat "$LOG_FILE"
           if [ "$READY" -ne 1 ]; then
             echo "Le renderer macOS n’a jamais confirmé que l’interface était prête." >&2
+            exit 1
+          fi
+
+          sleep 12
+          if ! kill -0 "$APP_PID" 2>/dev/null; then
+            echo "L’application macOS s’est arrêtée après le chargement de l’interface." >&2
+            cat "$LOG_FILE"
             exit 1
           fi
 
