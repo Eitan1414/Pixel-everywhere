@@ -5,38 +5,40 @@ let rendererReady = false;
 let startupDismissed = false;
 
 if (isMacOS) {
-  webFrame.insertCSS(`
-    html,
-    body {
-      background: #08090c !important;
-    }
+  try {
+    webFrame.insertCSS(`
+      html,
+      body {
+        background: #08090c !important;
+      }
 
-    #startupAnimation {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
-      pointer-events: none !important;
-      animation: none !important;
-    }
+      #startupAnimation {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        animation: none !important;
+      }
 
-    body.startup-running {
-      overflow-x: hidden !important;
-      overflow-y: auto !important;
-    }
+      body.startup-running {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+      }
 
-    body.startup-running .app-shell,
-    .app-shell {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-      animation: none !important;
-    }
-  `).catch((error) => {
+      body.startup-running .app-shell,
+      .app-shell {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        animation: none !important;
+      }
+    `);
+  } catch (error) {
     ipcRenderer.send("pixel:renderer-error", {
       message: `Impossible d’injecter la protection macOS : ${error?.message || String(error)}`,
       stack: error?.stack || ""
     });
-  });
+  }
 }
 
 function rendererErrorDetails(value) {
