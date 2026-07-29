@@ -50,6 +50,14 @@ function scheduleStartupRelease(window, reason = "main-process-timeout") {
   startupTimers.set(window, timer);
 }
 
+function releaseStartupForPlatform(window, source) {
+  if (process.platform === "darwin") {
+    forceDismissStartup(window, `macos-immediate-${source}`).catch(() => {});
+    return;
+  }
+  scheduleStartupRelease(window, `${source}-timeout`);
+}
+
 function loadFailurePage(window, reason) {
   if (!window || window.isDestroyed() || failedWindows.has(window)) return;
   failedWindows.add(window);
@@ -90,7 +98,7 @@ function guardWindow(window) {
   window.once("ready-to-show", () => safeShow(window));
   window.webContents.on("did-finish-load", () => {
     safeShow(window);
-    scheduleStartupRelease(window, "did-finish-load-timeout");
+    releaseStartupForPlatform(window, "did-finish-load");
   });
   window.webContents.on(
     "did-fail-load",
@@ -111,7 +119,7 @@ function guardWindow(window) {
 
 ipcMain.on("pixel:renderer-ready", (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
-  if (window) scheduleStartupRelease(window, "renderer-ready-timeout");
+  if (window) releaseStartupForPlatform(window, "renderer-ready");
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
 });
 
