@@ -60,9 +60,10 @@ jobs:
             exit 1
           fi
           grep -R -q 'reportRendererReady' www/assets
-          grep -q 'PIXEL_MACOS_UI_VISIBLE' electron/bootstrap.cjs
-          grep -q 'PIXEL_MACOS_WINDOW_SHOWN' electron/bootstrap.cjs
-          grep -q 'process.platform !== "darwin"' electron/main.cjs
+          grep -q 'PIXEL_ENTRY_LOADED' electron/entry.cjs
+          grep -q 'PIXEL_MACOS_UI_VISIBLE' electron/entry.cjs
+          grep -q 'PIXEL_MACOS_WINDOW_SHOWN' electron/entry.cjs
+          grep -q '"main": "electron/entry.cjs"' package.json
 
           SETTINGS_BUNDLE="$(grep -rl --include='*.js' 'pixel-api-base-url' www/assets | head -n 1 || true)"
           test -n "$SETTINGS_BUNDLE"
@@ -100,6 +101,7 @@ jobs:
 
           ELECTRON_ENABLE_LOGGING=1 "$EXECUTABLE" --disable-gpu --enable-logging=stderr > "$LOG_FILE" 2>&1 &
           APP_PID=$!
+          ENTRY_LOADED=0
           RENDERER_READY=0
           UI_VISIBLE=0
           WINDOW_SHOWN=0
@@ -111,11 +113,12 @@ jobs:
           trap cleanup EXIT
 
           for _attempt in $(seq 1 30); do
+            if grep -q 'PIXEL_ENTRY_LOADED darwin' "$LOG_FILE"; then ENTRY_LOADED=1; fi
             if grep -q 'PIXEL_RENDERER_READY' "$LOG_FILE"; then RENDERER_READY=1; fi
             if grep -q 'PIXEL_MACOS_UI_VISIBLE' "$LOG_FILE"; then UI_VISIBLE=1; fi
             if grep -q 'PIXEL_MACOS_WINDOW_SHOWN' "$LOG_FILE"; then WINDOW_SHOWN=1; fi
 
-            if [ "$RENDERER_READY" -eq 1 ] && [ "$UI_VISIBLE" -eq 1 ] && [ "$WINDOW_SHOWN" -eq 1 ]; then
+            if [ "$ENTRY_LOADED" -eq 1 ] && [ "$RENDERER_READY" -eq 1 ] && [ "$UI_VISIBLE" -eq 1 ] && [ "$WINDOW_SHOWN" -eq 1 ]; then
               break
             fi
 
@@ -128,6 +131,10 @@ jobs:
           done
 
           cat "$LOG_FILE"
+          if [ "$ENTRY_LOADED" -ne 1 ]; then
+            echo "Le paquet macOS n’a pas exécuté electron/entry.cjs." >&2
+            exit 1
+          fi
           if [ "$RENDERER_READY" -ne 1 ]; then
             echo "Le renderer macOS n’a pas confirmé son chargement." >&2
             exit 1
