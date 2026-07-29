@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.30.3",
+  "version": "0.30.4",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -22,7 +22,7 @@
     "@capacitor/core": "^7.4.3",
     "@capacitor/local-notifications": "^7.0.7",
     "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5",
+    "cors": "^5.1.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
