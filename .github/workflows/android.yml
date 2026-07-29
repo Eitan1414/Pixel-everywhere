@@ -86,11 +86,21 @@ jobs:
           grep -R -q 'pixel-api-base-url' www/assets
           grep -R -q 'pixel-update-last-check' www/assets
           grep -R -q 'Mises à jour automatiques' www/assets
+          grep -R -q 'Télécharger et installer' www/assets
+          grep -R -q 'PixelUpdater' www/assets
 
       - name: Générer le projet Android
         run: |
           npx cap add android
           npx cap sync android
+
+      - name: Installer le module de mise à jour Android
+        run: |
+          set -euo pipefail
+          node scripts/install-android-updater.mjs
+          test -f android/app/src/main/java/com/pdd/pixeleverywhere/PixelUpdaterPlugin.java
+          grep -q 'registerPlugin(PixelUpdaterPlugin.class)' android/app/src/main/java/com/pdd/pixeleverywhere/MainActivity.java
+          grep -q 'android.permission.REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml
 
       - name: Forcer la signature Alpha stable
         run: |
@@ -106,15 +116,15 @@ jobs:
               raise SystemExit("Bloc buildTypes introuvable dans android/app/build.gradle")
           if "signingConfigs.pixelAlpha" not in text:
               signing = '''    signingConfigs {
-                  pixelAlpha {
-                      storeFile rootProject.file("pixel-alpha-update.keystore")
-                      storePassword "android"
-                      keyAlias "androiddebugkey"
-                      keyPassword "android"
+                      pixelAlpha {
+                          storeFile rootProject.file("pixel-alpha-update.keystore")
+                          storePassword "android"
+                          keyAlias "androiddebugkey"
+                          keyPassword "android"
+                      }
                   }
-              }
 
-          '''
+              '''
               text = text.replace(marker, signing + marker, 1)
               text = text.replace(
                   marker,
@@ -159,6 +169,7 @@ jobs:
           ! grep -q 'web/server-settings.js' apk-check/assets/public/index.html
           grep -R -q 'pixel-api-base-url' apk-check/assets/public/assets
           grep -R -q 'pixel-update-last-check' apk-check/assets/public/assets
+          grep -R -q 'Télécharger et installer' apk-check/assets/public/assets
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"

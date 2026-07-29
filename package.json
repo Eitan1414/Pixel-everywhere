@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.30.2",
+  "version": "0.30.3",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -41,7 +41,7 @@
   "engines": {
     "node": ">=20"
   },
-  "main": "electron/main.cjs",
+  "main": "electron/bootstrap.cjs",
   "build": {
     "appId": "com.pdd.pixeleverywhere",
     "productName": "Pixel Everywhere",

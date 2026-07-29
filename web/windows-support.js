@@ -204,10 +204,10 @@ async function decorateWindowsUpdateDialog() {
   if (!(await windowsRuntime())) return;
   const instructions = document.querySelector("#appUpdateInstructions");
   if (instructions) {
-    instructions.textContent = "L’installateur Windows 64 bits va être téléchargé. Ouvre ensuite le fichier .exe et suis les étapes d’installation.";
+    instructions.textContent = "L’installateur Windows sera téléchargé puis lancé automatiquement. Pixel Everywhere se fermera pendant l’installation.";
   }
   const button = document.querySelector("#downloadAppUpdateButton");
-  if (button) button.textContent = "Télécharger l’installateur Windows";
+  if (button) button.textContent = "Installer automatiquement";
 }
 
 document.addEventListener("submit", saveWindowsAwareSettings, true);
