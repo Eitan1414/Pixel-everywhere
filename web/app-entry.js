@@ -27,3 +27,5 @@ import "./account-deletion.css";
 import "./account-deletion.js";
 import "./main.js";
 import "./offline-access.js";
+
+window.pixelDesktop?.reportRendererReady?.();
