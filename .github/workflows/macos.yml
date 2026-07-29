@@ -53,8 +53,9 @@ jobs:
           grep -q 'id="serverSettingsPanel"' www/index.html
           grep -q 'Serveur PDD' www/index.html
           grep -R -q 'reportRendererReady' www/assets
-          grep -q 'pixel:macos-ui-visible' electron/preload.cjs
-          grep -q 'PIXEL_MACOS_WINDOW_SHOWN' electron/startup-guard.cjs
+          grep -q 'MACOS_NO_INTRO_CSS' electron/bootstrap.cjs
+          grep -q 'PIXEL_MACOS_UI_VISIBLE' electron/bootstrap.cjs
+          grep -q 'PIXEL_MACOS_WINDOW_SHOWN' electron/bootstrap.cjs
           grep -q 'process.platform !== "darwin"' electron/main.cjs
 
           SETTINGS_BUNDLE="$(grep -rl --include='*.js' 'pixel-api-base-url' www/assets | head -n 1 || true)"
