@@ -1,0 +1,52 @@
+/*
+ * Dernier filet de sécurité : même si les minuteurs JavaScript sont suspendus,
+ * le compositeur CSS libère l’interface après l’animation.
+ */
+.startup-animation {
+  animation: pixel-startup-overlay-release 9.4s steps(1, end) both;
+}
+
+body.startup-running {
+  animation: pixel-startup-body-release 9.4s steps(1, end) both;
+}
+
+body.startup-running .app-shell {
+  animation: pixel-startup-shell-release 9.4s steps(1, end) both;
+}
+
+.startup-animation.leaving {
+  animation: none !important;
+}
+
+body:not(.startup-running) .app-shell {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+@keyframes pixel-startup-overlay-release {
+  0%, 99.9% {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+  }
+  100% {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@keyframes pixel-startup-shell-release {
+  0%, 99.9% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes pixel-startup-body-release {
+  0%, 99.9% {
+    overflow: hidden;
+  }
+  100% {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+}
