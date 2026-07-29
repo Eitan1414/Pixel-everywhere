@@ -1,16 +1,59 @@
-const { app, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 
 const guardedWindows = new WeakSet();
 const failedWindows = new WeakSet();
+const startupTimers = new WeakMap();
 
 function safeShow(window) {
   if (!window || window.isDestroyed()) return;
   if (!window.isVisible()) window.show();
 }
 
+function clearStartupTimer(window) {
+  const timer = startupTimers.get(window);
+  if (timer) clearTimeout(timer);
+  startupTimers.delete(window);
+}
+
+async function forceDismissStartup(window, reason = "main-process-timeout") {
+  if (!window || window.isDestroyed() || window.webContents.isDestroyed()) return;
+  clearStartupTimer(window);
+  try {
+    const dismissed = await window.webContents.executeJavaScript(`
+      (() => {
+        const startup = document.querySelector("#startupAnimation");
+        document.body?.classList.remove("startup-running");
+        if (!startup) return true;
+        startup.classList.add("leaving");
+        startup.setAttribute("aria-hidden", "true");
+        startup.style.pointerEvents = "none";
+        startup.hidden = true;
+        startup.style.display = "none";
+        const shell = document.querySelector(".app-shell");
+        if (shell) shell.style.opacity = "1";
+        return startup.hidden && !document.body?.classList.contains("startup-running");
+      })();
+    `, true);
+    if (dismissed) console.log(`PIXEL_STARTUP_DISMISSED ${reason}`);
+    else console.error("PIXEL_STARTUP_DISMISS_FAILED", reason);
+  } catch (error) {
+    console.error("PIXEL_STARTUP_DISMISS_FAILED", error?.message || String(error));
+  }
+}
+
+function scheduleStartupRelease(window) {
+  clearStartupTimer(window);
+  const timer = setTimeout(() => {
+    forceDismissStartup(window).catch(() => {});
+  }, 10_000);
+  timer.unref?.();
+  startupTimers.set(window, timer);
+}
+
 function loadFailurePage(window, reason) {
   if (!window || window.isDestroyed() || failedWindows.has(window)) return;
   failedWindows.add(window);
+  clearStartupTimer(window);
   const safeReason = String(reason || "Erreur inconnue").slice(0, 600);
   const html = `<!doctype html>
 <html lang="fr">
@@ -45,7 +88,10 @@ function guardWindow(window) {
   guardedWindows.add(window);
 
   window.once("ready-to-show", () => safeShow(window));
-  window.webContents.once("did-finish-load", () => safeShow(window));
+  window.webContents.on("did-finish-load", () => {
+    safeShow(window);
+    scheduleStartupRelease(window);
+  });
   window.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL, isMainFrame) => {
@@ -57,6 +103,7 @@ function guardWindow(window) {
     loadFailurePage(window, `Le moteur d’affichage s’est arrêté : ${details?.reason || "inconnu"}.`);
   });
   window.on("unresponsive", () => safeShow(window));
+  window.on("closed", () => clearStartupTimer(window));
 
   const revealTimer = setTimeout(() => safeShow(window), 2500);
   revealTimer.unref?.();
@@ -66,7 +113,9 @@ ipcMain.on("pixel:renderer-ready", (event) => {
   console.log(`PIXEL_RENDERER_READY ${event.sender.getURL()}`);
 });
 
-ipcMain.on("pixel:startup-dismissed", (_event, details = {}) => {
+ipcMain.on("pixel:startup-dismissed", (event, details = {}) => {
+  const window = BrowserWindow.fromWebContents(event.sender);
+  if (window) clearStartupTimer(window);
   console.log(`PIXEL_STARTUP_DISMISSED ${details.reason || "unknown"}`);
 });
 
@@ -76,4 +125,4 @@ ipcMain.on("pixel:renderer-error", (_event, details = {}) => {
 
 app.on("browser-window-created", (_event, window) => guardWindow(window));
 
-module.exports = { guardWindow, loadFailurePage };
+module.exports = { guardWindow, loadFailurePage, forceDismissStartup };
