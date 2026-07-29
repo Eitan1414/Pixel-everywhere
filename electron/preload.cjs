@@ -1,7 +1,43 @@
-const { contextBridge, ipcRenderer } = require("electron");
+const { contextBridge, ipcRenderer, webFrame } = require("electron");
 
+const isMacOS = process.platform === "darwin";
 let rendererReady = false;
 let startupDismissed = false;
+
+if (isMacOS) {
+  webFrame.insertCSS(`
+    html,
+    body {
+      background: #08090c !important;
+    }
+
+    #startupAnimation {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      animation: none !important;
+    }
+
+    body.startup-running {
+      overflow-x: hidden !important;
+      overflow-y: auto !important;
+    }
+
+    body.startup-running .app-shell,
+    .app-shell {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      animation: none !important;
+    }
+  `).catch((error) => {
+    ipcRenderer.send("pixel:renderer-error", {
+      message: `Impossible d’injecter la protection macOS : ${error?.message || String(error)}`,
+      stack: error?.stack || ""
+    });
+  });
+}
 
 function rendererErrorDetails(value) {
   if (value instanceof Error) {
@@ -15,6 +51,43 @@ function reportStartupDismissed(details = {}) {
   startupDismissed = true;
   const reason = typeof details === "string" ? details : details?.reason || "unknown";
   ipcRenderer.send("pixel:startup-dismissed", { reason });
+}
+
+function disableMacOSStartup() {
+  if (!isMacOS) return;
+
+  const startup = document.querySelector("#startupAnimation");
+  const shell = document.querySelector(".app-shell");
+
+  document.documentElement.classList.add("pixel-macos-no-intro");
+  document.body?.classList.remove("startup-running");
+  startup?.remove();
+
+  if (shell) {
+    shell.style.setProperty("display", "block", "important");
+    shell.style.setProperty("visibility", "visible", "important");
+    shell.style.setProperty("opacity", "1", "important");
+    shell.style.setProperty("animation", "none", "important");
+  }
+
+  const computed = shell ? window.getComputedStyle(shell) : null;
+  const details = {
+    visible: Boolean(
+      shell &&
+      !document.querySelector("#startupAnimation") &&
+      computed?.display !== "none" &&
+      computed?.visibility !== "hidden" &&
+      Number.parseFloat(computed?.opacity || "0") > 0
+    ),
+    rendererReady,
+    startupPresent: Boolean(document.querySelector("#startupAnimation")),
+    display: computed?.display || "missing",
+    visibility: computed?.visibility || "missing",
+    opacity: computed?.opacity || "missing"
+  };
+
+  reportStartupDismissed("macos-intro-disabled");
+  ipcRenderer.send("pixel:macos-ui-visible", details);
 }
 
 function revealStartupFallback() {
@@ -66,6 +139,10 @@ window.addEventListener("unhandledrejection", (event) => {
   ipcRenderer.send("pixel:renderer-error", rendererErrorDetails(event.reason));
 });
 window.addEventListener("DOMContentLoaded", () => {
+  if (isMacOS) {
+    disableMacOSStartup();
+    return;
+  }
   window.setTimeout(revealStartupFallback, 10_000);
 });
 
