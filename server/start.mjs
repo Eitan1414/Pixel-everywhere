@@ -110,11 +110,11 @@ source = source.replace(
 );
 
 // Les comptes supprimés sont anonymisés pour conserver l’historique, puis masqués
-// de la page utilisateurs.
+// de la page utilisateurs. Le motif cible uniquement la requête de liste admin.
 source = source.replace(
-  `FROM staff_users
-      ORDER BY datetime(created_at) DESC`,
-  `FROM staff_users
+  /SELECT id, username, role, active, must_change_password, created_at\s+FROM staff_users\s+ORDER BY datetime\(created_at\) DESC/,
+  `SELECT id, username, role, active, must_change_password, created_at
+      FROM staff_users
       WHERE deleted_at IS NULL
       ORDER BY datetime(created_at) DESC`
 );
