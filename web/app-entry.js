@@ -23,5 +23,7 @@ import "./announcement-center.css";
 import "./announcement-center.js";
 import "./announcement-subcategories.css";
 import "./announcement-subcategories.js";
+import "./account-deletion.css";
+import "./account-deletion.js";
 import "./main.js";
 import "./offline-access.js";

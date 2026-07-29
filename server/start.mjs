@@ -43,6 +43,9 @@ const runtimePath = path.join(serverDirectory, "index.runtime.mjs");
 let source = fs.readFileSync(sourcePath, "utf8");
 
 const extraImports = [];
+if (!source.includes('from "./account-deletion.mjs"')) {
+  extraImports.push('import { registerAccountDeletionRoutes } from "./account-deletion.mjs";');
+}
 if (!source.includes('from "./suggestions.mjs"')) {
   extraImports.push('import { registerSuggestionRoutes } from "./suggestions.mjs";');
 }
@@ -106,7 +109,28 @@ source = source.replace(
         datetime(a.created_at) DESC`
 );
 
+// Les comptes supprimés sont anonymisés pour conserver l’historique, puis masqués
+// de la page utilisateurs. Le motif cible uniquement la requête de liste admin.
+source = source.replace(
+  /SELECT id, username, role, active, must_change_password, created_at\s+FROM staff_users\s+ORDER BY datetime\(created_at\) DESC/,
+  `SELECT id, username, role, active, must_change_password, created_at
+      FROM staff_users
+      WHERE deleted_at IS NULL
+      ORDER BY datetime(created_at) DESC`
+);
+
 const registrations = [];
+if (!source.includes("registerAccountDeletionRoutes({")) {
+  registrations.push(`registerAccountDeletionRoutes({
+  app,
+  db,
+  authenticate,
+  requireActiveStaff,
+  staffOnly,
+  requireAdmin,
+  isOwnerAdmin
+});`);
+}
 if (!source.includes("registerSuggestionRoutes({")) {
   registrations.push(`registerSuggestionRoutes({
   app,
