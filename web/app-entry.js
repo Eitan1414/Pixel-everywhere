@@ -1,4 +1,5 @@
-import "./startup-safety.js";
+import "./startup-failsafe.css";
+import "./simple-startup.js";
 import "./native-interaction-stability.css";
 
 const userAgent = navigator.userAgent || "";
@@ -24,36 +25,36 @@ async function bootPixelEverywhere() {
     await import("./desktop-layout.css");
   }
 
+  // Ces modules créent les catégories et fonctions complémentaires.
+  // Ils doivent être chargés aussi sur Android et macOS.
+  await import("./enhancements.js");
+  await import("./pixel-live.js");
+  await import("./suggestions.css");
+  await import("./suggestions.js");
+  await import("./admin-control.css");
+  await import("./admin-control.js");
+  await import("./creation-studio.css");
+  await import("./creation-studio.js");
+  await import("./creation-studio-lazy.js");
+  await import("./announcement-center.css");
+  await import("./announcement-center.js");
+  await import("./announcement-subcategories.css");
+  await import("./announcement-subcategories.js");
+  await import("./account-deletion.css");
+  await import("./account-deletion.js");
+
   if (!stableNativeRuntime) {
     await import("./desktop-network.js");
     await import("./windows-support.js");
     await import("./update-upload-desktop.js");
-
-    await import("./startup-original-preserver.js");
-    await import("./enhancements.js");
-    await import("./startup-original-restorer.js");
-
-    await import("./pixel-live.js");
-    await import("./suggestions.css");
-    await import("./suggestions.js");
-    await import("./admin-control.css");
-    await import("./admin-control.js");
-    await import("./creation-studio.css");
-    await import("./creation-studio.js");
-    await import("./creation-studio-lazy.js");
     await import("./desktop-layout.css");
-    await import("./announcement-center.css");
-    await import("./announcement-center.js");
-    await import("./announcement-subcategories.css");
-    await import("./announcement-subcategories.js");
-    await import("./account-deletion.css");
-    await import("./account-deletion.js");
   }
 
   await import("./main.js");
   await import("./offline-access.js");
 
   document.documentElement.dataset.pixelRuntimeReady = "true";
+  document.documentElement.dataset.pixelCategoriesRestored = "true";
   window.pixelDesktop?.reportRendererReady?.();
 }
 

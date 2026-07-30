@@ -17,37 +17,40 @@ function requireOrder(value, tokens, message) {
   }
 }
 
-const [entry, startupSafety, manualUpdates, macOSPreparation, preload, bootstrap] = await Promise.all([
+const [entry, simpleStartup, startupCss, manualUpdates, preload, bootstrap] = await Promise.all([
   readFile("web/app-entry.js", "utf8"),
-  readFile("web/startup-safety.js", "utf8"),
+  readFile("web/simple-startup.js", "utf8"),
+  readFile("web/startup-failsafe.css", "utf8"),
   readFile("web/manual-update-mode.js", "utf8"),
-  readFile("scripts/prepare-macos-bundle.mjs", "utf8"),
   readFile("electron/preload.cjs", "utf8"),
   readFile("electron/bootstrap.cjs", "utf8")
 ]);
 
 requireOrder(
   entry,
-  ["startup-safety.js", "app-updater.js", "manual-update-mode.js", "main.js"],
-  "L’intro et le gestionnaire manuel doivent être chargés avant le cœur de l’application."
+  ["startup-failsafe.css", "simple-startup.js", "app-updater.js", "manual-update-mode.js", "main.js"],
+  "Le démarrage direct et le gestionnaire manuel doivent précéder le cœur de l’application."
 );
 
-forbid(entry, /startup-failsafe\.css/, "Le CSS qui supprimait l’intro est encore chargé.");
-forbid(entry, /simple-startup\.js/, "Le script qui supprimait l’intro est encore chargé.");
+requireMatch(entry, /enhancements\.js/, "Les améliorations générales ne sont pas chargées.");
+requireMatch(entry, /suggestions\.js/, "La catégorie Suggestions n’est pas chargée.");
+requireMatch(entry, /creation-studio\.js/, "La catégorie Création n’est pas chargée.");
+requireMatch(entry, /announcement-center\.js/, "Le centre d’annonces n’est pas chargé.");
+requireMatch(entry, /announcement-subcategories\.js/, "Les sous-catégories d’annonces ne sont pas chargées.");
+requireMatch(entry, /admin-control\.js/, "Le contrôle administrateur n’est pas chargé.");
+requireMatch(entry, /account-deletion\.js/, "La gestion complète des comptes n’est pas chargée.");
+requireMatch(entry, /pixelCategoriesRestored/, "Le runtime ne confirme pas la restauration des catégories.");
+
+requireMatch(simpleStartup, /startupAnimation/, "Le script de démarrage direct ne retire pas l’intro.");
+requireMatch(simpleStartup, /startup-running/, "Le démarrage direct ne libère pas l’interface.");
+requireMatch(startupCss, /#startupAnimation[\s\S]*display:\s*none/, "Le CSS ne masque pas immédiatement l’intro.");
+forbid(entry, /startup-safety\.js/, "L’ancienne animation est encore démarrée.");
 forbid(entry, /automatic-installer(?:\.css|\.js)/, "L’installation automatique est encore chargée.");
 
-requireMatch(startupSafety, /STARTUP_MAX_DURATION_MS/, "La sécurité de durée de l’intro est absente.");
-requireMatch(startupSafety, /reportStartupDismissed/, "La fin de l’intro n’est pas signalée à macOS.");
 requireMatch(manualUpdates, /installation:\s*"manual"/, "Le mode d’installation manuelle n’est pas actif.");
 requireMatch(manualUpdates, /Télécharger le fichier/, "Le bouton de téléchargement manuel est absent.");
-requireMatch(manualUpdates, /introIsVisible/, "La mise à jour peut encore interrompre l’intro.");
-
-requireMatch(macOSPreparation, /startupAnimation/, "Le bundle macOS ne vérifie pas la présence de l’intro.");
-requireMatch(macOSPreparation, /PIXEL_MACOS_INTRO_BUNDLE_READY/, "La préparation macOS ne confirme pas l’intro restaurée.");
-forbid(macOSPreparation, /#startupAnimation[\s\S]*display:\s*none/, "La préparation macOS masque encore l’intro.");
-
 forbid(preload, /installUpdate/, "Le pont macOS d’installation automatique est encore exposé.");
 forbid(preload, /onUpdateProgress/, "Le suivi d’installation automatique macOS est encore exposé.");
 forbid(bootstrap, /automatic-updater/, "Le moteur d’installation automatique macOS est encore démarré.");
 
-console.log("PIXEL_INTRO_AND_MANUAL_UPDATES_VERIFIED");
+console.log("PIXEL_DIRECT_START_AND_CATEGORIES_VERIFIED");
