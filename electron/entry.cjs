@@ -13,7 +13,7 @@ if (process.platform === "darwin") {
       if (window.isDestroyed()) return;
       console.log(`PIXEL_MACOS_UI_VISIBLE ${JSON.stringify({
         source: "entry-load-file-resolved",
-        introHidden: true,
+        introRestored: true,
         shellVisible: true
       })}`);
       window.show();
