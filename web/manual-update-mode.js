@@ -1,0 +1,94 @@
+window.PixelManualUpdates = Object.freeze({
+  enabled: true,
+  installation: "manual"
+});
+
+document.documentElement.dataset.pixelManualUpdates = "true";
+
+function enforceManualUpdateInterface() {
+  const cardTitle = document.querySelector("#appUpdateCard strong");
+  if (cardTitle && cardTitle.textContent !== "Mises à jour") {
+    cardTitle.textContent = "Mises à jour";
+  }
+
+  const summary = document.querySelector("#appUpdateSummary");
+  if (summary?.textContent.includes("Vérification automatique")) {
+    summary.textContent = summary.textContent.replace(
+      "Vérification automatique",
+      "Recherche automatique • installation manuelle"
+    );
+  }
+
+  const adminEyebrow = document.querySelector("#updateAdminForm .update-admin-heading .eyebrow");
+  if (adminEyebrow && adminEyebrow.textContent !== "Diffusion des mises à jour") {
+    adminEyebrow.textContent = "Diffusion des mises à jour";
+  }
+
+  const downloadButton = document.querySelector("#downloadAppUpdateButton");
+  if (downloadButton && downloadButton.textContent !== "Télécharger le fichier") {
+    downloadButton.textContent = "Télécharger le fichier";
+  }
+
+  const laterButton = document.querySelector("#laterAppUpdateButton");
+  if (laterButton) {
+    laterButton.hidden = false;
+    laterButton.textContent = "Installer plus tard";
+  }
+
+  const closeButton = document.querySelector("#closeAppUpdateDialog");
+  if (closeButton) closeButton.hidden = false;
+
+  const title = document.querySelector("#appUpdateTitle");
+  if (title?.textContent === "Mise à jour obligatoire") {
+    title.textContent = "Mise à jour importante";
+  }
+
+  const instructions = document.querySelector("#appUpdateInstructions");
+  if (instructions?.textContent) {
+    const isAndroid = /Android/i.test(instructions.textContent);
+    const manualText = isAndroid
+      ? "Télécharge l’APK, puis ouvre-le depuis les téléchargements Android pour confirmer toi-même l’installation."
+      : "Télécharge le ZIP adapté à ce Mac, ferme Pixel Everywhere, puis remplace manuellement l’ancienne application.";
+    if (instructions.textContent !== manualText) instructions.textContent = manualText;
+  }
+}
+
+function deferUpdateDialogUntilAfterIntro() {
+  const dialog = document.querySelector("#appUpdateDialog");
+  if (!dialog || dialog.dataset.manualOpenGuard === "true") return;
+
+  dialog.dataset.manualOpenGuard = "true";
+  const nativeShowModal = dialog.showModal.bind(dialog);
+  let deferredOpen = false;
+
+  dialog.showModal = function showManualUpdateAfterIntro() {
+    if (document.body?.classList.contains("startup-running")) {
+      deferredOpen = true;
+      return;
+    }
+    if (!dialog.open) nativeShowModal();
+    enforceManualUpdateInterface();
+  };
+
+  const bodyObserver = new MutationObserver(() => {
+    if (!deferredOpen || document.body?.classList.contains("startup-running")) return;
+    deferredOpen = false;
+    if (!dialog.open) nativeShowModal();
+    enforceManualUpdateInterface();
+  });
+  bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+}
+
+enforceManualUpdateInterface();
+deferUpdateDialogUntilAfterIntro();
+
+const interfaceObserver = new MutationObserver(() => {
+  enforceManualUpdateInterface();
+  deferUpdateDialogUntilAfterIntro();
+});
+interfaceObserver.observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+  attributes: true,
+  attributeFilter: ["hidden", "open"]
+});
