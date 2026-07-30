@@ -1,0 +1,40 @@
+html[data-pixel-stable-native="true"] .app-shell {
+  pointer-events: auto !important;
+  touch-action: manipulation;
+}
+
+html[data-pixel-stable-native="true"] button,
+html[data-pixel-stable-native="true"] a,
+html[data-pixel-stable-native="true"] [role="button"] {
+  touch-action: manipulation;
+}
+
+html[data-pixel-stable-native="true"] dialog::backdrop {
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html[data-pixel-stable-native="true"] #serverStatusDialog[data-non-blocking="true"] {
+  position: fixed;
+  inset: auto 12px calc(82px + env(safe-area-inset-bottom)) 12px;
+  z-index: 950;
+  width: auto;
+  max-width: 430px;
+  max-height: min(55vh, 470px);
+  margin: 0 auto;
+  overflow: auto;
+  border: 1px solid rgba(255, 84, 104, 0.32);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.48);
+}
+
+html[data-pixel-stable-native="true"] #serverStatusDialog[data-non-blocking="true"] .server-status-card {
+  padding: 17px 16px 14px;
+}
+
+html[data-pixel-stable-native="true"] #serverStatusDialog[data-non-blocking="true"] .server-status-icon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 9px;
+  font-size: 1.3rem;
+}
