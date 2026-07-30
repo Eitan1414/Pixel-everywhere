@@ -60,6 +60,27 @@ function enforceManualUpdateInterface() {
   }
 }
 
+function installManualDialogActions() {
+  if (document.documentElement.dataset.pixelManualUpdateActions === "true") return;
+  document.documentElement.dataset.pixelManualUpdateActions = "true";
+
+  document.addEventListener("click", (event) => {
+    const dismissButton = event.target.closest?.("#closeAppUpdateDialog, #laterAppUpdateButton");
+    if (!dismissButton) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    const versions = document.querySelector("#appUpdateVersions")?.textContent || "";
+    const latestVersion = versions.match(/nouvelle version\s+(.+)$/i)?.[1]?.trim() || "";
+    if (latestVersion) {
+      localStorage.setItem("pixel-update-dismissed-version", latestVersion);
+      localStorage.setItem("pixel-update-dismissed-at", String(Date.now()));
+    }
+    document.querySelector("#appUpdateDialog")?.close();
+  }, true);
+}
+
 function deferUpdateDialogUntilAfterIntro() {
   const dialog = document.querySelector("#appUpdateDialog");
   if (!dialog || dialog.dataset.manualOpenGuard === "true") return;
@@ -95,6 +116,7 @@ function deferUpdateDialogUntilAfterIntro() {
 }
 
 enforceManualUpdateInterface();
+installManualDialogActions();
 deferUpdateDialogUntilAfterIntro();
 
 const interfaceObserver = new MutationObserver(() => {
