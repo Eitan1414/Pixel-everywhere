@@ -8,46 +8,37 @@ const isAndroid = window.Capacitor?.getPlatform?.() === "android" || /Android/i.
 const isMacOS = Boolean(window.pixelDesktop) && /Mac/i.test(`${platform} ${userAgent}`);
 const stableNativeRuntime = isAndroid || isMacOS;
 
-async function loadModules(paths) {
-  for (const path of paths) await import(path);
-}
-
 async function bootPixelEverywhere() {
   if (isMacOS) await import("./desktop-network.js");
   await import("./native-interaction-stability.js");
-
-  await loadModules([
-    "./session-stability.js",
-    "./server-settings-v2.js",
-    "./server-recovery.js"
-  ]);
+  await import("./session-stability.js");
+  await import("./server-settings-v2.js");
+  await import("./server-recovery.js");
 
   if (!stableNativeRuntime) {
-    await loadModules([
-      "./desktop-network.js",
-      "./windows-support.js",
-      "./app-updater.css",
-      "./automatic-installer.css",
-      "./automatic-installer.js",
-      "./app-updater.js",
-      "./update-upload-desktop.js",
-      "./enhancements.js",
-      "./pixel-live.js",
-      "./suggestions.css",
-      "./suggestions.js",
-      "./admin-control.css",
-      "./admin-control.js",
-      "./creation-studio.css",
-      "./creation-studio.js",
-      "./creation-studio-lazy.js",
-      "./desktop-layout.css",
-      "./announcement-center.css",
-      "./announcement-center.js",
-      "./announcement-subcategories.css",
-      "./announcement-subcategories.js",
-      "./account-deletion.css",
-      "./account-deletion.js"
-    ]);
+    await import("./desktop-network.js");
+    await import("./windows-support.js");
+    await import("./app-updater.css");
+    await import("./automatic-installer.css");
+    await import("./automatic-installer.js");
+    await import("./app-updater.js");
+    await import("./update-upload-desktop.js");
+    await import("./enhancements.js");
+    await import("./pixel-live.js");
+    await import("./suggestions.css");
+    await import("./suggestions.js");
+    await import("./admin-control.css");
+    await import("./admin-control.js");
+    await import("./creation-studio.css");
+    await import("./creation-studio.js");
+    await import("./creation-studio-lazy.js");
+    await import("./desktop-layout.css");
+    await import("./announcement-center.css");
+    await import("./announcement-center.js");
+    await import("./announcement-subcategories.css");
+    await import("./announcement-subcategories.js");
+    await import("./account-deletion.css");
+    await import("./account-deletion.js");
   } else if (isMacOS) {
     await import("./desktop-layout.css");
   }
