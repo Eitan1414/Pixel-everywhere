@@ -5,6 +5,13 @@ window.PixelManualUpdates = Object.freeze({
 
 document.documentElement.dataset.pixelManualUpdates = "true";
 
+function introIsVisible() {
+  const startup = document.querySelector("#startupAnimation");
+  if (!startup || startup.hidden) return false;
+  const style = window.getComputedStyle(startup);
+  return style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity || 1) > 0;
+}
+
 function enforceManualUpdateInterface() {
   const cardTitle = document.querySelector("#appUpdateCard strong");
   if (cardTitle && cardTitle.textContent !== "Mises à jour") {
@@ -61,8 +68,15 @@ function deferUpdateDialogUntilAfterIntro() {
   const nativeShowModal = dialog.showModal.bind(dialog);
   let deferredOpen = false;
 
+  const releaseDeferredDialog = () => {
+    if (!deferredOpen || introIsVisible()) return;
+    deferredOpen = false;
+    if (!dialog.open) nativeShowModal();
+    enforceManualUpdateInterface();
+  };
+
   dialog.showModal = function showManualUpdateAfterIntro() {
-    if (document.body?.classList.contains("startup-running")) {
+    if (introIsVisible()) {
       deferredOpen = true;
       return;
     }
@@ -70,13 +84,14 @@ function deferUpdateDialogUntilAfterIntro() {
     enforceManualUpdateInterface();
   };
 
-  const bodyObserver = new MutationObserver(() => {
-    if (!deferredOpen || document.body?.classList.contains("startup-running")) return;
-    deferredOpen = false;
-    if (!dialog.open) nativeShowModal();
-    enforceManualUpdateInterface();
+  const introObserver = new MutationObserver(releaseDeferredDialog);
+  introObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class", "hidden", "style"]
   });
-  bodyObserver.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+  window.setTimeout(releaseDeferredDialog, 12_000);
 }
 
 enforceManualUpdateInterface();
