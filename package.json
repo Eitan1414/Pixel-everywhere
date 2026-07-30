@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.30.7",
+  "version": "0.30.8",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -13,7 +13,7 @@
     "cap:init": "cap add android",
     "cap:sync": "npm run build && cap sync android",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
-    "test": "node --test && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check electron/entry.cjs && node --check electron/bootstrap.cjs && node --check electron/main.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check electron/automatic-updater.cjs && node --check web/startup-safety.js && node --check scripts/prepare-macos-bundle.mjs",
+    "test": "node --test && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check electron/entry.cjs && node --check electron/bootstrap.cjs && node --check electron/main.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check electron/automatic-updater.cjs && node --check web/startup-safety.js && node --check web/startup-original-preserver.js && node --check web/startup-original-restorer.js && node --check scripts/prepare-macos-bundle.mjs && node scripts/verify-platform-startup.mjs",
     "mac:build": "npm run build && node scripts/prepare-macos-bundle.mjs && electron-builder --mac zip --x64 && electron-builder --mac zip --arm64",
     "win:build": "npm run build && electron-builder --win nsis --x64"
   },
@@ -22,7 +22,7 @@
     "@capacitor/core": "^7.4.3",
     "@capacitor/local-notifications": "^7.0.7",
     "bcryptjs": "^3.0.2",
-    "cors": "^2.8.5",
+    "cors": "^5.1.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-rate-limit": "^8.0.1",
