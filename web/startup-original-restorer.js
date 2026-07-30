@@ -1,14 +1,8 @@
-const startup = document.querySelector("#startupAnimation");
-const originalMarkup = window.__pixelOriginalStartupMarkup;
+const startup = window.__pixelOriginalStartupElement;
 const macOSBundle = document.body?.dataset.pixelMacosNoIntro === "true";
 
-if (startup && originalMarkup && !macOSBundle) {
-  startup.innerHTML = originalMarkup;
-  startup.classList.remove("leaving");
-  startup.removeAttribute("aria-hidden");
-  startup.hidden = false;
-  startup.style.removeProperty("display");
-  startup.style.removeProperty("pointer-events");
+if (startup && !macOSBundle) {
+  startup.id = "startupAnimation";
 }
 
-delete window.__pixelOriginalStartupMarkup;
+delete window.__pixelOriginalStartupElement;
