@@ -13,9 +13,11 @@ function requireOrder(value, tokens, message) {
   }
 }
 
-const [html, entry, macOSPreparation] = await Promise.all([
+const [html, entry, preserver, restorer, macOSPreparation] = await Promise.all([
   readFile("index.html", "utf8"),
   readFile("web/app-entry.js", "utf8"),
+  readFile("web/startup-original-preserver.js", "utf8"),
+  readFile("web/startup-original-restorer.js", "utf8"),
   readFile("scripts/prepare-macos-bundle.mjs", "utf8")
 ]);
 
@@ -38,6 +40,12 @@ requireOrder(
   ],
   "L’ordre de protection de l’intro normale est invalide."
 );
+
+requireMatch(preserver, /startup\.id\s*=\s*["']startupAnimationOriginal["']/, "L’intro normale n’est pas protégée avant les améliorations.");
+requireMatch(restorer, /startup\.id\s*=\s*["']startupAnimation["']/, "L’identifiant de l’intro normale n’est pas restauré.");
+if (preserver.includes("innerHTML") || restorer.includes("innerHTML")) {
+  throw new Error("L’intro normale ne doit jamais être reconstruite ou remplacée.");
+}
 
 requireMatch(macOSPreparation, /pixel-macos-static-no-intro/, "Le marqueur macOS sans intro est absent.");
 requireMatch(macOSPreparation, /data-pixel-macos-no-intro/, "Le bundle macOS n’est pas identifié comme sans intro.");
