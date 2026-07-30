@@ -1,5 +1,6 @@
 import "./startup-failsafe.css";
 import "./startup-safety.js";
+import "./startup-original-preserver.js";
 import "./desktop-network.js";
 import "./windows-support.js";
 import "./session-stability.js";
@@ -11,6 +12,7 @@ import "./automatic-installer.js";
 import "./app-updater.js";
 import "./update-upload-desktop.js";
 import "./enhancements.js";
+import "./startup-original-restorer.js";
 import "./pixel-live.js";
 import "./suggestions.css";
 import "./suggestions.js";
