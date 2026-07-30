@@ -1,32 +1,76 @@
 import "./startup-failsafe.css";
 import "./simple-startup.js";
-import "./desktop-network.js";
-import "./windows-support.js";
-import "./session-stability.js";
-import "./server-settings-v2.js";
-import "./server-recovery.js";
-import "./app-updater.css";
-import "./automatic-installer.css";
-import "./automatic-installer.js";
-import "./app-updater.js";
-import "./update-upload-desktop.js";
-import "./enhancements.js";
-import "./pixel-live.js";
-import "./suggestions.css";
-import "./suggestions.js";
-import "./admin-control.css";
-import "./admin-control.js";
-import "./creation-studio.css";
-import "./creation-studio.js";
-import "./creation-studio-lazy.js";
-import "./desktop-layout.css";
-import "./announcement-center.css";
-import "./announcement-center.js";
-import "./announcement-subcategories.css";
-import "./announcement-subcategories.js";
-import "./account-deletion.css";
-import "./account-deletion.js";
-import "./main.js";
-import "./offline-access.js";
+import "./native-interaction-stability.css";
 
-window.pixelDesktop?.reportRendererReady?.();
+const userAgent = navigator.userAgent || "";
+const platform = navigator.platform || "";
+const isAndroid = window.Capacitor?.getPlatform?.() === "android" || /Android/i.test(userAgent);
+const isMacOS = Boolean(window.pixelDesktop) && /Mac/i.test(`${platform} ${userAgent}`);
+const stableNativeRuntime = isAndroid || isMacOS;
+
+async function loadModules(paths) {
+  for (const path of paths) await import(path);
+}
+
+async function bootPixelEverywhere() {
+  if (isMacOS) await import("./desktop-network.js");
+  await import("./native-interaction-stability.js");
+
+  await loadModules([
+    "./session-stability.js",
+    "./server-settings-v2.js",
+    "./server-recovery.js"
+  ]);
+
+  if (!stableNativeRuntime) {
+    await loadModules([
+      "./desktop-network.js",
+      "./windows-support.js",
+      "./app-updater.css",
+      "./automatic-installer.css",
+      "./automatic-installer.js",
+      "./app-updater.js",
+      "./update-upload-desktop.js",
+      "./enhancements.js",
+      "./pixel-live.js",
+      "./suggestions.css",
+      "./suggestions.js",
+      "./admin-control.css",
+      "./admin-control.js",
+      "./creation-studio.css",
+      "./creation-studio.js",
+      "./creation-studio-lazy.js",
+      "./desktop-layout.css",
+      "./announcement-center.css",
+      "./announcement-center.js",
+      "./announcement-subcategories.css",
+      "./announcement-subcategories.js",
+      "./account-deletion.css",
+      "./account-deletion.js"
+    ]);
+  } else if (isMacOS) {
+    await import("./desktop-layout.css");
+  }
+
+  await import("./main.js");
+  await import("./offline-access.js");
+
+  document.documentElement.dataset.pixelRuntimeReady = "true";
+  window.pixelDesktop?.reportRendererReady?.();
+}
+
+bootPixelEverywhere().catch((error) => {
+  console.error("PIXEL_RUNTIME_BOOT_FAILED", error);
+  document.documentElement.dataset.pixelRuntimeReady = "failed";
+  const notice = document.createElement("section");
+  notice.id = "pixelRuntimeFailure";
+  notice.setAttribute("role", "alert");
+  notice.innerHTML = `
+    <div>
+      <strong>Pixel Everywhere n’a pas pu terminer son chargement.</strong>
+      <p>${error?.message || "Erreur inconnue"}</p>
+      <button type="button">Recharger l’application</button>
+    </div>`;
+  notice.querySelector("button")?.addEventListener("click", () => window.location.reload());
+  document.body?.append(notice);
+});
