@@ -38,12 +38,12 @@ function enforceManualUpdateInterface() {
 
   const laterButton = document.querySelector("#laterAppUpdateButton");
   if (laterButton) {
-    laterButton.hidden = false;
-    laterButton.textContent = "Installer plus tard";
+    if (laterButton.hidden) laterButton.hidden = false;
+    if (laterButton.textContent !== "Installer plus tard") laterButton.textContent = "Installer plus tard";
   }
 
   const closeButton = document.querySelector("#closeAppUpdateDialog");
-  if (closeButton) closeButton.hidden = false;
+  if (closeButton?.hidden) closeButton.hidden = false;
 
   const title = document.querySelector("#appUpdateTitle");
   if (title?.textContent === "Mise à jour obligatoire") {
@@ -61,9 +61,6 @@ function enforceManualUpdateInterface() {
 }
 
 function installManualDialogActions() {
-  if (document.documentElement.dataset.pixelManualUpdateActions === "true") return;
-  document.documentElement.dataset.pixelManualUpdateActions = "true";
-
   document.addEventListener("click", (event) => {
     const dismissButton = event.target.closest?.("#closeAppUpdateDialog, #laterAppUpdateButton");
     if (!dismissButton) return;
@@ -81,51 +78,44 @@ function installManualDialogActions() {
   }, true);
 }
 
-function deferUpdateDialogUntilAfterIntro() {
+function guardUpdateDialogOpening() {
   const dialog = document.querySelector("#appUpdateDialog");
-  if (!dialog || dialog.dataset.manualOpenGuard === "true") return;
+  if (!dialog) return;
 
-  dialog.dataset.manualOpenGuard = "true";
   const nativeShowModal = dialog.showModal.bind(dialog);
   let deferredOpen = false;
+
+  const openManually = () => {
+    enforceManualUpdateInterface();
+    if (!dialog.open) nativeShowModal();
+  };
 
   const releaseDeferredDialog = () => {
     if (!deferredOpen || introIsVisible()) return;
     deferredOpen = false;
-    if (!dialog.open) nativeShowModal();
-    enforceManualUpdateInterface();
+    openManually();
   };
 
   dialog.showModal = function showManualUpdateAfterIntro() {
+    enforceManualUpdateInterface();
     if (introIsVisible()) {
       deferredOpen = true;
       return;
     }
-    if (!dialog.open) nativeShowModal();
-    enforceManualUpdateInterface();
+    openManually();
   };
 
-  const introObserver = new MutationObserver(releaseDeferredDialog);
-  introObserver.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["class", "hidden", "style"]
-  });
+  const startup = document.querySelector("#startupAnimation");
+  if (startup) {
+    const introObserver = new MutationObserver(releaseDeferredDialog);
+    introObserver.observe(startup, {
+      attributes: true,
+      attributeFilter: ["class", "hidden", "style"]
+    });
+  }
   window.setTimeout(releaseDeferredDialog, 12_000);
 }
 
 enforceManualUpdateInterface();
 installManualDialogActions();
-deferUpdateDialogUntilAfterIntro();
-
-const interfaceObserver = new MutationObserver(() => {
-  enforceManualUpdateInterface();
-  deferUpdateDialogUntilAfterIntro();
-});
-interfaceObserver.observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributeFilter: ["hidden", "open"]
-});
+guardUpdateDialogOpening();
