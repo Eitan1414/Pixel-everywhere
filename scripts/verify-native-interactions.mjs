@@ -4,17 +4,25 @@ function requireMatch(value, pattern, message) {
   if (!pattern.test(value)) throw new Error(message);
 }
 
-const [entry, stability, stabilityCss, main] = await Promise.all([
+function forbid(value, pattern, message) {
+  if (pattern.test(value)) throw new Error(message);
+}
+
+const [entry, stability, stabilityCss, manualUpdates, main] = await Promise.all([
   readFile("web/app-entry.js", "utf8"),
   readFile("web/native-interaction-stability.js", "utf8"),
   readFile("web/native-interaction-stability.css", "utf8"),
+  readFile("web/manual-update-mode.js", "utf8"),
   readFile("web/main.js", "utf8")
 ]);
 
 requireMatch(entry, /stableNativeRuntime\s*=\s*isAndroid\s*\|\|\s*isMacOS/, "Le mode natif stable Android/macOS est absent.");
 requireMatch(entry, /if\s*\(!stableNativeRuntime\)[\s\S]*enhancements\.js/, "Les modules expérimentaux ne sont pas isolés du mode natif stable.");
+requireMatch(entry, /await import\("\.\/app-updater\.js"\)/, "Le système de publication et téléchargement des mises à jour n’est pas chargé.");
+requireMatch(entry, /await import\("\.\/manual-update-mode\.js"\)/, "Le mode manuel des mises à jour n’est pas chargé.");
 requireMatch(entry, /await import\("\.\/main\.js"\)/, "Le cœur de l’application n’est pas chargé.");
 requireMatch(entry, /await import\("\.\/offline-access\.js"\)/, "Le mode hors ligne n’est pas chargé.");
+forbid(entry, /automatic-installer/, "L’installation automatique est encore chargée dans le runtime.");
 
 requireMatch(stability, /serverStatusDialog/, "La fenêtre serveur n’est pas stabilisée.");
 requireMatch(stability, /this\.show\(\)/, "L’alerte serveur doit être non modale.");
@@ -25,6 +33,8 @@ requireMatch(stabilityCss, /touch-action:\s*manipulation/, "La protection tactil
 requireMatch(stabilityCss, /backdrop-filter:\s*none\s*!important/, "Le flou GPU des dialogues n’est pas désactivé.");
 requireMatch(stabilityCss, /data-non-blocking/, "Le style non bloquant du statut serveur est absent.");
 
+requireMatch(manualUpdates, /installation:\s*"manual"/, "Les mises à jour ne sont pas limitées à l’installation manuelle.");
+requireMatch(manualUpdates, /Installer plus tard/, "La fenêtre de mise à jour peut encore bloquer l’application.");
 requireMatch(main, /button\.addEventListener\("click",\s*\(\)\s*=>\s*navigate/, "La navigation principale n’est plus reliée aux boutons.");
 
-console.log("PIXEL_NATIVE_INTERACTIONS_VERIFIED");
+console.log("PIXEL_NATIVE_MANUAL_UPDATES_VERIFIED");

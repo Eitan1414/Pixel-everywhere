@@ -65,8 +65,10 @@ jobs:
           convert public/assets/alpha-logo.png -resize 192x192 public/assets/icon-192.png
           convert public/assets/alpha-logo.png -resize 512x512 public/assets/icon-512.png
 
-      - name: Construire l’interface
-        run: npm run build
+      - name: Tester et construire l’interface
+        run: |
+          npm test
+          npm run build
 
       - name: Publier le bundle web de contrôle
         uses: actions/upload-artifact@v4
@@ -75,32 +77,37 @@ jobs:
           path: www
           if-no-files-found: error
 
-      - name: Vérifier le bundle Serveur PDD
+      - name: Vérifier l’intro et les mises à jour manuelles
         run: |
           set -euo pipefail
           test -f www/index.html
+          grep -q 'id="startupAnimation"' www/index.html
+          grep -q '<body class="startup-running">' www/index.html
           grep -q 'id="serverSettingsPanel"' www/index.html
           grep -q 'Serveur PDD' www/index.html
           ! grep -q 'web/server-settings.js' www/index.html
           ! grep -q 'web/enhancements.js' www/index.html
           grep -R -q 'pixel-api-base-url' www/assets
           grep -R -q 'pixel-update-last-check' www/assets
-          grep -R -q 'Mises à jour automatiques' www/assets
-          grep -R -q 'Télécharger et installer' www/assets
-          grep -R -q 'PixelUpdater' www/assets
+          grep -R -q 'PixelManualUpdates' www/assets
+          grep -R -q 'Télécharger le fichier' www/assets
+          if grep -R -q 'PixelUpdater' www/assets; then
+            echo "Le module d’installation automatique Android est encore présent dans le bundle." >&2
+            exit 1
+          fi
 
       - name: Générer le projet Android
         run: |
           npx cap add android
           npx cap sync android
-
-      - name: Installer le module de mise à jour Android
-        run: |
-          set -euo pipefail
-          node scripts/install-android-updater.mjs
-          test -f android/app/src/main/java/com/pdd/pixeleverywhere/PixelUpdaterPlugin.java
-          grep -q 'registerPlugin(PixelUpdaterPlugin.class)' android/app/src/main/java/com/pdd/pixeleverywhere/MainActivity.java
-          grep -q 'android.permission.REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml
+          if grep -R -q 'PixelUpdaterPlugin' android/app/src/main; then
+            echo "Le plugin d’installation automatique Android a été généré." >&2
+            exit 1
+          fi
+          if grep -q 'android.permission.REQUEST_INSTALL_PACKAGES' android/app/src/main/AndroidManifest.xml; then
+            echo "La permission d’installation d’APK ne doit plus être demandée." >&2
+            exit 1
+          fi
 
       - name: Forcer la signature Alpha stable
         run: |
@@ -164,12 +171,18 @@ jobs:
           mkdir apk-check
           unzip -q "$APK" 'assets/public/*' -d apk-check
           test -f apk-check/assets/public/index.html
+          grep -q 'id="startupAnimation"' apk-check/assets/public/index.html
           grep -q 'id="serverSettingsPanel"' apk-check/assets/public/index.html
           grep -q 'Serveur PDD' apk-check/assets/public/index.html
           ! grep -q 'web/server-settings.js' apk-check/assets/public/index.html
           grep -R -q 'pixel-api-base-url' apk-check/assets/public/assets
           grep -R -q 'pixel-update-last-check' apk-check/assets/public/assets
-          grep -R -q 'Télécharger et installer' apk-check/assets/public/assets
+          grep -R -q 'PixelManualUpdates' apk-check/assets/public/assets
+          grep -R -q 'Télécharger le fichier' apk-check/assets/public/assets
+          if grep -R -q 'PixelUpdater' apk-check/assets/public/assets; then
+            echo "L’APK contient encore le système d’installation automatique." >&2
+            exit 1
+          fi
 
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
           test -x "$APKSIGNER"

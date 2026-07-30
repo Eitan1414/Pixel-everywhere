@@ -1,5 +1,4 @@
-import "./startup-failsafe.css";
-import "./simple-startup.js";
+import "./startup-safety.js";
 import "./native-interaction-stability.css";
 
 const userAgent = navigator.userAgent || "";
@@ -10,20 +9,30 @@ const stableNativeRuntime = isAndroid || isMacOS;
 
 async function bootPixelEverywhere() {
   if (isMacOS) await import("./desktop-network.js");
+
   await import("./native-interaction-stability.js");
   await import("./session-stability.js");
   await import("./server-settings-v2.js");
   await import("./server-recovery.js");
 
+  await import("./app-updater.css");
+  await import("./app-updater.js");
+  await import("./manual-update-mode.js");
+
+  if (isMacOS) {
+    await import("./update-upload-desktop.js");
+    await import("./desktop-layout.css");
+  }
+
   if (!stableNativeRuntime) {
     await import("./desktop-network.js");
     await import("./windows-support.js");
-    await import("./app-updater.css");
-    await import("./automatic-installer.css");
-    await import("./automatic-installer.js");
-    await import("./app-updater.js");
     await import("./update-upload-desktop.js");
+
+    await import("./startup-original-preserver.js");
     await import("./enhancements.js");
+    await import("./startup-original-restorer.js");
+
     await import("./pixel-live.js");
     await import("./suggestions.css");
     await import("./suggestions.js");
@@ -39,8 +48,6 @@ async function bootPixelEverywhere() {
     await import("./announcement-subcategories.js");
     await import("./account-deletion.css");
     await import("./account-deletion.js");
-  } else if (isMacOS) {
-    await import("./desktop-layout.css");
   }
 
   await import("./main.js");
