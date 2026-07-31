@@ -68,7 +68,19 @@ jobs:
             target_file="$2"
             echo "Restauration de ${target_file}..."
             test -s "$source_file"
-            timeout 20s base64 --decode "$source_file" > "$target_file"
+            timeout 20s python - "$source_file" "$target_file" <<'PY'
+          from pathlib import Path
+          import base64
+          import re
+          import sys
+
+          source = Path(sys.argv[1])
+          target = Path(sys.argv[2])
+          encoded = source.read_text(encoding="ascii", errors="ignore")
+          clean = "".join(re.findall(r"[A-Za-z0-9+/]", encoded))
+          clean += "=" * (-len(clean) % 4)
+          target.write_bytes(base64.b64decode(clean, validate=True))
+          PY
             test -s "$target_file"
             file "$target_file"
           }
