@@ -59,48 +59,7 @@ jobs:
 
       - name: Restaurer les ressources graphiques
         timeout-minutes: 2
-        run: |
-          set -euo pipefail
-          mkdir -p public/assets
-
-          decode_asset() {
-            source_file="$1"
-            target_file="$2"
-            echo "Restauration de ${target_file}..."
-            test -s "$source_file"
-            timeout 20s python - "$source_file" "$target_file" <<'PY'
-          from pathlib import Path
-          import base64
-          import re
-          import sys
-
-          source = Path(sys.argv[1])
-          target = Path(sys.argv[2])
-          encoded = source.read_text(encoding="ascii", errors="ignore")
-          clean = "".join(re.findall(r"[A-Za-z0-9+/]", encoded))
-          clean += "=" * (-len(clean) % 4)
-          target.write_bytes(base64.b64decode(clean, validate=True))
-          PY
-            test -s "$target_file"
-            file "$target_file"
-          }
-
-          decode_asset assets-encoded/pdd-logo.jpg.b64 public/assets/pdd-logo.jpg
-          decode_asset assets-encoded/alpha-logo.png.b64 public/assets/alpha-logo.png
-          decode_asset assets-encoded/pixel-mascot.png.b64 public/assets/pixel-mascot.png
-          decode_asset assets-encoded/pdd2-wordmark.png.b64 public/assets/pdd2-wordmark.png
-          decode_asset assets-encoded/pixel-body.png.b64 public/assets/pixel-body.png
-          decode_asset assets-encoded/pixel-eye.png.b64 public/assets/pixel-eye.png
-          decode_asset assets-encoded/pixel-everywhere-logo.png.b64 public/assets/pixel-everywhere-logo.png
-
-          echo "Vérification du nouveau logo..."
-          timeout 10s identify public/assets/pixel-everywhere-logo.png
-
-          echo "Création des icônes web..."
-          timeout 30s convert public/assets/pixel-everywhere-logo.png -resize 192x192 public/assets/icon-192.png
-          timeout 30s convert public/assets/pixel-everywhere-logo.png -resize 512x512 public/assets/icon-512.png
-          timeout 10s identify public/assets/icon-192.png public/assets/icon-512.png
-          echo "Ressources graphiques restaurées avec succès."
+        run: bash scripts/restore-graphics.sh
 
       - name: Tester et construire l’interface
         run: |
