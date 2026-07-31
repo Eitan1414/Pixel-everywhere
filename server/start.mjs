@@ -190,7 +190,9 @@ if (!source.includes("registerCommunityAnnouncementRoutes({")) {
   app,
   db,
   authenticate,
+  authenticateMember,
   requireActiveStaff,
+  requireActiveMember,
   staffOnly
 });`);
 }
