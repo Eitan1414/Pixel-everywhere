@@ -51,10 +51,14 @@ async function bootPixelEverywhere() {
   }
 
   await import("./main.js");
+  // Doit être chargé après main.js afin d’intercepter l’ancien swipe Tamagotchi
+  // et de sécuriser l’accès aux panneaux de modération dynamiques.
+  await import("./interaction-access-stability.js");
   await import("./offline-access.js");
 
   document.documentElement.dataset.pixelRuntimeReady = "true";
   document.documentElement.dataset.pixelCategoriesRestored = "true";
+  document.documentElement.dataset.pixelInteractionAccessStable = "true";
   window.pixelDesktop?.reportRendererReady?.();
 }
 
