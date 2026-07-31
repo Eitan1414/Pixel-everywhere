@@ -64,6 +64,147 @@
   margin-top: 14px;
 }
 
+.announcement-poll {
+  display: grid;
+  gap: 13px;
+  margin-top: 18px;
+  padding: 15px;
+  border: 1px solid rgba(18, 214, 223, 0.24);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(18, 214, 223, 0.09), transparent 12rem),
+    rgba(5, 8, 13, 0.72);
+}
+
+.announcement-poll.closed {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.announcement-poll-heading,
+.announcement-poll-footer,
+.announcement-poll-option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.announcement-poll-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.announcement-poll-heading strong {
+  line-height: 1.35;
+}
+
+.announcement-poll-heading small,
+.announcement-poll-footer,
+.announcement-poll-votes {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.announcement-poll-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--cyan);
+  background: rgba(18, 214, 223, 0.1);
+}
+
+.announcement-poll-options {
+  display: grid;
+  gap: 9px;
+}
+
+.announcement-poll-option {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  color: #f4f5f7;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.announcement-poll-option:not(:disabled):active {
+  transform: scale(0.99);
+}
+
+.announcement-poll-option.selected {
+  border-color: rgba(255, 107, 25, 0.48);
+  background: rgba(255, 107, 25, 0.08);
+}
+
+.announcement-poll-option:disabled {
+  cursor: default;
+  opacity: 0.82;
+}
+
+.announcement-poll-choice {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  color: #101216;
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.announcement-poll-option.selected .announcement-poll-choice {
+  border-color: transparent;
+  background: linear-gradient(145deg, var(--orange), var(--cyan));
+}
+
+.announcement-poll-option-row strong {
+  min-width: 0;
+  flex: 1;
+  font-size: 0.9rem;
+}
+
+.announcement-poll-option-row small {
+  color: var(--cyan);
+  font-weight: 900;
+}
+
+.announcement-poll-bar {
+  display: block;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.announcement-poll-bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--orange), var(--cyan));
+  transition: width 0.35s ease;
+}
+
+.announcement-poll-votes {
+  justify-self: end;
+}
+
+.announcement-poll-status {
+  color: var(--orange-2);
+  text-align: right;
+}
+
 .update-log-list {
   position: relative;
 }
@@ -116,6 +257,41 @@
   margin-bottom: 0;
 }
 
+.staff-poll-toggle {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgba(18, 214, 223, 0.2);
+  border-radius: 14px;
+  background: rgba(18, 214, 223, 0.06);
+}
+
+.staff-poll-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.staff-poll-fields {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed rgba(255, 107, 25, 0.32);
+  border-radius: 16px;
+  background: rgba(255, 107, 25, 0.04);
+}
+
+.staff-poll-fields[hidden] {
+  display: none;
+}
+
+.staff-poll-fields > small {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .staff-publication-lists > section {
   min-width: 0;
 }
@@ -145,9 +321,24 @@
   white-space: pre-wrap;
 }
 
-.staff-publication-card .delete-publication {
+.staff-poll-summary {
+  padding: 11px 12px;
+  border: 1px solid rgba(18, 214, 223, 0.18);
+  border-radius: 13px;
+  background: rgba(18, 214, 223, 0.05);
+}
+
+.staff-publication-card .delete-publication,
+.staff-publication-card .toggle-poll {
   justify-self: start;
+}
+
+.staff-publication-card .delete-publication {
   color: #ff9aa7;
+}
+
+.staff-publication-card .toggle-poll {
+  color: var(--cyan);
 }
 
 /* Pixel Helper ne doit jamais recouvrir la barre de catégories principale. */
@@ -186,5 +377,10 @@
 
   .announcement-category-tabs button small {
     display: none;
+  }
+
+  .announcement-poll-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
