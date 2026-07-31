@@ -1,5 +1,7 @@
 import "./startup-failsafe.css";
+import "./android-startup.css";
 import "./simple-startup.js";
+import "./android-startup.js";
 import "./native-interaction-stability.css";
 
 const userAgent = navigator.userAgent || "";
