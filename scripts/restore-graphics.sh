@@ -29,9 +29,11 @@ cat \
   > public/assets/pixel-everywhere-logo.png
 
 test -s public/assets/pixel-everywhere-logo.png
-echo "6f98bde3e3661e7e7faf7dd3d0c5e61d5ab33bb427cdbdbf77fb6eefd2665fe6  public/assets/pixel-everywhere-logo.png" \
+echo "925c5874c0c6a6b569dc1550a78b1be19099404649f68e0d5a293aa36205a506  public/assets/pixel-everywhere-logo.png" \
   | sha256sum --check --strict
-timeout 10s identify public/assets/pixel-everywhere-logo.png
+DIMENSIONS="$(timeout 10s identify -format '%wx%h' public/assets/pixel-everywhere-logo.png)"
+test "$DIMENSIONS" = "192x192"
+echo "Logo vérifié : ${DIMENSIONS}."
 
 echo "Création des icônes web..."
 timeout 30s convert public/assets/pixel-everywhere-logo.png -resize 192x192 public/assets/icon-192.png
