@@ -66,19 +66,25 @@ requireMatch(startupCss, /#startupAnimation[\s\S]*display:\s*none/, "Le CSS ne m
 
 requireMatch(androidStartup, /getPlatform\?\.\(\)\s*===\s*"android"/, "L’intro n’est pas limitée à Android.");
 requireMatch(androidStartup, /androidStartupAnimation/, "Le nouvel écran de démarrage Android est absent.");
-requireMatch(androidStartup, /pixel-body\.png/, "Le corps de Pixel n’est pas utilisé dans l’intro.");
-requireMatch(androidStartup, /pixel-eye\.png/, "L’œil animé de Pixel est absent.");
-requireMatch(androidStartup, /pdd2-wordmark\.png/, "Le logo Pixel Everywhere est absent.");
-requireMatch(androidStartup, /Imagine•Create•Share/, "Le texte Imagine•Create•Share est absent.");
-requireMatch(androidStartup, /By:Eitan14\/Eitan2\.0/, "Le crédit de l’intro est absent.");
-requireMatch(androidStartup, /PDD Everywhere you go/, "La signature finale de l’intro est absente.");
-requireMatch(androidStartup, /length:\s*24/, "Les particules de fond Android sont absentes.");
-requireMatch(androidStartup, /9350/, "La fermeture automatique de l’intro Android est absente.");
-requireMatch(androidStartupCss, /android-intro-wave/, "L’animation de la main qui salue est absente.");
-requireMatch(androidStartupCss, /android-intro-eye/, "L’animation de fermeture de l’œil est absente.");
+requireMatch(androidStartup, /pixel-mascot\.png/, "La mascotte complète de Pixel n’est pas utilisée dans l’intro.");
+requireMatch(androidStartup, /android-intro-full-mascot/, "La mascotte complète n’est pas animée.");
+requireMatch(androidStartup, /pixel-intro-draw/, "L’effet de dessin progressif de Pixel est absent.");
+requireMatch(androidStartup, /pixel-intro-trace/, "Le tracé lumineux de Pixel est absent.");
+requireMatch(androidStartup, /<strong>Pixel<\/strong>/, "Le titre Pixel est absent.");
+requireMatch(androidStartup, /<span>Everywhere<\/span>/, "Le titre Everywhere est absent.");
+requireMatch(androidStartup, /Imagine • Create • Share/, "La signature de la nouvelle intro est absente.");
+requireMatch(androidStartup, /length:\s*18/, "Les particules de fond Android sont absentes.");
+requireMatch(androidStartup, /5900/, "La fermeture automatique courte de l’intro Android est absente.");
+requireMatch(androidStartup, /android-intro-hand[\s\S]*display:\s*none/, "L’ancienne main n’est pas explicitement neutralisée.");
+requireMatch(androidStartup, /android-intro-body[\s\S]*display:\s*none/, "L’ancien corps séparé n’est pas neutralisé.");
+requireMatch(androidStartup, /android-intro-eye[\s\S]*display:\s*none/, "L’ancien œil séparé n’est pas neutralisé.");
 requireMatch(androidStartupCss, /android-intro-particle/, "Les effets de particules sont absents.");
 requireMatch(androidStartupCss, /data-pixel-android-intro="active"/, "L’application n’est pas protégée derrière l’intro Android.");
 
+forbid(androidStartup, /src="\.\/assets\/pixel-body\.png"/, "L’intro utilise encore le corps séparé qui déformait Pixel.");
+forbid(androidStartup, /src="\.\/assets\/pixel-eye\.png"/, "L’intro utilise encore l’œil séparé qui déformait Pixel.");
+forbid(androidStartup, /👋/, "L’ancienne main est encore présente dans l’intro.");
+forbid(androidStartup, /pdd2-wordmark\.png/, "L’ancien wordmark PDD 2 est encore utilisé dans l’intro Android.");
 forbid(entry, /startup-safety\.js/, "L’ancienne animation est encore démarrée.");
 forbid(entry, /automatic-installer(?:\.css|\.js)/, "L’installation automatique est encore chargée.");
 
