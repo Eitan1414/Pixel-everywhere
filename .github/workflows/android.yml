@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pixel-everywhere-android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android:
     runs-on: ubuntu-latest
@@ -54,17 +58,37 @@ jobs:
           sudo apt-get install -y imagemagick
 
       - name: Restaurer les ressources graphiques
+        timeout-minutes: 2
         run: |
+          set -euo pipefail
           mkdir -p public/assets
-          base64 --decode assets-encoded/pdd-logo.jpg.b64 > public/assets/pdd-logo.jpg
-          base64 --decode assets-encoded/alpha-logo.png.b64 > public/assets/alpha-logo.png
-          base64 --decode assets-encoded/pixel-mascot.png.b64 > public/assets/pixel-mascot.png
-          base64 --decode assets-encoded/pdd2-wordmark.png.b64 > public/assets/pdd2-wordmark.png
-          base64 --decode assets-encoded/pixel-body.png.b64 > public/assets/pixel-body.png
-          base64 --decode assets-encoded/pixel-eye.png.b64 > public/assets/pixel-eye.png
-          base64 --decode assets-encoded/pixel-everywhere-logo.png.b64 > public/assets/pixel-everywhere-logo.png
-          convert public/assets/pixel-everywhere-logo.png -resize 192x192 public/assets/icon-192.png
-          convert public/assets/pixel-everywhere-logo.png -resize 512x512 public/assets/icon-512.png
+
+          decode_asset() {
+            source_file="$1"
+            target_file="$2"
+            echo "Restauration de ${target_file}..."
+            test -s "$source_file"
+            timeout 20s base64 --decode "$source_file" > "$target_file"
+            test -s "$target_file"
+            file "$target_file"
+          }
+
+          decode_asset assets-encoded/pdd-logo.jpg.b64 public/assets/pdd-logo.jpg
+          decode_asset assets-encoded/alpha-logo.png.b64 public/assets/alpha-logo.png
+          decode_asset assets-encoded/pixel-mascot.png.b64 public/assets/pixel-mascot.png
+          decode_asset assets-encoded/pdd2-wordmark.png.b64 public/assets/pdd2-wordmark.png
+          decode_asset assets-encoded/pixel-body.png.b64 public/assets/pixel-body.png
+          decode_asset assets-encoded/pixel-eye.png.b64 public/assets/pixel-eye.png
+          decode_asset assets-encoded/pixel-everywhere-logo.png.b64 public/assets/pixel-everywhere-logo.png
+
+          echo "Vérification du nouveau logo..."
+          timeout 10s identify public/assets/pixel-everywhere-logo.png
+
+          echo "Création des icônes web..."
+          timeout 30s convert public/assets/pixel-everywhere-logo.png -resize 192x192 public/assets/icon-192.png
+          timeout 30s convert public/assets/pixel-everywhere-logo.png -resize 512x512 public/assets/icon-512.png
+          timeout 10s identify public/assets/icon-192.png public/assets/icon-512.png
+          echo "Ressources graphiques restaurées avec succès."
 
       - name: Tester et construire l’interface
         run: |
