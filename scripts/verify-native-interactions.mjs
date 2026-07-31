@@ -8,12 +8,32 @@ function forbid(value, pattern, message) {
   if (pattern.test(value)) throw new Error(message);
 }
 
-const [entry, stability, stabilityCss, manualUpdates, offlineAccess, main] = await Promise.all([
+function requireOrder(value, tokens, message) {
+  let previous = -1;
+  for (const token of tokens) {
+    const index = value.indexOf(token);
+    if (index < 0 || index <= previous) throw new Error(message);
+    previous = index;
+  }
+}
+
+const [
+  entry,
+  stability,
+  stabilityCss,
+  manualUpdates,
+  offlineAccess,
+  serverSettings,
+  interactionAccess,
+  main
+] = await Promise.all([
   readFile("web/app-entry.js", "utf8"),
   readFile("web/native-interaction-stability.js", "utf8"),
   readFile("web/native-interaction-stability.css", "utf8"),
   readFile("web/manual-update-mode.js", "utf8"),
   readFile("web/offline-access.js", "utf8"),
+  readFile("web/server-settings-v2.js", "utf8"),
+  readFile("web/interaction-access-stability.js", "utf8"),
   readFile("web/main.js", "utf8")
 ]);
 
@@ -25,7 +45,13 @@ requireMatch(entry, /await import\("\.\/creation-studio\.js"\)/, "Création rest
 requireMatch(entry, /await import\("\.\/announcement-center\.js"\)/, "Le centre d’annonces reste exclu du runtime natif.");
 requireMatch(entry, /await import\("\.\/admin-control\.js"\)/, "Le contrôle administrateur reste exclu du runtime natif.");
 requireMatch(entry, /await import\("\.\/main\.js"\)/, "Le cœur de l’application n’est pas chargé.");
+requireMatch(entry, /await import\("\.\/interaction-access-stability\.js"\)/, "La protection scroll/modération n’est pas chargée.");
 requireMatch(entry, /await import\("\.\/offline-access\.js"\)/, "Le mode hors ligne n’est pas chargé.");
+requireOrder(
+  entry,
+  ["main.js", "interaction-access-stability.js", "offline-access.js"],
+  "La protection du swipe doit être installée après l’ancien gestionnaire de main.js."
+);
 forbid(entry, /if\s*\(!stableNativeRuntime\)[\s\S]*suggestions\.js/, "Les catégories sont encore enfermées hors d’Android/macOS.");
 forbid(entry, /automatic-installer/, "L’installation automatique est encore chargée dans le runtime.");
 
@@ -43,8 +69,21 @@ requireMatch(offlineAccess, /if\s*\(decorating\)\s*return/, "La protection contr
 requireMatch(offlineAccess, /decorationQueued/, "Les mutations serveur ne sont pas regroupées par frame.");
 forbid(offlineAccess, /closeButton\.textContent\s*=\s*"Continuer hors ligne"/, "Une écriture non conditionnelle peut recréer la boucle de gel.");
 
+requireMatch(serverSettings, /document\.readyState\s*===\s*"loading"/, "Les boutons serveur dépendent encore uniquement d’un DOMContentLoaded déjà passé.");
+requireMatch(serverSettings, /startServerSettingsBinding/, "Le panneau serveur n’est pas retenté s’il arrive tard.");
+requireMatch(serverSettings, /testLocalTermux/, "Le bouton Termux local n’a pas de test dédié.");
+requireMatch(serverSettings, /127\.0\.0\.1:3000\/api/, "L’adresse Termux locale attendue est absente.");
+requireMatch(serverSettings, /Les comptes et la modération utilisent maintenant ce serveur/, "La sauvegarde serveur ne confirme pas l’accès à la modération.");
+
+requireMatch(interactionAccess, /horizontalDistance\s*>\s*verticalDistance\s*\*\s*1\.8/, "Le swipe Pixel ne distingue pas assez le scroll vertical.");
+requireMatch(interactionAccess, /pageScrolled/, "Le swipe Pixel ne vérifie pas le déplacement réel de la page.");
+requireMatch(interactionAccess, /stopLegacyPixelSwipe/, "L’ancien swipe Pixel n’est pas neutralisé pendant un scroll.");
+requireMatch(interactionAccess, /moderationAccessButton/, "Le raccourci Modération est absent.");
+requireMatch(interactionAccess, /delegatedModerationTabs/, "Les onglets de modération dynamiques ne sont pas pris en charge.");
+requireMatch(interactionAccess, /data-guide-page=\"staff\"/, "Le raccourci ne passe pas par l’ouverture officielle de l’espace staff.");
+
 requireMatch(manualUpdates, /installation:\s*"manual"/, "Les mises à jour ne sont pas limitées à l’installation manuelle.");
 requireMatch(manualUpdates, /Installer plus tard/, "La fenêtre de mise à jour peut encore bloquer l’application.");
 requireMatch(main, /button\.addEventListener\("click",\s*\(\)\s*=>\s*navigate/, "La navigation principale n’est plus reliée aux boutons.");
 
-console.log("PIXEL_NATIVE_NAVIGATION_AND_CATEGORIES_VERIFIED");
+console.log("PIXEL_NATIVE_SCROLL_TERMUX_AND_MODERATION_VERIFIED");
