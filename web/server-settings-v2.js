@@ -1,6 +1,9 @@
 const SERVER_STORAGE_KEY = "pixel-api-base-url";
 const BUILD_API_BASE = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
-const LOCAL_TERMUX_API = "http://127.0.0.1:3000/api";
+const LOCAL_TERMUX_APIS = [
+  "http://127.0.0.1:3000/api",
+  "http://localhost:3000/api"
+];
 const nativeFetch = window.fetch.bind(window);
 
 function normalizeApiBase(value) {
@@ -47,9 +50,6 @@ function rewriteApiUrl(rawUrl) {
   if (!active) return rawUrl;
 
   const value = String(rawUrl);
-  // Les modules récents utilisent volontairement /api/... pour fonctionner dans
-  // le navigateur. Dans Electron, cette URL devenait file:///api/... lorsque
-  // l'adresse enregistrée était identique à celle du build.
   if (value === "/api" || value.startsWith("/api/")) {
     return `${active}${value.slice(4)}`;
   }
@@ -113,6 +113,18 @@ async function testApiBase(base) {
   }
 }
 
+async function testLocalTermux() {
+  let lastError = null;
+  for (const candidate of LOCAL_TERMUX_APIS) {
+    try {
+      return await testApiBase(candidate);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error("Serveur Termux local inaccessible.");
+}
+
 function serverLabel(base) {
   try {
     const url = new URL(base, window.location.href);
@@ -135,6 +147,7 @@ function installStyles() {
     .server-settings-body input{width:100%;box-sizing:border-box}
     .server-settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}
     .server-settings-actions button{min-height:40px;padding:8px;border:1px solid var(--line);border-radius:11px;color:var(--text);background:var(--surface)}
+    .server-settings-actions button:disabled{opacity:.55}
     .server-settings-status{min-height:1.2em;margin:0;color:var(--muted);font-size:.76rem;line-height:1.4}
     .server-settings-status.success{color:var(--success)}.server-settings-status.error{color:var(--danger)}
   `;
@@ -143,61 +156,75 @@ function installStyles() {
 
 function bindServerSettings() {
   const panel = document.querySelector("#serverSettingsPanel");
-  if (!panel || panel.dataset.ready === "true") return;
+  if (!panel || panel.dataset.ready === "true") return Boolean(panel);
   panel.dataset.ready = "true";
   installStyles();
 
   const input = panel.querySelector("#serverSettingsInput");
   const label = panel.querySelector("#serverSettingsLabel");
   const status = panel.querySelector("#serverSettingsStatus");
+  const buttons = [...panel.querySelectorAll(".server-settings-actions button")];
   const setStatus = (message, type = "") => {
     status.textContent = message;
     status.className = `server-settings-status ${type}`.trim();
   };
+  const setBusy = (busy) => buttons.forEach((button) => { button.disabled = busy; });
   const refresh = () => {
     const base = activeApiBase();
     input.value = base.startsWith("http") ? base : "";
     label.textContent = serverLabel(base);
   };
 
-  panel.querySelector(".server-settings-toggle").addEventListener("click", () => panel.classList.toggle("open"));
+  panel.querySelector(".server-settings-toggle")?.addEventListener("click", () => {
+    panel.classList.toggle("open");
+  });
 
-  panel.querySelector("#testServerSettings").addEventListener("click", async () => {
+  panel.querySelector("#testServerSettings")?.addEventListener("click", async () => {
+    setBusy(true);
     setStatus("Test du serveur…");
     try {
       input.value = await testApiBase(input.value);
       setStatus("Serveur en ligne. Appuie sur Enregistrer.", "success");
     } catch (error) {
       setStatus(error.message, "error");
+    } finally {
+      setBusy(false);
     }
   });
 
-  panel.querySelector("#saveServerSettings").addEventListener("click", async () => {
+  panel.querySelector("#saveServerSettings")?.addEventListener("click", async () => {
+    setBusy(true);
     setStatus("Vérification avant enregistrement…");
     try {
       const base = await testApiBase(input.value);
       localStorage.setItem(SERVER_STORAGE_KEY, base);
       refresh();
-      setStatus("Adresse enregistrée. Réessaie maintenant ton compte membre.", "success");
+      setStatus("Adresse enregistrée. Les comptes et la modération utilisent maintenant ce serveur.", "success");
     } catch (error) {
       setStatus(error.message, "error");
+    } finally {
+      setBusy(false);
     }
   });
 
-  panel.querySelector("#useLocalServer").addEventListener("click", async () => {
-    input.value = LOCAL_TERMUX_API;
+  panel.querySelector("#useLocalServer")?.addEventListener("click", async () => {
+    setBusy(true);
+    input.value = LOCAL_TERMUX_APIS[0];
     setStatus("Recherche de Termux sur cet appareil…");
     try {
-      const base = await testApiBase(LOCAL_TERMUX_API);
+      const base = await testLocalTermux();
       localStorage.setItem(SERVER_STORAGE_KEY, base);
+      input.value = base;
       refresh();
-      setStatus("Serveur Termux local connecté.", "success");
+      setStatus("Serveur Termux local connecté. Tu peux maintenant ouvrir la modération.", "success");
     } catch (error) {
-      setStatus(`${error.message} Vérifie que npm start tourne dans Termux.`, "error");
+      setStatus(`${error.message} Vérifie que npm start tourne dans Termux sur le port 3000.`, "error");
+    } finally {
+      setBusy(false);
     }
   });
 
-  panel.querySelector("#resetServerSettings").addEventListener("click", () => {
+  panel.querySelector("#resetServerSettings")?.addEventListener("click", () => {
     localStorage.removeItem(SERVER_STORAGE_KEY);
     refresh();
     setStatus("Adresse d’origine restaurée.", "success");
@@ -213,7 +240,27 @@ function bindServerSettings() {
       setStatus("Serveur hors ligne. Entre la nouvelle adresse ngrok, ou choisis Termux local.", "error");
     }
   }, 700);
+
+  return true;
 }
 
-window.PixelServerSettings = { activeApiBase, normalizeApiBase, testApiBase };
-window.addEventListener("DOMContentLoaded", bindServerSettings);
+function startServerSettingsBinding(attempt = 0) {
+  if (bindServerSettings()) return;
+  if (attempt < 8) {
+    window.setTimeout(() => startServerSettingsBinding(attempt + 1), 150);
+  }
+}
+
+window.PixelServerSettings = {
+  activeApiBase,
+  normalizeApiBase,
+  testApiBase,
+  testLocalTermux,
+  bindServerSettings
+};
+
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", () => startServerSettingsBinding(), { once: true });
+} else {
+  startServerSettingsBinding();
+}
