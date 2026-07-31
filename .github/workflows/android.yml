@@ -62,8 +62,9 @@ jobs:
           base64 --decode assets-encoded/pdd2-wordmark.png.b64 > public/assets/pdd2-wordmark.png
           base64 --decode assets-encoded/pixel-body.png.b64 > public/assets/pixel-body.png
           base64 --decode assets-encoded/pixel-eye.png.b64 > public/assets/pixel-eye.png
-          convert public/assets/alpha-logo.png -resize 192x192 public/assets/icon-192.png
-          convert public/assets/alpha-logo.png -resize 512x512 public/assets/icon-512.png
+          base64 --decode assets-encoded/pixel-everywhere-logo.png.b64 > public/assets/pixel-everywhere-logo.png
+          convert public/assets/pixel-everywhere-logo.png -resize 192x192 public/assets/icon-192.png
+          convert public/assets/pixel-everywhere-logo.png -resize 512x512 public/assets/icon-512.png
 
       - name: Tester et construire l’interface
         run: |
@@ -156,7 +157,7 @@ jobs:
           grep -q "versionCode ${VERSION_CODE}" android/app/build.gradle
           grep -q "versionName \"${VERSION_NAME}\"" android/app/build.gradle
 
-      - name: Appliquer le logo Alpha PDD
+      - name: Appliquer le logo Pixel Everywhere
         run: bash scripts/brand-android.sh
 
       - name: Compiler l’APK
