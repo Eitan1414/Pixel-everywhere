@@ -25,7 +25,7 @@ function assert(condition, message) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
-assert(packageJson.version === "0.31.8", `Version Windows inattendue : ${packageJson.version}`);
+assert(/^\d+\.\d+\.\d+$/.test(packageJson.version), `Version Windows invalide : ${packageJson.version}`);
 
 const indexPath = resolve(outputRoot, "index.html");
 assert((await stat(indexPath)).isFile(), "Le bundle www/index.html est absent.");
@@ -67,6 +67,10 @@ const featureChecks = [
   {
     label: "tolérance aux erreurs de modules",
     markers: ["PIXEL_OPTIONAL_MODULE_FAILED"]
+  },
+  {
+    label: "messagerie membres et staff",
+    markers: ["conversationInboxButton", "conversations/staff/member-profile"]
   }
 ];
 
@@ -104,4 +108,4 @@ assert(
   "L’ancienne adresse ngrok est encore intégrée au bundle Windows."
 );
 
-console.log(`PIXEL_WINDOWS_BUNDLE_0_31_8_COMPLETE — ${javascriptFiles.length} fichiers JavaScript inspectés.`);
+console.log(`PIXEL_WINDOWS_BUNDLE_${packageJson.version.replaceAll(".", "_")}_COMPLETE — ${javascriptFiles.length} fichiers JavaScript inspectés.`);
