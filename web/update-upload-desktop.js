@@ -11,16 +11,21 @@ function desktopUpdateApiBase() {
 function decorateDesktopUpdateCards() {
   if (typeof desktopUpdateUploader !== "function") return;
   document.querySelectorAll("[data-update-target]").forEach((card) => {
+    // Le MutationObserver écoute les changements de contenu. Sans ce drapeau,
+    // modifier le texte du bouton déclencheait à nouveau l’observateur en boucle
+    // et figeait Electron dès l’ouverture des réglages de mise à jour.
+    if (card.dataset.desktopUpdateReady === "true") return;
+    card.dataset.desktopUpdateReady = "true";
+
     const input = card.querySelector(".update-file-input");
     const button = card.querySelector(".upload-update-file");
     if (input) input.hidden = true;
     if (button) button.textContent = "Choisir et envoyer";
-    if (!card.querySelector(".desktop-update-upload-help")) {
-      const help = document.createElement("small");
-      help.className = "desktop-update-upload-help";
-      help.textContent = "Le sélecteur de fichiers de l’ordinateur s’ouvrira au moment de l’envoi.";
-      card.querySelector(".update-file-actions")?.insertAdjacentElement("beforebegin", help);
-    }
+
+    const help = document.createElement("small");
+    help.className = "desktop-update-upload-help";
+    help.textContent = "Le sélecteur de fichiers de l’ordinateur s’ouvrira au moment de l’envoi.";
+    card.querySelector(".update-file-actions")?.insertAdjacentElement("beforebegin", help);
   });
 }
 
