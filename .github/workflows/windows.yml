@@ -45,6 +45,9 @@ jobs:
           if (-not $entry.Contains('serverSettings: () => import("./server-settings-v2.js")')) {
             throw "Les imports Vite littéraux ne sont pas présents dans app-entry.js."
           }
+          if (-not $entry.Contains('memberConversations: () => import("./member-conversations.js")')) {
+            throw "La messagerie membres/staff n’est pas raccordée au bundle Windows."
+          }
 
           Write-Host "Révision actuelle confirmée : imports Vite et vérificateur Windows récents."
 
@@ -95,7 +98,7 @@ jobs:
       - name: Publier l’installateur Windows complet
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-0.31.8-Windows-x64-COMPLETE
-          path: release/Pixel-Everywhere-0.31.8-Windows-x64-Setup.exe
+          name: Pixel-Everywhere-Windows-x64-COMPLETE
+          path: release/*-Windows-x64-Setup.exe
           if-no-files-found: error
           retention-days: 14
