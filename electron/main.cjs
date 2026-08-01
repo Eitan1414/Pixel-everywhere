@@ -1,5 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const fs = require("fs");
+const http = require("http");
+const https = require("https");
 const path = require("path");
 const { guardWindow } = require("./startup-guard.cjs");
 
@@ -12,7 +14,7 @@ const ALLOWED_API_HEADERS = new Set([
 ]);
 const MAX_API_BODY_BYTES = 12 * 1024 * 1024;
 const MAX_UPDATE_FILE_BYTES = 350 * 1024 * 1024;
-const UPDATE_UPLOAD_TIMEOUT = 20 * 60 * 1000;
+const UPDATE_UPLOAD_TIMEOUT = 30 * 60 * 1000;
 const UPDATE_TARGETS = {
   android: { extension: ".apk", contentType: "application/vnd.android.package-archive", filters: [{ name: "Application Android", extensions: ["apk"] }] },
   "macos-arm64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Apple Silicon", extensions: ["zip"] }] },
@@ -46,6 +48,71 @@ function safeUpdateUpload(value, requestedTarget) {
   const match = url.pathname.match(/^\/api\/admin\/update-files\/(android|macos-arm64|macos-x64|windows-x64)$/);
   if (!match || match[1] !== requestedTarget) return null;
   return { url: url.toString(), target: match[1], config: UPDATE_TARGETS[match[1]] };
+}
+
+function readNativeResponse(response) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    response.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    response.on("end", () => {
+      const body = Buffer.concat(chunks).toString("utf8");
+      let data = {};
+      try {
+        data = body ? JSON.parse(body) : {};
+      } catch {
+        data = {};
+      }
+      resolve({
+        status: Number(response.statusCode || 0),
+        statusMessage: response.statusMessage || "",
+        headers: response.headers,
+        body,
+        data
+      });
+    });
+    response.on("error", reject);
+  });
+}
+
+function nativeUploadFile(urlValue, headers, filePath, redirectsRemaining = 3) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(urlValue);
+    const transport = url.protocol === "https:" ? https : http;
+    const request = transport.request(url, {
+      method: "PUT",
+      headers
+    });
+
+    request.setTimeout(UPDATE_UPLOAD_TIMEOUT, () => {
+      request.destroy(new Error("UPDATE_UPLOAD_TIMEOUT"));
+    });
+    request.on("socket", (socket) => socket.setKeepAlive(true, 30_000));
+    request.on("error", reject);
+    request.on("response", async (response) => {
+      const location = response.headers.location;
+      if ([307, 308].includes(Number(response.statusCode)) && location) {
+        response.resume();
+        response.once("end", () => {
+          if (redirectsRemaining <= 0) {
+            reject(new Error("Trop de redirections pendant l’envoi du fichier."));
+            return;
+          }
+          nativeUploadFile(new URL(location, url).toString(), headers, filePath, redirectsRemaining - 1)
+            .then(resolve, reject);
+        });
+        return;
+      }
+      try {
+        resolve(await readNativeResponse(response));
+      } catch (error) {
+        reject(error);
+      }
+    });
+
+    const stream = fs.createReadStream(filePath);
+    stream.on("error", (error) => request.destroy(error));
+    stream.pipe(request);
+  });
 }
 
 ipcMain.handle("pixel:get-runtime", () => ({
@@ -117,6 +184,7 @@ ipcMain.handle("pixel:api-request", async (_event, request = {}) => {
 // Les APK, archives macOS et installateurs Windows dépassent largement la
 // limite du relais JSON. Electron ouvre donc un sélecteur natif, puis transmet
 // directement le fichier au serveur sous forme de flux, sans le charger en mémoire.
+// Le flux natif http/https évite le bug AbortSignal d’Undici observé sur macOS.
 ipcMain.handle("pixel:select-update-file", async (event, request = {}) => {
   const target = String(request.target || "");
   const upload = safeUpdateUpload(request.url, target);
@@ -141,7 +209,8 @@ ipcMain.handle("pixel:select-update-file", async (event, request = {}) => {
 
   const headers = {
     "content-type": upload.config.contentType,
-    "content-length": String(stats.size)
+    "content-length": String(stats.size),
+    connection: "keep-alive"
   };
   const authorization = String(request.authorization || "").trim();
   if (authorization) headers.authorization = authorization;
@@ -149,40 +218,25 @@ ipcMain.handle("pixel:select-update-file", async (event, request = {}) => {
     headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), UPDATE_UPLOAD_TIMEOUT);
   try {
-    const response = await fetch(upload.url, {
-      method: "PUT",
-      headers,
-      body: fs.createReadStream(filePath),
-      duplex: "half",
-      signal: controller.signal,
-      redirect: "follow"
-    });
-    const responseBody = await response.text();
-    let data = {};
-    try {
-      data = responseBody ? JSON.parse(responseBody) : {};
-    } catch {
-      data = {};
-    }
-    if (!response.ok) {
-      throw new Error(data.error || `Le serveur a refusé le fichier (${response.status}).`);
+    const response = await nativeUploadFile(upload.url, headers, filePath);
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error(response.data.error || `Le serveur a refusé le fichier (${response.status}).`);
     }
     return {
       canceled: false,
       filename: path.basename(filePath),
       size: stats.size,
-      data
+      data: response.data
     };
   } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error("L’envoi a dépassé vingt minutes. Vérifie la connexion puis recommence.");
+    if (error?.message === "UPDATE_UPLOAD_TIMEOUT") {
+      throw new Error("L’envoi a dépassé trente minutes. Vérifie la connexion puis recommence.");
+    }
+    if (/aborted|abort signal|signal is aborted/i.test(String(error?.message || ""))) {
+      throw new Error("La connexion a interrompu l’envoi. Le fichier n’a pas été enregistré ; relance l’envoi sans fermer l’application.");
     }
     throw new Error(error?.message || "Impossible d’envoyer le fichier de mise à jour.");
-  } finally {
-    clearTimeout(timeout);
   }
 });
 
