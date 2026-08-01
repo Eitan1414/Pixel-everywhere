@@ -27,6 +27,27 @@ jobs:
       - name: Récupérer le projet
         uses: actions/checkout@v4
 
+      - name: Confirmer la révision compilée
+        shell: pwsh
+        run: |
+          Write-Host "Commit GitHub Actions : $env:GITHUB_SHA"
+          git log -1 --oneline
+
+          $verifier = Get-Content "scripts/verify-windows-bundle.mjs" -Raw
+          if ($verifier.Contains("PixelServerSettings")) {
+            throw "Ancien vérificateur détecté. Ce run ne compile pas la branche main actuelle."
+          }
+          if (-not $verifier.Contains("pixel-api-base-url")) {
+            throw "Le vérificateur Windows actuel est absent."
+          }
+
+          $entry = Get-Content "web/app-entry.js" -Raw
+          if (-not $entry.Contains('serverSettings: () => import("./server-settings-v2.js")')) {
+            throw "Les imports Vite littéraux ne sont pas présents dans app-entry.js."
+          }
+
+          Write-Host "Révision actuelle confirmée : imports Vite et vérificateur Windows récents."
+
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
