@@ -37,22 +37,44 @@ const [
   readFile("web/main.js", "utf8")
 ]);
 
-requireMatch(entry, /stableNativeRuntime\s*=\s*isAndroid\s*\|\|\s*isMacOS/, "Le mode natif stable Android/macOS est absent.");
-requireMatch(entry, /await import\("\.\/app-updater\.js"\)/, "Le système de publication et téléchargement des mises à jour n’est pas chargé.");
-requireMatch(entry, /await import\("\.\/manual-update-mode\.js"\)/, "Le mode manuel des mises à jour n’est pas chargé.");
-requireMatch(entry, /await import\("\.\/suggestions\.js"\)/, "Suggestions reste exclue du runtime natif.");
-requireMatch(entry, /await import\("\.\/creation-studio\.js"\)/, "Création reste exclue du runtime natif.");
-requireMatch(entry, /await import\("\.\/announcement-center\.js"\)/, "Le centre d’annonces reste exclu du runtime natif.");
-requireMatch(entry, /await import\("\.\/admin-control\.js"\)/, "Le contrôle administrateur reste exclu du runtime natif.");
-requireMatch(entry, /await import\("\.\/main\.js"\)/, "Le cœur de l’application n’est pas chargé.");
-requireMatch(entry, /await import\("\.\/interaction-access-stability\.js"\)/, "La protection scroll/modération n’est pas chargée.");
-requireMatch(entry, /await import\("\.\/offline-access\.js"\)/, "Le mode hors ligne n’est pas chargé.");
+// Architecture native actuelle : Android, macOS et Windows sont détectés
+// séparément. Les modules secondaires sont tolérants aux erreurs, tandis que
+// main.js reste critique pour garantir une interface réellement interactive.
+requireMatch(entry, /const isAndroid\s*=\s*/, "La détection Android est absente.");
+requireMatch(entry, /const isDesktop\s*=\s*Boolean\(window\.pixelDesktop\)/, "La détection Electron desktop est absente.");
+requireMatch(entry, /const isMacOS\s*=\s*isDesktop\s*&&/, "La détection macOS est absente.");
+requireMatch(entry, /const isWindows\s*=\s*isDesktop\s*&&\s*!isMacOS/, "La détection Windows est absente.");
+requireMatch(entry, /async function loadOptional\(/, "Le chargement tolérant des modules secondaires est absent.");
+requireMatch(entry, /async function loadCritical\(/, "Le chargement critique de l’interface principale est absent.");
+requireMatch(entry, /PIXEL_OPTIONAL_MODULE_FAILED/, "Le diagnostic des modules secondaires est absent.");
+
+requireMatch(entry, /loadOptional\("\.\/desktop-network\.js"/, "Le relais réseau desktop n’est pas chargé.");
+requireMatch(entry, /loadOptional\("\.\/server-settings-v2\.js"/, "La configuration du serveur n’est pas chargée.");
+requireOrder(
+  entry,
+  ["desktop-network.js", "server-settings-v2.js"],
+  "Le relais réseau Electron doit être installé avant la configuration serveur."
+);
+
+requireMatch(entry, /loadOptional\("\.\/app-updater\.js"/, "Le système de publication et téléchargement des mises à jour n’est pas chargé.");
+requireMatch(entry, /loadOptional\("\.\/manual-update-mode\.js"/, "Le mode manuel des mises à jour n’est pas chargé.");
+requireMatch(entry, /loadOptional\("\.\/suggestions\.js"/, "La catégorie Idées/Suggestions n’est pas chargée.");
+requireMatch(entry, /loadOptional\("\.\/creation-studio\.js"/, "La catégorie Création n’est pas chargée.");
+requireMatch(entry, /loadOptional\("\.\/announcement-center\.js"/, "Le centre d’annonces n’est pas chargé.");
+requireMatch(entry, /loadOptional\("\.\/admin-control\.js"/, "Le contrôle administrateur n’est pas chargé.");
+requireMatch(entry, /loadOptional\("\.\/windows-support\.js"/, "Les fonctions Windows ne sont pas chargées.");
+requireMatch(entry, /loadCritical\("\.\/main\.js"/, "Le cœur interactif de l’application n’est pas chargé comme module critique.");
+requireMatch(entry, /loadOptional\("\.\/interaction-access-stability\.js"/, "La protection scroll/modération n’est pas chargée.");
+requireMatch(entry, /loadOptional\("\.\/offline-access\.js"/, "Le mode hors ligne n’est pas chargé.");
 requireOrder(
   entry,
   ["main.js", "interaction-access-stability.js", "offline-access.js"],
   "La protection du swipe doit être installée après l’ancien gestionnaire de main.js."
 );
-forbid(entry, /if\s*\(!stableNativeRuntime\)[\s\S]*suggestions\.js/, "Les catégories sont encore enfermées hors d’Android/macOS.");
+requireMatch(entry, /dataset\.pixelRuntime\s*=\s*isAndroid/, "Le runtime natif actif n’est pas exposé pour le diagnostic.");
+requireMatch(entry, /document\.body\?\.classList\.remove\("startup-running"\)/, "Le démarrage en erreur peut encore laisser une couche bloquante.");
+requireMatch(entry, /document\.querySelector\("#startupAnimation"\)\?\.remove\(\)/, "L’animation de démarrage n’est pas retirée lors d’une erreur critique.");
+forbid(entry, /stableNativeRuntime/, "L’ancien mode natif global obsolète est encore présent.");
 forbid(entry, /automatic-installer/, "L’installation automatique est encore chargée dans le runtime.");
 
 requireMatch(stability, /serverStatusDialog/, "La fenêtre serveur n’est pas stabilisée.");
@@ -86,4 +108,4 @@ requireMatch(manualUpdates, /installation:\s*"manual"/, "Les mises à jour ne so
 requireMatch(manualUpdates, /Installer plus tard/, "La fenêtre de mise à jour peut encore bloquer l’application.");
 requireMatch(main, /button\.addEventListener\("click",\s*\(\)\s*=>\s*navigate/, "La navigation principale n’est plus reliée aux boutons.");
 
-console.log("PIXEL_NATIVE_SCROLL_TERMUX_AND_MODERATION_VERIFIED");
+console.log("PIXEL_NATIVE_ANDROID_MACOS_WINDOWS_INTERACTIONS_VERIFIED");
