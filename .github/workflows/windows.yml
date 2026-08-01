@@ -10,10 +10,19 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pixel-everywhere-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
+  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
 jobs:
   windows:
+    name: Windows x64
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
 
     steps:
       - name: Récupérer le projet
@@ -22,34 +31,48 @@ jobs:
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Installer les dépendances
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Restaurer et vérifier les ressources graphiques
+        run: npm run desktop:restore
 
       - name: Tester le projet
         run: npm test
 
-      - name: Construire l’installateur Windows 64 bits
-        run: npm run win:build
+      - name: Construire l’interface
+        run: npm run build
+
+      - name: Compiler l’installateur Windows 64 bits
+        run: npx electron-builder --win nsis --x64 --publish never
 
       - name: Vérifier l’installateur Windows
         shell: pwsh
         run: |
-          $installer = Get-ChildItem -Path release -Filter "Pixel-Everywhere-*-Windows-x64-Setup.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "L’installateur Windows x64 est introuvable dans release/."
+          $version = node -p "require('./package.json').version"
+          $expected = "release/Pixel-Everywhere-$version-Windows-x64-Setup.exe"
+
+          if (-not (Test-Path $expected)) {
+            Write-Error "Installateur Windows introuvable: $expected"
+            Get-ChildItem -Path release -Recurse -ErrorAction SilentlyContinue
+            exit 1
           }
+
+          $installer = Get-Item $expected
           if ($installer.Length -lt 1MB) {
-            throw "L’installateur Windows semble incomplet."
+            Write-Error "L’installateur Windows semble incomplet: $($installer.Length) octets."
+            exit 1
           }
+
           Write-Host "Installateur vérifié : $($installer.Name) — $([math]::Round($installer.Length / 1MB, 1)) Mo"
 
       - name: Publier l’installateur Windows
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-Windows-x64
-          path: release/Pixel-Everywhere-*-Windows-x64-Setup.exe
+          name: Pixel-Everywhere-0.31.7-Windows-x64
+          path: release/Pixel-Everywhere-0.31.7-Windows-x64-Setup.exe
           if-no-files-found: error
           retention-days: 14
