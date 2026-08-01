@@ -15,12 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
   CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
 jobs:
   windows:
-    name: Windows x64
+    name: Windows x64 — version complète
     runs-on: windows-latest
     timeout-minutes: 40
 
@@ -43,8 +42,48 @@ jobs:
       - name: Tester le projet
         run: npm test
 
-      - name: Construire l’interface
+      - name: Construire l’interface complète
         run: npm run build
+
+      - name: Vérifier les catégories, interactions et réglages serveur
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          if ($version -ne "0.31.8") {
+            throw "Version inattendue : $version"
+          }
+
+          if (-not (Test-Path "www/index.html")) {
+            throw "Le bundle www/index.html est absent."
+          }
+
+          $jsFiles = Get-ChildItem -Path "www/assets" -Filter "*.js" -File
+          if (-not $jsFiles) {
+            throw "Aucun bundle JavaScript n’a été produit."
+          }
+
+          $requiredMarkers = @(
+            "pixelCategoriesRestored",
+            "page-suggestions",
+            "PixelServerSettings",
+            "windows-x64",
+            "PIXEL_OPTIONAL_MODULE_FAILED"
+          )
+
+          foreach ($marker in $requiredMarkers) {
+            $found = Select-String -Path $jsFiles.FullName -Pattern $marker -SimpleMatch -Quiet
+            if (-not $found) {
+              throw "Fonctionnalité absente du bundle Windows : $marker"
+            }
+            Write-Host "Fonctionnalité vérifiée : $marker"
+          }
+
+          $oldServer = Select-String -Path $jsFiles.FullName -Pattern "reprimand-overprice-quickly.ngrok-free.dev" -SimpleMatch -Quiet
+          if ($oldServer) {
+            throw "L’ancienne adresse ngrok est encore intégrée au bundle Windows."
+          }
+
+          Write-Host "Bundle Windows $version complet et sans ancienne URL serveur."
 
       - name: Compiler l’installateur Windows 64 bits
         run: npx electron-builder --win nsis --x64 --publish never
@@ -69,10 +108,10 @@ jobs:
 
           Write-Host "Installateur vérifié : $($installer.Name) — $([math]::Round($installer.Length / 1MB, 1)) Mo"
 
-      - name: Publier l’installateur Windows
+      - name: Publier l’installateur Windows complet
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-0.31.7-Windows-x64
-          path: release/Pixel-Everywhere-0.31.7-Windows-x64-Setup.exe
+          name: Pixel-Everywhere-0.31.8-Windows-x64-COMPLETE
+          path: release/Pixel-Everywhere-0.31.8-Windows-x64-Setup.exe
           if-no-files-found: error
           retention-days: 14
