@@ -86,15 +86,15 @@ const appLogo = await decodeParts([
 verifyHash(appLogo, "925c5874c0c6a6b569dc1550a78b1be19099404649f68e0d5a293aa36205a506", "Logo application");
 verifyPng(appLogo, 192, 192, "Logo application");
 await writeBytes("public/assets/pixel-everywhere-logo.png", appLogo);
+await writeBytes("public/assets/icon-192.png", appLogo);
 
 const desktopIcon = await decodeParts([
-  "assets-encoded/desktop-icon-256.parts/part01.b64",
-  "assets-encoded/desktop-icon-256.parts/part02.b64",
+  "assets-encoded/desktop-icon-512.parts/part01.b64",
+  "assets-encoded/desktop-icon-512.parts/part02.b64",
 ]);
-verifyHash(desktopIcon, "d3e2a43fa64f930bbc9c51e212d6c861b65784b785a49adbad9c544e8be1d665", "Icône desktop");
-verifyPng(desktopIcon, 256, 256, "Icône desktop");
+verifyHash(desktopIcon, "be2dcea606dc8f811e8b440740c47c6713c1bbacd5592f4b04e6bc891b1fdc97", "Icône desktop");
+verifyPng(desktopIcon, 512, 512, "Icône desktop");
 await writeBytes("public/assets/desktop-icon.png", desktopIcon);
-await writeBytes("public/assets/icon-192.png", desktopIcon);
 await writeBytes("public/assets/icon-512.png", desktopIcon);
 
 console.log("Toutes les ressources graphiques desktop sont prêtes.");
