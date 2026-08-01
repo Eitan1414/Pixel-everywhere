@@ -52,7 +52,10 @@ requireMatch(entry, /loadOptional\("\.\/desktop-network\.js"/, "Le relais résea
 requireMatch(entry, /loadOptional\("\.\/server-settings-v2\.js"/, "La configuration du serveur n’est pas chargée.");
 requireOrder(
   entry,
-  ["desktop-network.js", "server-settings-v2.js"],
+  [
+    'loadOptional("./desktop-network.js"',
+    'loadOptional("./server-settings-v2.js"'
+  ],
   "Le relais réseau Electron doit être installé avant la configuration serveur."
 );
 
@@ -68,7 +71,11 @@ requireMatch(entry, /loadOptional\("\.\/interaction-access-stability\.js"/, "La 
 requireMatch(entry, /loadOptional\("\.\/offline-access\.js"/, "Le mode hors ligne n’est pas chargé.");
 requireOrder(
   entry,
-  ["main.js", "interaction-access-stability.js", "offline-access.js"],
+  [
+    'loadCritical("./main.js"',
+    'loadOptional("./interaction-access-stability.js"',
+    'loadOptional("./offline-access.js"'
+  ],
   "La protection du swipe doit être installée après l’ancien gestionnaire de main.js."
 );
 requireMatch(entry, /dataset\.pixelRuntime\s*=\s*isAndroid/, "Le runtime natif actif n’est pas exposé pour le diagnostic.");
