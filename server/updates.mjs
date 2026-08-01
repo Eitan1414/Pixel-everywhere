@@ -17,11 +17,11 @@ const settingsSchema = z.object({
   enabled: z.boolean(),
   latestVersion: z.string().trim().regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/, "Version invalide. Utilise par exemple 0.2.1."),
   minimumVersion: z.string().trim().regex(/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/, "Version minimale invalide."),
-  releaseNotes: z.string().trim().max(8000),
-  androidUrl: z.string().trim().max(2000),
-  macosArm64Url: z.string().trim().max(2000),
-  macosX64Url: z.string().trim().max(2000)
-}).strict();
+  releaseNotes: z.string().trim().max(8000).default(""),
+  androidUrl: z.string().trim().max(2000).default(""),
+  macosArm64Url: z.string().trim().max(2000).default(""),
+  macosX64Url: z.string().trim().max(2000).default("")
+});
 
 function validateOptionalUrl(value) {
   if (!value) return true;
@@ -133,8 +133,19 @@ function selectedCustomUrl(settings, target) {
   return "";
 }
 
-function parseSettings(req, res) {
-  const parsed = settingsSchema.safeParse(req.body);
+function parseSettings(req, res, db) {
+  const current = readSettings(db) || {};
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  const candidate = {
+    enabled: typeof body.enabled === "boolean" ? body.enabled : Boolean(current.enabled),
+    latestVersion: body.latestVersion ?? current.latest_version ?? DEFAULT_VERSION,
+    minimumVersion: body.minimumVersion ?? current.minimum_version ?? DEFAULT_VERSION,
+    releaseNotes: body.releaseNotes ?? current.release_notes ?? "",
+    androidUrl: body.androidUrl ?? current.android_url ?? "",
+    macosArm64Url: body.macosArm64Url ?? current.macos_arm64_url ?? "",
+    macosX64Url: body.macosX64Url ?? current.macos_x64_url ?? ""
+  };
+  const parsed = settingsSchema.safeParse(candidate);
   if (!parsed.success) {
     res.status(400).json({
       error: "Certains réglages de mise à jour sont invalides.",
@@ -247,7 +258,7 @@ export function registerUpdateRoutes({
     staffOnly,
     requireAdmin,
     (req, res) => {
-      const values = parseSettings(req, res);
+      const values = parseSettings(req, res, db);
       if (!values) return;
 
       db.prepare(`
