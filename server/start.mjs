@@ -46,6 +46,9 @@ if (!source.includes('from "./suggestions.mjs"')) {
 if (!source.includes('from "./admin-control.mjs"')) {
   extraImports.push('import { createManagedLoginLimiter, registerAdminControlRoutes } from "./admin-control.mjs";');
 }
+if (!source.includes('from "./chunked-update-upload.mjs"')) {
+  extraImports.push('import { registerChunkedUpdateUploadRoutes } from "./chunked-update-upload.mjs";');
+}
 if (!source.includes('from "./windows-updates.mjs"')) {
   extraImports.push('import { registerWindowsUpdateRoutes } from "./windows-updates.mjs";');
 }
@@ -141,6 +144,15 @@ if (!source.includes("registerAdminControlRoutes({")) {
   authenticateMember,
   requireActiveStaff,
   requireActiveMember,
+  staffOnly,
+  requireAdmin
+});`);
+}
+if (!source.includes("registerChunkedUpdateUploadRoutes({")) {
+  registrations.push(`registerChunkedUpdateUploadRoutes({
+  app,
+  authenticate,
+  requireActiveStaff,
   staffOnly,
   requireAdmin
 });`);
