@@ -47,16 +47,35 @@ function bundlesContaining(marker) {
   return bundles.filter((bundle) => bundle.content.includes(marker));
 }
 
-const requiredMarkers = [
-  ["pixelCategoriesRestored", "restauration des catégories"],
-  ["PixelServerSettings", "configuration du serveur"],
-  ["windows-x64", "prise en charge des mises à jour Windows"],
-  ["PIXEL_OPTIONAL_MODULE_FAILED", "tolérance aux erreurs de modules"]
+function bundlesContainingAll(markers) {
+  return bundles.filter((bundle) => markers.every((marker) => bundle.content.includes(marker)));
+}
+
+const featureChecks = [
+  {
+    label: "restauration des catégories",
+    markers: ["pixelCategoriesRestored"]
+  },
+  {
+    label: "configuration du serveur",
+    markers: ["pixel-api-base-url", "127.0.0.1:3000/api"]
+  },
+  {
+    label: "prise en charge des mises à jour Windows",
+    markers: ["windows-x64", "Installer automatiquement"]
+  },
+  {
+    label: "tolérance aux erreurs de modules",
+    markers: ["PIXEL_OPTIONAL_MODULE_FAILED"]
+  }
 ];
 
-for (const [marker, label] of requiredMarkers) {
-  const matches = bundlesContaining(marker);
-  assert(matches.length > 0, `Fonctionnalité absente du bundle Windows : ${label} (${marker}).`);
+for (const { label, markers } of featureChecks) {
+  const matches = bundlesContainingAll(markers);
+  assert(
+    matches.length > 0,
+    `Fonctionnalité absente du bundle Windows : ${label} (${markers.join(" + ")}).`
+  );
   console.log(`Fonctionnalité vérifiée : ${label} — ${matches.map((item) => item.relativePath).join(", ")}`);
 }
 
@@ -74,7 +93,7 @@ assert(
 const suggestionCodePresent = suggestionBundles.some((bundle) =>
   bundle.content.includes("page-suggestions")
   && bundle.content.includes("suggestionForm")
-  && bundle.content.includes("data-page-target")
+  && bundle.content.includes("Suggestions de mises à jour")
 );
 assert(suggestionCodePresent, "Le chunk Suggestions existe, mais son interface complète n’est pas présente.");
 console.log(`Catégorie Idées/Suggestions vérifiée : ${suggestionBundles.map((item) => item.relativePath).join(", ")}`);
