@@ -4,12 +4,12 @@ import { dirname, resolve } from "node:path";
 
 const root = process.cwd();
 
-function cleanBase64(text, source) {
+function cleanChunk(text, source) {
   const clean = text.replace(/\s+/g, "");
-  if (!clean || clean.length % 4 !== 0) {
-    throw new Error(`${source}: longueur base64 invalide.`);
+  if (!clean) {
+    throw new Error(`${source}: contenu base64 vide.`);
   }
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(clean)) {
+  if (!/^[A-Za-z0-9+/=]+$/.test(clean)) {
     throw new Error(`${source}: caractères base64 invalides.`);
   }
   return clean;
@@ -20,10 +20,17 @@ async function decodeParts(sources) {
   for (const source of sources) {
     const absolute = resolve(root, source);
     const text = await readFile(absolute, "utf8");
-    chunks.push(cleanBase64(text, source));
+    chunks.push(cleanChunk(text, source));
   }
 
   const encoded = chunks.join("");
+  if (encoded.length % 4 !== 0) {
+    throw new Error(`Longueur base64 totale invalide pour ${sources.join(", ")}.`);
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+    throw new Error(`Placement du remplissage base64 invalide pour ${sources.join(", ")}.`);
+  }
+
   const bytes = Buffer.from(encoded, "base64");
   const normalizedInput = encoded.replace(/=+$/, "");
   const normalizedOutput = bytes.toString("base64").replace(/=+$/, "");
