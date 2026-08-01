@@ -167,6 +167,31 @@ if (!source.includes("registerWindowsUpdateRoutes({")) {
   requireAdmin
 });`);
 }
+if (!source.includes("PIXEL_UPDATE_SETTINGS_COMPAT")) {
+  registrations.push(`app.use("/api/admin/update-settings", (req, _res, next) => {
+  // PIXEL_UPDATE_SETTINGS_COMPAT : les anciennes applications peuvent omettre
+  // certains champs facultatifs. On reprend alors la valeur enregistrée au lieu
+  // de transmettre undefined à Zod.
+  if (req.method !== "PUT") return next();
+  let current = {};
+  try {
+    current = db.prepare("SELECT * FROM app_update_settings WHERE id = 1").get() || {};
+  } catch {
+    current = {};
+  }
+  const body = req.body && typeof req.body === "object" ? req.body : {};
+  req.body = {
+    enabled: typeof body.enabled === "boolean" ? body.enabled : Boolean(current.enabled),
+    latestVersion: body.latestVersion ?? current.latest_version ?? "0.2.0",
+    minimumVersion: body.minimumVersion ?? current.minimum_version ?? "0.2.0",
+    releaseNotes: body.releaseNotes ?? current.release_notes ?? "",
+    androidUrl: body.androidUrl ?? current.android_url ?? "",
+    macosArm64Url: body.macosArm64Url ?? current.macos_arm64_url ?? "",
+    macosX64Url: body.macosX64Url ?? current.macos_x64_url ?? ""
+  };
+  next();
+});`);
+}
 if (!source.includes("registerUpdateRoutes({")) {
   registrations.push(`registerUpdateRoutes({
   app,
