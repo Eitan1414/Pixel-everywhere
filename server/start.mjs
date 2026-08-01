@@ -15,18 +15,12 @@ const configuredOrigins = (process.env.MOBILE_ORIGINS || defaultOrigins.join(","
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-// Une application Electron empaquetée est chargée depuis file://. Les navigateurs
-// sérialisent alors son origine opaque sous la valeur littérale "null" lors des
-// requêtes CORS vers le serveur HTTPS/ngrok.
 if (!configuredOrigins.includes("null")) {
   configuredOrigins.push("null");
 }
 
 process.env.MOBILE_ORIGINS = [...new Set(configuredOrigins)].join(",");
 
-// Le serveur Termux est exposé par un seul proxy inverse ngrok. Sans ce réglage,
-// express-rate-limit considère X-Forwarded-For comme inattendu et les routes
-// limitées (connexion et inscription) terminent en erreur HTTP 500.
 const configuredProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS || "1", 10);
 const proxyHops = Number.isInteger(configuredProxyHops) && configuredProxyHops >= 0
   ? configuredProxyHops
@@ -74,8 +68,6 @@ if (extraImports.length) {
   );
 }
 
-// Les projets d’animation contiennent plusieurs PNG encodés. La validation des
-// routes limite ensuite chaque projet à 9 Mo et 24 frames.
 source = source.replace(
   'app.use(express.json({ limit: "32kb" }));',
   'app.use(express.json({ limit: "12mb" }));'
@@ -95,8 +87,6 @@ const loginLimiter = (req, res, next) => {
   );
 }
 
-// La liste staff joint les candidatures aux comptes membres. Les deux tables ont
-// une colonne created_at : sans alias SQLite refuse le tri comme ambigu.
 source = source.replace(
   `CASE status
           WHEN 'pending' THEN 0
@@ -112,8 +102,6 @@ source = source.replace(
         datetime(a.created_at) DESC`
 );
 
-// Les comptes supprimés sont anonymisés pour conserver l’historique, puis masqués
-// de la page utilisateurs. Le motif cible uniquement la requête de liste admin.
 source = source.replace(
   /SELECT id, username, role, active, must_change_password, created_at\s+FROM staff_users\s+ORDER BY datetime\(created_at\) DESC/,
   `SELECT id, username, role, active, must_change_password, created_at
@@ -168,10 +156,10 @@ if (!source.includes("registerWindowsUpdateRoutes({")) {
 });`);
 }
 if (!source.includes("PIXEL_UPDATE_SETTINGS_COMPAT")) {
-  registrations.push(`app.use("/api/admin/update-settings", (req, _res, next) => {
+  registrations.unshift(`app.use("/api/admin/update-settings", (req, _res, next) => {
   // PIXEL_UPDATE_SETTINGS_COMPAT : les anciennes applications peuvent omettre
-  // certains champs facultatifs. On reprend alors la valeur enregistrée au lieu
-  // de transmettre undefined à Zod.
+  // certains champs facultatifs. Ce middleware doit être enregistré avant les
+  // deux gestionnaires de mise à jour, notamment celui qui ajoute Windows.
   if (req.method !== "PUT") return next();
   let current = {};
   try {
