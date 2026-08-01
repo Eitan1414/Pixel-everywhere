@@ -52,17 +52,80 @@ function verifyHash(bytes, expected, label) {
   console.log(`${label}: SHA-256 vérifié.`);
 }
 
+const crcTable = new Uint32Array(256);
+for (let value = 0; value < 256; value += 1) {
+  let crc = value;
+  for (let bit = 0; bit < 8; bit += 1) {
+    crc = (crc & 1) !== 0 ? 0xedb88320 ^ (crc >>> 1) : crc >>> 1;
+  }
+  crcTable[value] = crc >>> 0;
+}
+
+function crc32(bytes) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc = crcTable[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 function verifyPng(bytes, width, height, label) {
   const signature = "89504e470d0a1a0a";
   if (bytes.length < 24 || bytes.subarray(0, 8).toString("hex") !== signature) {
     throw new Error(`${label}: signature PNG invalide.`);
   }
+
   const actualWidth = bytes.readUInt32BE(16);
   const actualHeight = bytes.readUInt32BE(20);
   if (actualWidth !== width || actualHeight !== height) {
     throw new Error(`${label}: dimensions ${actualWidth}x${actualHeight}, attendu ${width}x${height}.`);
   }
-  console.log(`${label}: PNG ${width}x${height} vérifié.`);
+
+  let offset = 8;
+  let foundIend = false;
+
+  while (offset < bytes.length) {
+    if (offset + 12 > bytes.length) {
+      throw new Error(`${label}: bloc PNG tronqué à l’octet ${offset}.`);
+    }
+
+    const length = bytes.readUInt32BE(offset);
+    const typeStart = offset + 4;
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    const crcOffset = dataEnd;
+    const nextOffset = crcOffset + 4;
+
+    if (nextOffset > bytes.length) {
+      throw new Error(`${label}: bloc PNG incomplet à l’octet ${offset}.`);
+    }
+
+    const type = bytes.subarray(typeStart, dataStart).toString("ascii");
+    const storedCrc = bytes.readUInt32BE(crcOffset);
+    const calculatedCrc = crc32(bytes.subarray(typeStart, dataEnd));
+    if (storedCrc !== calculatedCrc) {
+      throw new Error(`${label}: CRC invalide pour le bloc ${type}.`);
+    }
+
+    if (type === "IEND") {
+      if (length !== 0) {
+        throw new Error(`${label}: bloc IEND invalide.`);
+      }
+      if (nextOffset !== bytes.length) {
+        throw new Error(`${label}: données parasites après le bloc IEND.`);
+      }
+      foundIend = true;
+      break;
+    }
+
+    offset = nextOffset;
+  }
+
+  if (!foundIend) {
+    throw new Error(`${label}: bloc IEND absent.`);
+  }
+
+  console.log(`${label}: PNG ${width}x${height} et CRC vérifiés.`);
 }
 
 async function writeBytes(target, bytes) {
@@ -97,7 +160,6 @@ await writeBytes("public/assets/icon-192.png", appLogo);
 
 const desktopIcon = await decodeParts([
   "assets-encoded/desktop-icon-512.parts/part01.b64",
-  "assets-encoded/desktop-icon-512.parts/part02.b64",
 ]);
 verifyHash(desktopIcon, "be2dcea606dc8f811e8b440740c47c6713c1bbacd5592f4b04e6bc891b1fdc97", "Icône desktop");
 verifyPng(desktopIcon, 512, 512, "Icône desktop");
