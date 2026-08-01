@@ -37,46 +37,54 @@ const [
   readFile("web/main.js", "utf8")
 ]);
 
-// Architecture native actuelle : Android, macOS et Windows sont détectés
-// séparément. Les modules secondaires sont tolérants aux erreurs, tandis que
-// main.js reste critique pour garantir une interface réellement interactive.
+// Architecture native actuelle : chaque import dynamique est déclaré avec un
+// chemin littéral dans moduleLoaders afin que Vite crée réellement les chunks.
 requireMatch(entry, /const isAndroid\s*=\s*/, "La détection Android est absente.");
 requireMatch(entry, /const isDesktop\s*=\s*Boolean\(window\.pixelDesktop\)/, "La détection Electron desktop est absente.");
 requireMatch(entry, /const isMacOS\s*=\s*isDesktop\s*&&/, "La détection macOS est absente.");
 requireMatch(entry, /const isWindows\s*=\s*isDesktop\s*&&\s*!isMacOS/, "La détection Windows est absente.");
-requireMatch(entry, /async function loadOptional\(/, "Le chargement tolérant des modules secondaires est absent.");
-requireMatch(entry, /async function loadCritical\(/, "Le chargement critique de l’interface principale est absent.");
+requireMatch(entry, /const moduleLoaders\s*=\s*Object\.freeze\(/, "La table des imports Vite est absente.");
+requireMatch(entry, /async function loadOptional\(loader,\s*label\)/, "Le chargement tolérant des modules secondaires est absent.");
+requireMatch(entry, /async function loadCritical\(loader,\s*label\)/, "Le chargement critique de l’interface principale est absent.");
 requireMatch(entry, /PIXEL_OPTIONAL_MODULE_FAILED/, "Le diagnostic des modules secondaires est absent.");
+forbid(entry, /await\s+import\(path\)/, "Un import dynamique non analysable par Vite est encore présent.");
 
-requireMatch(entry, /loadOptional\("\.\/desktop-network\.js"/, "Le relais réseau desktop n’est pas chargé.");
-requireMatch(entry, /loadOptional\("\.\/server-settings-v2\.js"/, "La configuration du serveur n’est pas chargée.");
+const literalImports = [
+  ["desktopNetwork", "desktop-network.js", "Le relais réseau desktop"],
+  ["serverSettings", "server-settings-v2.js", "La configuration serveur"],
+  ["appUpdater", "app-updater.js", "Le système de mise à jour"],
+  ["manualUpdateMode", "manual-update-mode.js", "Le mode manuel des mises à jour"],
+  ["suggestions", "suggestions.js", "La catégorie Idées/Suggestions"],
+  ["creationStudio", "creation-studio.js", "La catégorie Création"],
+  ["announcementCenter", "announcement-center.js", "Le centre d’annonces"],
+  ["adminControl", "admin-control.js", "Le contrôle administrateur"],
+  ["windowsSupport", "windows-support.js", "Les fonctions Windows"],
+  ["main", "main.js", "Le cœur interactif"],
+  ["interactionAccessStability", "interaction-access-stability.js", "La protection scroll/modération"],
+  ["offlineAccess", "offline-access.js", "Le mode hors ligne"]
+];
+
+for (const [key, file, label] of literalImports) {
+  const pattern = new RegExp(`${key}\\s*:\\s*\\(\\)\\s*=>\\s*import\\(\\"\\.\\/${file.replaceAll(".", "\\.")}\\"\\)`);
+  requireMatch(entry, pattern, `${label} n’est pas déclaré avec un import littéral Vite.`);
+}
+
 requireOrder(
   entry,
   [
-    'loadOptional("./desktop-network.js"',
-    'loadOptional("./server-settings-v2.js"'
+    "loadOptional(moduleLoaders.desktopNetwork",
+    "loadOptional(moduleLoaders.serverSettings"
   ],
   "Le relais réseau Electron doit être installé avant la configuration serveur."
 );
-
-requireMatch(entry, /loadOptional\("\.\/app-updater\.js"/, "Le système de publication et téléchargement des mises à jour n’est pas chargé.");
-requireMatch(entry, /loadOptional\("\.\/manual-update-mode\.js"/, "Le mode manuel des mises à jour n’est pas chargé.");
-requireMatch(entry, /loadOptional\("\.\/suggestions\.js"/, "La catégorie Idées/Suggestions n’est pas chargée.");
-requireMatch(entry, /loadOptional\("\.\/creation-studio\.js"/, "La catégorie Création n’est pas chargée.");
-requireMatch(entry, /loadOptional\("\.\/announcement-center\.js"/, "Le centre d’annonces n’est pas chargé.");
-requireMatch(entry, /loadOptional\("\.\/admin-control\.js"/, "Le contrôle administrateur n’est pas chargé.");
-requireMatch(entry, /loadOptional\("\.\/windows-support\.js"/, "Les fonctions Windows ne sont pas chargées.");
-requireMatch(entry, /loadCritical\("\.\/main\.js"/, "Le cœur interactif de l’application n’est pas chargé comme module critique.");
-requireMatch(entry, /loadOptional\("\.\/interaction-access-stability\.js"/, "La protection scroll/modération n’est pas chargée.");
-requireMatch(entry, /loadOptional\("\.\/offline-access\.js"/, "Le mode hors ligne n’est pas chargé.");
 requireOrder(
   entry,
   [
-    'loadCritical("./main.js"',
-    'loadOptional("./interaction-access-stability.js"',
-    'loadOptional("./offline-access.js"'
+    "loadCritical(moduleLoaders.main",
+    "loadOptional(moduleLoaders.interactionAccessStability",
+    "loadOptional(moduleLoaders.offlineAccess"
   ],
-  "La protection du swipe doit être installée après l’ancien gestionnaire de main.js."
+  "La protection du swipe doit être installée après l’interface principale."
 );
 requireMatch(entry, /dataset\.pixelRuntime\s*=\s*isAndroid/, "Le runtime natif actif n’est pas exposé pour le diagnostic.");
 requireMatch(entry, /document\.body\?\.classList\.remove\("startup-running"\)/, "Le démarrage en erreur peut encore laisser une couche bloquante.");
