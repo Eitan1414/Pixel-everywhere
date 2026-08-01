@@ -1,0 +1,178 @@
+name: Compiler Pixel Everywhere Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/desktop.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "electron/**"
+      - "web/**"
+      - "public/**"
+      - "scripts/**"
+      - "assets-encoded/**"
+      - "index.html"
+      - "vite.config.*"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/desktop.yml"
+      - "package.json"
+      - "package-lock.json"
+      - "electron/**"
+      - "web/**"
+      - "public/**"
+      - "scripts/**"
+      - "assets-encoded/**"
+      - "index.html"
+      - "vite.config.*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pixel-everywhere-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
+  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+jobs:
+  verifier:
+    name: Vérifier la version desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+
+      - name: Restaurer et vérifier les ressources graphiques
+        run: npm run desktop:restore
+
+      - name: Lancer les tests
+        run: npm test
+
+      - name: Construire le bundle web de contrôle
+        run: npm run build
+
+      - name: Vérifier le bundle Electron
+        run: |
+          set -euo pipefail
+          test -f www/index.html
+          grep -q 'id="startupAnimation"' www/index.html
+          test -f public/assets/desktop-icon.png
+          test "$(node -p "require('./package.json').version")" = "0.31.7"
+
+  windows:
+    name: Windows x64
+    needs: verifier
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+
+      - name: Restaurer les ressources graphiques
+        run: npm run desktop:restore
+
+      - name: Construire l’interface
+        run: npm run build
+
+      - name: Compiler l’installateur Windows
+        run: npx electron-builder --win nsis --x64 --publish never
+
+      - name: Vérifier l’installateur Windows
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $installer = "release/Pixel-Everywhere-$version-Windows-x64-Setup.exe"
+          if (-not (Test-Path $installer)) {
+            Write-Error "Installateur Windows introuvable: $installer"
+            Get-ChildItem -Recurse release -ErrorAction SilentlyContinue
+            exit 1
+          }
+          if ((Get-Item $installer).Length -le 0) {
+            Write-Error "L’installateur Windows est vide."
+            exit 1
+          }
+          Write-Host "Installateur Windows prêt: $installer"
+
+      - name: Publier la version Windows
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-0.31.7-Windows-x64
+          path: release/Pixel-Everywhere-0.31.7-Windows-x64-Setup.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS ${{ matrix.arch }}
+    needs: verifier
+    runs-on: macos-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+
+    steps:
+      - name: Récupérer le projet
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Installer les dépendances
+        run: npm install --no-audit --no-fund
+
+      - name: Restaurer les ressources graphiques
+        run: npm run desktop:restore
+
+      - name: Construire l’interface
+        run: npm run build
+
+      - name: Préparer le bundle macOS
+        run: node scripts/prepare-macos-bundle.mjs
+
+      - name: Compiler la version macOS
+        run: npx electron-builder --mac zip --${{ matrix.arch }} --publish never
+
+      - name: Vérifier l’archive macOS
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          ARCHIVE="release/Pixel-Everywhere-${VERSION}-macOS-${{ matrix.arch }}.zip"
+          test -s "$ARCHIVE"
+          unzip -l "$ARCHIVE" | grep -q 'Pixel Everywhere.app'
+          echo "Archive macOS prête: $ARCHIVE"
+
+      - name: Publier la version macOS
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-0.31.7-macOS-${{ matrix.arch }}
+          path: release/Pixel-Everywhere-0.31.7-macOS-${{ matrix.arch }}.zip
+          if-no-files-found: error
+          retention-days: 14
