@@ -162,7 +162,7 @@ const desktopIcon = await decodeParts([
   "assets-encoded/desktop-icon-512.parts/part01.b64",
   "assets-encoded/desktop-icon-512.parts/part02.b64",
 ]);
-verifyHash(desktopIcon, "f418ff487fc560e79bc4c8e4ee10e3ea7ee18f43d69150dcfa251afbd9c431b4", "Icône desktop");
+verifyHash(desktopIcon, "be2dcea606dc8f811e8b440740c47c6713c1bbacd5592f4b04e6bc891b1fdc97", "Icône desktop");
 verifyPng(desktopIcon, 512, 512, "Icône desktop");
 await writeBytes("public/assets/desktop-icon.png", desktopIcon);
 await writeBytes("public/assets/icon-512.png", desktopIcon);
