@@ -45,7 +45,7 @@ env:
 
 jobs:
   verifier:
-    name: Vérifier la version desktop 0.31.8
+    name: Vérifier la version desktop actuelle
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="$(node -p "require('./package.json').version")"
-          test "$VERSION" = "0.31.8"
+          test -n "$VERSION"
           test -s www/index.html
           test -s public/assets/pixel-everywhere-logo.png
           test -s public/assets/desktop-icon.png
@@ -86,6 +86,7 @@ jobs:
           grep -R -q 'page-suggestions' www/assets
           grep -R -q 'PixelServerSettings' www/assets
           grep -R -q 'PIXEL_OPTIONAL_MODULE_FAILED' www/assets
+          grep -R -q 'conversationInboxButton' www/assets
           if grep -R -q 'reprimand-overprice-quickly.ngrok-free.dev' www; then
             echo "Une ancienne adresse ngrok est encore intégrée au bundle desktop." >&2
             exit 1

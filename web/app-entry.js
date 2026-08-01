@@ -43,6 +43,8 @@ const moduleLoaders = Object.freeze({
   announcementSubcategories: () => import("./announcement-subcategories.js"),
   accountDeletionStyles: () => import("./account-deletion.css"),
   accountDeletion: () => import("./account-deletion.js"),
+  memberConversationsStyles: () => import("./member-conversations.css"),
+  memberConversations: () => import("./member-conversations.js"),
   main: () => import("./main.js"),
   interactionAccessStability: () => import("./interaction-access-stability.js"),
   offlineAccess: () => import("./offline-access.js")
@@ -128,10 +130,15 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.announcementSubcategories, "sous-catégories d’annonces");
   await loadOptional(moduleLoaders.accountDeletionStyles, "styles de suppression du compte");
   await loadOptional(moduleLoaders.accountDeletion, "suppression du compte");
+  await loadOptional(moduleLoaders.memberConversationsStyles, "styles de la messagerie privée");
 
   // main.js est critique : il active la navigation, les boutons, les comptes,
   // Pixel et les fonctions de base.
   await loadCritical(moduleLoaders.main, "Interface principale");
+
+  // La messagerie s’installe après main.js afin de réutiliser l’interface et les
+  // sessions déjà initialisées, sans demander un second compte aux membres du staff.
+  await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
 
   // Ces protections s’installent après main.js afin de corriger ses anciens
   // gestionnaires sans bloquer le démarrage si elles échouent.
