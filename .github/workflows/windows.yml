@@ -46,44 +46,7 @@ jobs:
         run: npm run build
 
       - name: Vérifier les catégories, interactions et réglages serveur
-        shell: pwsh
-        run: |
-          $version = node -p "require('./package.json').version"
-          if ($version -ne "0.31.8") {
-            throw "Version inattendue : $version"
-          }
-
-          if (-not (Test-Path "www/index.html")) {
-            throw "Le bundle www/index.html est absent."
-          }
-
-          $jsFiles = Get-ChildItem -Path "www/assets" -Filter "*.js" -File
-          if (-not $jsFiles) {
-            throw "Aucun bundle JavaScript n’a été produit."
-          }
-
-          $requiredMarkers = @(
-            "pixelCategoriesRestored",
-            "page-suggestions",
-            "PixelServerSettings",
-            "windows-x64",
-            "PIXEL_OPTIONAL_MODULE_FAILED"
-          )
-
-          foreach ($marker in $requiredMarkers) {
-            $found = Select-String -Path $jsFiles.FullName -Pattern $marker -SimpleMatch -Quiet
-            if (-not $found) {
-              throw "Fonctionnalité absente du bundle Windows : $marker"
-            }
-            Write-Host "Fonctionnalité vérifiée : $marker"
-          }
-
-          $oldServer = Select-String -Path $jsFiles.FullName -Pattern "reprimand-overprice-quickly.ngrok-free.dev" -SimpleMatch -Quiet
-          if ($oldServer) {
-            throw "L’ancienne adresse ngrok est encore intégrée au bundle Windows."
-          }
-
-          Write-Host "Bundle Windows $version complet et sans ancienne URL serveur."
+        run: node scripts/verify-windows-bundle.mjs
 
       - name: Compiler l’installateur Windows 64 bits
         run: npx electron-builder --win nsis --x64 --publish never
