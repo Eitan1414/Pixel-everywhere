@@ -12,10 +12,6 @@ const isMacOS = isDesktop && /Mac/i.test(`${platform} ${userAgent}`);
 const isWindows = isDesktop && !isMacOS;
 const optionalFailures = [];
 
-// Les imports doivent rester écrits littéralement dans ce fichier. Vite peut
-// ainsi détecter chaque module et créer les chunks nécessaires aux versions
-// Windows, macOS et Android. Un import(path) avec un chemin fourni en texte
-// laisserait les catégories hors du bundle Electron.
 const moduleLoaders = Object.freeze({
   desktopNetwork: () => import("./desktop-network.js"),
   nativeInteractionStability: () => import("./native-interaction-stability.js"),
@@ -25,6 +21,7 @@ const moduleLoaders = Object.freeze({
   appUpdaterStyles: () => import("./app-updater.css"),
   appUpdater: () => import("./app-updater.js"),
   manualUpdateMode: () => import("./manual-update-mode.js"),
+  androidUpdateUpload: () => import("./android-update-upload.js"),
   updateUploadDesktop: () => import("./update-upload-desktop.js"),
   desktopLayout: () => import("./desktop-layout.css"),
   windowsSupport: () => import("./windows-support.js"),
@@ -89,9 +86,6 @@ function exposeBootState() {
 }
 
 async function bootPixelEverywhere() {
-  // Electron installe son relais réseau avant que la configuration serveur ne
-  // capture window.fetch. Windows peut ainsi utiliser le relais IPC si CORS
-  // bloque la requête directe du renderer.
   if (isDesktop) {
     await loadOptional(moduleLoaders.desktopNetwork, "relais réseau desktop");
   }
@@ -105,6 +99,9 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.appUpdater, "système de mise à jour");
   await loadOptional(moduleLoaders.manualUpdateMode, "mode de mise à jour manuel");
 
+  if (isAndroid) {
+    await loadOptional(moduleLoaders.androidUpdateUpload, "envoi Android des fichiers de mise à jour");
+  }
   if (isDesktop) {
     await loadOptional(moduleLoaders.updateUploadDesktop, "envoi des mises à jour desktop");
     await loadOptional(moduleLoaders.desktopLayout, "mise en page desktop");
@@ -113,8 +110,6 @@ async function bootPixelEverywhere() {
     await loadOptional(moduleLoaders.windowsSupport, "fonctions Windows");
   }
 
-  // Chaque catégorie est isolée : une erreur dans une fonction avancée ne doit
-  // pas empêcher les autres catégories ni l’interface principale de démarrer.
   await loadOptional(moduleLoaders.enhancements, "catégories complémentaires");
   await loadOptional(moduleLoaders.pixelLive, "Pixel en direct");
   await loadOptional(moduleLoaders.suggestionsStyles, "styles des idées");
@@ -132,16 +127,8 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.accountDeletion, "suppression du compte");
   await loadOptional(moduleLoaders.memberConversationsStyles, "styles de la messagerie privée");
 
-  // main.js est critique : il active la navigation, les boutons, les comptes,
-  // Pixel et les fonctions de base.
   await loadCritical(moduleLoaders.main, "Interface principale");
-
-  // La messagerie s’installe après main.js afin de réutiliser l’interface et les
-  // sessions déjà initialisées, sans demander un second compte aux membres du staff.
   await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
-
-  // Ces protections s’installent après main.js afin de corriger ses anciens
-  // gestionnaires sans bloquer le démarrage si elles échouent.
   await loadOptional(moduleLoaders.interactionAccessStability, "stabilité des accès et interactions");
   await loadOptional(moduleLoaders.offlineAccess, "accès hors ligne");
 

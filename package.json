@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.31.10",
+  "version": "0.31.11",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -13,7 +13,7 @@
     "cap:init": "cap add android",
     "cap:sync": "npm run build && cap sync android",
     "android:debug": "npm run cap:sync && cd android && ./gradlew assembleDebug",
-    "test": "node --test --test-force-exit && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check server/member-conversations.mjs && node --check electron/entry.cjs && node --check electron/bootstrap.cjs && node --check electron/main.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check web/app-entry.js && node --check web/member-conversations.js && node --check web/simple-startup.js && node --check web/android-startup.js && node --check web/native-interaction-stability.js && node --check web/desktop-network.js && node --check web/windows-support.js && node --check web/suggestions.js && node --check web/manual-update-mode.js && node --check web/offline-access.js && node --check web/server-settings-v2.js && node --check web/interaction-access-stability.js && node --check scripts/prepare-macos-bundle.mjs && node --check scripts/restore-graphics.mjs && node scripts/verify-platform-startup.mjs && node scripts/verify-native-interactions.mjs",
+    "test": "node --test --test-force-exit && node --check server/start.mjs && node --check server/account-deletion.mjs && node --check server/member-conversations.mjs && node --check server/chunked-update-upload.mjs && node --check electron/entry.cjs && node --check electron/bootstrap.cjs && node --check electron/main.cjs && node --check electron/startup-guard.cjs && node --check electron/preload.cjs && node --check web/app-entry.js && node --check web/member-conversations.js && node --check web/simple-startup.js && node --check web/android-startup.js && node --check web/android-update-upload.js && node --check web/native-interaction-stability.js && node --check web/desktop-network.js && node --check web/windows-support.js && node --check web/suggestions.js && node --check web/manual-update-mode.js && node --check web/offline-access.js && node --check web/server-settings-v2.js && node --check web/interaction-access-stability.js && node --check scripts/prepare-macos-bundle.mjs && node --check scripts/restore-graphics.mjs && node scripts/verify-platform-startup.mjs && node scripts/verify-native-interactions.mjs",
     "desktop:restore": "node scripts/restore-graphics.mjs",
     "mac:build": "npm run desktop:restore && npm run build && node scripts/prepare-macos-bundle.mjs && electron-builder --mac zip --x64 --publish never && electron-builder --mac zip --arm64 --publish never",
     "win:build": "npm run desktop:restore && npm run build && electron-builder --win nsis --x64 --publish never"
