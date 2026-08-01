@@ -54,6 +54,9 @@ function formatAndroidUploadBytes(value) {
 function decorateAndroidUpdateCards() {
   if (!isAndroidUpdateRuntime) return;
   document.querySelectorAll("[data-update-target]").forEach((card) => {
+    if (card.dataset.pixelAndroidUpdateDecorated === "true") return;
+    card.dataset.pixelAndroidUpdateDecorated = "true";
+
     const button = card.querySelector(".upload-update-file");
     if (button) button.textContent = "Envoyer depuis Android";
     if (!card.querySelector(".android-update-upload-help")) {
