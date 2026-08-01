@@ -41,12 +41,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VITE_API_BASE_URL: https://reprimand-overprice-quickly.ngrok-free.dev/api
   CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
 jobs:
   verifier:
-    name: Vérifier la version desktop 0.31.7
+    name: Vérifier la version desktop 0.31.8
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -72,15 +71,23 @@ jobs:
       - name: Construire le bundle web de contrôle
         run: npm run build
 
-      - name: Vérifier le bundle Electron
+      - name: Vérifier le bundle Electron complet
         shell: bash
         run: |
           set -euo pipefail
           VERSION="$(node -p "require('./package.json').version")"
-          test "$VERSION" = "0.31.7"
+          test "$VERSION" = "0.31.8"
           test -s www/index.html
           test -s public/assets/pixel-everywhere-logo.png
           test -s public/assets/desktop-icon.png
           grep -q 'id="startupAnimation"' www/index.html
           grep -q '"main": "electron/entry.cjs"' package.json
-          echo "Bundle desktop ${VERSION} vérifié avec succès."
+          grep -R -q 'pixelCategoriesRestored' www/assets
+          grep -R -q 'page-suggestions' www/assets
+          grep -R -q 'PixelServerSettings' www/assets
+          grep -R -q 'PIXEL_OPTIONAL_MODULE_FAILED' www/assets
+          if grep -R -q 'reprimand-overprice-quickly.ngrok-free.dev' www; then
+            echo "Une ancienne adresse ngrok est encore intégrée au bundle desktop." >&2
+            exit 1
+          fi
+          echo "Bundle desktop ${VERSION} complet vérifié avec succès."
