@@ -1,0 +1,88 @@
+import { readFile, readdir, stat } from "node:fs/promises";
+import { resolve, relative } from "node:path";
+
+const root = process.cwd();
+const outputRoot = resolve(root, "www");
+
+async function listFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const fullPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listFiles(fullPath));
+    } else if (entry.isFile()) {
+      files.push(fullPath);
+    }
+  }
+
+  return files;
+}
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
+assert(packageJson.version === "0.31.8", `Version Windows inattendue : ${packageJson.version}`);
+
+const indexPath = resolve(outputRoot, "index.html");
+assert((await stat(indexPath)).isFile(), "Le bundle www/index.html est absent.");
+
+const files = await listFiles(outputRoot);
+const javascriptFiles = files.filter((file) => file.endsWith(".js"));
+assert(javascriptFiles.length > 0, "Aucun fichier JavaScript n’a été produit dans www.");
+
+const bundles = [];
+for (const file of javascriptFiles) {
+  bundles.push({
+    file,
+    relativePath: relative(outputRoot, file).replaceAll("\\", "/"),
+    content: await readFile(file, "utf8")
+  });
+}
+
+function bundlesContaining(marker) {
+  return bundles.filter((bundle) => bundle.content.includes(marker));
+}
+
+const requiredMarkers = [
+  ["pixelCategoriesRestored", "restauration des catégories"],
+  ["PixelServerSettings", "configuration du serveur"],
+  ["windows-x64", "prise en charge des mises à jour Windows"],
+  ["PIXEL_OPTIONAL_MODULE_FAILED", "tolérance aux erreurs de modules"]
+];
+
+for (const [marker, label] of requiredMarkers) {
+  const matches = bundlesContaining(marker);
+  assert(matches.length > 0, `Fonctionnalité absente du bundle Windows : ${label} (${marker}).`);
+  console.log(`Fonctionnalité vérifiée : ${label} — ${matches.map((item) => item.relativePath).join(", ")}`);
+}
+
+const suggestionBundles = bundles.filter((bundle) =>
+  bundle.content.includes("page-suggestions")
+  || bundle.content.includes("Suggestions de mises à jour")
+  || /(?:^|\/)suggestions-[^/]+\.js$/i.test(bundle.relativePath)
+);
+
+assert(
+  suggestionBundles.length > 0,
+  `La catégorie Idées/Suggestions n’a pas été générée. Fichiers inspectés : ${javascriptFiles.map((file) => relative(outputRoot, file)).join(", ")}`
+);
+
+const suggestionCodePresent = suggestionBundles.some((bundle) =>
+  bundle.content.includes("page-suggestions")
+  && bundle.content.includes("suggestionForm")
+  && bundle.content.includes("data-page-target")
+);
+assert(suggestionCodePresent, "Le chunk Suggestions existe, mais son interface complète n’est pas présente.");
+console.log(`Catégorie Idées/Suggestions vérifiée : ${suggestionBundles.map((item) => item.relativePath).join(", ")}`);
+
+const obsoleteServer = "reprimand-overprice-quickly.ngrok-free.dev";
+assert(
+  bundlesContaining(obsoleteServer).length === 0,
+  "L’ancienne adresse ngrok est encore intégrée au bundle Windows."
+);
+
+console.log(`PIXEL_WINDOWS_BUNDLE_0_31_8_COMPLETE — ${javascriptFiles.length} fichiers JavaScript inspectés.`);
