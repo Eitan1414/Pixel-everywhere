@@ -187,7 +187,8 @@ if (!source.includes("PIXEL_UPDATE_SETTINGS_COMPAT")) {
     releaseNotes: body.releaseNotes ?? current.release_notes ?? "",
     androidUrl: body.androidUrl ?? current.android_url ?? "",
     macosArm64Url: body.macosArm64Url ?? current.macos_arm64_url ?? "",
-    macosX64Url: body.macosX64Url ?? current.macos_x64_url ?? ""
+    macosX64Url: body.macosX64Url ?? current.macos_x64_url ?? "",
+    windowsX64Url: body.windowsX64Url ?? current.windows_x64_url ?? ""
   };
   next();
 });`);
