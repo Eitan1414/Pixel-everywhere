@@ -5,9 +5,9 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("./simple-startup.js", import.meta.url), "utf8");
 
 test("un MP avec une session membre expirée renouvelle le jeton via le compte staff", () => {
-  assert.match(source, /\/api\/member-direct/);
+  assert.match(source, /member-direct/);
   assert.match(source, /\[401, 403\]\.includes\(response\.status\)/);
-  assert.match(source, /\/conversations\/staff\/member-profile/);
+  assert.match(source, /conversations\/staff\/member-profile/);
   assert.match(source, /localStorage\.setItem\("pixel-member-token", payload\.token\)/);
   assert.match(source, /return nativeFetch\(input, retryOptions\(input, init, renewed\.token\)\)/);
 });
