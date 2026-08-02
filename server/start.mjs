@@ -64,6 +64,9 @@ if (!source.includes('from "./community-announcements.mjs"')) {
 if (!source.includes('from "./member-conversations.mjs"')) {
   extraImports.push('import { registerMemberConversationRoutes } from "./member-conversations.mjs";');
 }
+if (!source.includes('from "./community-messaging.mjs"')) {
+  extraImports.push('import { registerCommunityMessagingRoutes } from "./community-messaging.mjs";');
+}
 if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
@@ -235,6 +238,14 @@ if (!source.includes("registerMemberConversationRoutes({")) {
   requireActiveStaff,
   requireActiveMember,
   staffOnly
+});`);
+}
+if (!source.includes("registerCommunityMessagingRoutes({")) {
+  registrations.push(`registerCommunityMessagingRoutes({
+  app,
+  db,
+  authenticateMember,
+  requireActiveMember
 });`);
 }
 if (registrations.length) {
