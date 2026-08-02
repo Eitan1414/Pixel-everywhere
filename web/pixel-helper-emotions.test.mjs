@@ -8,12 +8,14 @@ import thinking1 from "./pixel-helper-emotions/thinking-1.js";
 import thinking2 from "./pixel-helper-emotions/thinking-2.js";
 import surprised1 from "./pixel-helper-emotions/surprised-1.js";
 import surprised2 from "./pixel-helper-emotions/surprised-2.js";
+import happy1a from "./pixel-helper-emotions/happy-1-a.js";
 import happy1a1 from "./pixel-helper-emotions/happy-1-a1.js";
 import happy1a2 from "./pixel-helper-emotions/happy-1-a2.js";
 import happy1b from "./pixel-helper-emotions/happy-1-b.js";
 import happy1c from "./pixel-helper-emotions/happy-1-c.js";
 import happy1d from "./pixel-helper-emotions/happy-1-d.js";
 import happy2a from "./pixel-helper-emotions/happy-2-a.js";
+import happy2b from "./pixel-helper-emotions/happy-2-b.js";
 import happy2b1 from "./pixel-helper-emotions/happy-2-b1.js";
 import happy2b2 from "./pixel-helper-emotions/happy-2-b2.js";
 import happy2c1 from "./pixel-helper-emotions/happy-2-c1.js";
@@ -39,11 +41,7 @@ const expected = {
 const restored = {
   sad: restore([sad1, sad2]),
   thinking: restore([thinking1, thinking2]),
-  surprised: restore([surprised1, surprised2]),
-  happy: restore([
-    happy1a1, happy1a2, happy1b, happy1c, happy1d, happy2a,
-    happy2b1, happy2b2, happy2c1, happy2c2, happy2d1, happy2d2
-  ])
+  surprised: restore([surprised1, surprised2])
 };
 
 for (const [emotion, bytes] of Object.entries(restored)) {
@@ -53,3 +51,43 @@ for (const [emotion, bytes] of Object.entries(restored)) {
     assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
   });
 }
+
+const aVariants = {
+  a: [happy1a],
+  a1: [happy1a1],
+  "a1+a2": [happy1a1, happy1a2],
+  "a+a2": [happy1a, happy1a2]
+};
+
+const bVariants = {
+  b: [happy2b],
+  b1: [happy2b1],
+  "b1+b2": [happy2b1, happy2b2],
+  "b+b2": [happy2b, happy2b2]
+};
+
+const fixedBeforeB = [happy1b, happy1c, happy1d, happy2a];
+const fixedAfterB = [happy2c1, happy2c2, happy2d1, happy2d2];
+
+let matchingCandidate = null;
+
+for (const [aName, aParts] of Object.entries(aVariants)) {
+  for (const [bName, bParts] of Object.entries(bVariants)) {
+    const candidateName = `${aName}/${bName}`;
+    try {
+      const bytes = restore([...aParts, ...fixedBeforeB, ...bParts, ...fixedAfterB]);
+      const digest = sha256(bytes);
+      console.log(`PIXEL_HAPPY_CANDIDATE ${candidateName} size=${bytes.length} sha256=${digest}`);
+      if (bytes.length === expected.happy.size && digest === expected.happy.sha256) {
+        matchingCandidate = candidateName;
+      }
+    } catch (error) {
+      console.log(`PIXEL_HAPPY_CANDIDATE ${candidateName} error=${error.code || error.message}`);
+    }
+  }
+}
+
+test("la combinaison exacte de fragments du logo content est identifiée", () => {
+  assert.ok(matchingCandidate, "Aucune combinaison de fragments ne correspond au JPEG original");
+  console.log(`PIXEL_HAPPY_MATCH ${matchingCandidate}`);
+});
