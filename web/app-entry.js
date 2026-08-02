@@ -44,6 +44,7 @@ const moduleLoaders = Object.freeze({
   memberConversations: () => import("./member-conversations.js"),
   communityMessagingStyles: () => import("./community-messaging.css"),
   communityMessaging: () => import("./community-messaging.js"),
+  staffMemberSession: () => import("./staff-member-session.js"),
   pixelHelperStyles: () => import("./pixel-helper.css"),
   pixelHelper: () => import("./pixel-helper.js"),
   pixelHelperDownload: () => import("./pixel-helper-download.js"),
@@ -137,6 +138,7 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.pixelHelperStyles, "styles de Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperInteractiveStyles, "styles interactifs de Pixel Helper");
 
+  await loadOptional(moduleLoaders.staffMemberSession, "profil membre automatique des comptes staff");
   await loadCritical(moduleLoaders.main, "Interface principale");
   await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
   await loadOptional(moduleLoaders.communityMessaging, "chat public et MP entre membres");
