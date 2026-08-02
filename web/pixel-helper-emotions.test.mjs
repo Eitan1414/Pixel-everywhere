@@ -8,7 +8,8 @@ import thinking1 from "./pixel-helper-emotions/thinking-1.js";
 import thinking2 from "./pixel-helper-emotions/thinking-2.js";
 import surprised1 from "./pixel-helper-emotions/surprised-1.js";
 import surprised2 from "./pixel-helper-emotions/surprised-2.js";
-import happy1a from "./pixel-helper-emotions/happy-1-a.js";
+import happy1a1 from "./pixel-helper-emotions/happy-1-a1.js";
+import happy1a2 from "./pixel-helper-emotions/happy-1-a2.js";
 import happy1b from "./pixel-helper-emotions/happy-1-b.js";
 import happy1c from "./pixel-helper-emotions/happy-1-c.js";
 import happy1d from "./pixel-helper-emotions/happy-1-d.js";
@@ -40,7 +41,7 @@ const restored = {
   thinking: restore([thinking1, thinking2]),
   surprised: restore([surprised1, surprised2]),
   happy: restore([
-    happy1a, happy1b, happy1c, happy1d, happy2a,
+    happy1a1, happy1a2, happy1b, happy1c, happy1d, happy2a,
     happy2b1, happy2b2, happy2c1, happy2c2, happy2d1, happy2d2
   ])
 };
