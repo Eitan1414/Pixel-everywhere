@@ -24,7 +24,8 @@ import happy2d1 from "./pixel-helper-emotions/happy-2-d1.js";
 import happy2d2 from "./pixel-helper-emotions/happy-2-d2.js";
 
 function restore(parts) {
-  return gunzipSync(Buffer.from(parts.join(""), "base64"));
+  const compressed = Buffer.concat(parts.map((part) => Buffer.from(part, "base64")));
+  return gunzipSync(compressed);
 }
 
 function sha256(bytes) {
