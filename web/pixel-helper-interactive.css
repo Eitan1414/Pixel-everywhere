@@ -1,3 +1,17 @@
+/*
+ * Garde-fous pour les anciens WebView Android :
+ * - le nouveau logo est inséré avant l'ancien rond « P » ;
+ * - un éventuel second bouton portant le même identifiant est masqué.
+ */
+#pixelHelperGuideButton > .pixel-helper-logo-frame ~ span {
+  display: none !important;
+}
+
+#pixelHelperGuideButton ~ #pixelHelperGuideButton,
+.pixel-guide-button ~ .pixel-guide-button {
+  display: none !important;
+}
+
 .pixel-helper-logo-frame {
   display: grid;
   width: 42px;
