@@ -1,0 +1,228 @@
+.pixel-guide-button {
+  position: fixed;
+  right: 18px;
+  bottom: calc(112px + env(safe-area-inset-bottom));
+  z-index: 38;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px 10px 9px;
+  border: 1px solid rgba(18, 214, 223, 0.36);
+  border-radius: 999px;
+  color: #f7fbff;
+  background: rgba(9, 13, 19, 0.94);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+  cursor: pointer;
+}
+
+.pixel-guide-button > span,
+.pixel-helper-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  color: #101216;
+  font-weight: 950;
+  background: linear-gradient(145deg, var(--orange), var(--cyan));
+}
+
+.pixel-guide-button strong {
+  font-size: 0.78rem;
+}
+
+.pixel-helper-dialog {
+  width: min(92vw, 680px);
+  max-height: min(88vh, 760px);
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(18, 214, 223, 0.28);
+  border-radius: 24px;
+  color: #f5f7fa;
+  background: #0b0f16;
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.64);
+}
+
+.pixel-helper-dialog::backdrop {
+  background: rgba(2, 5, 9, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+.pixel-helper-modal {
+  position: relative;
+  display: grid;
+  gap: 17px;
+  max-height: min(88vh, 760px);
+  padding: 25px;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(18, 214, 223, 0.12), transparent 18rem),
+    radial-gradient(circle at 0% 100%, rgba(255, 107, 25, 0.08), transparent 15rem),
+    #0b0f16;
+}
+
+.pixel-helper-heading {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding-right: 38px;
+}
+
+.pixel-helper-heading h2,
+.pixel-helper-heading p,
+.pixel-helper-guide-item p,
+.pixel-helper-intro,
+.pixel-helper-release-notes p,
+.pixel-helper-warning {
+  margin: 0;
+}
+
+.pixel-helper-intro,
+.pixel-helper-guide-item p,
+.pixel-helper-warning,
+.pixel-helper-release-notes p {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.pixel-helper-guide-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pixel-helper-guide-item {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 11px;
+  padding: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.pixel-helper-guide-item > span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: var(--cyan);
+  font-weight: 900;
+  background: rgba(18, 214, 223, 0.1);
+}
+
+.pixel-helper-guide-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.pixel-helper-thread {
+  border-color: rgba(18, 214, 223, 0.34) !important;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(18, 214, 223, 0.1), transparent 12rem),
+    var(--surface) !important;
+}
+
+.pixel-helper-thread strong,
+.pixel-helper-signed-badge,
+.pixel-helper-signature {
+  color: var(--cyan);
+}
+
+.pixel-helper-message-head {
+  align-items: center;
+}
+
+.pixel-helper-signed-badge {
+  padding: 6px 9px;
+  border: 1px solid rgba(18, 214, 223, 0.32);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  background: rgba(18, 214, 223, 0.08);
+}
+
+.pixel-helper-message-list {
+  padding-bottom: 12px;
+}
+
+.pixel-helper-message {
+  width: min(100%, 720px);
+  max-width: none !important;
+  gap: 12px;
+}
+
+.pixel-helper-message ol {
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.pixel-helper-message li {
+  padding-left: 3px;
+  line-height: 1.5;
+}
+
+.pixel-helper-release-notes,
+.pixel-helper-warning {
+  padding: 13px;
+  border-radius: 14px;
+}
+
+.pixel-helper-release-notes {
+  border: 1px solid rgba(18, 214, 223, 0.2);
+  background: rgba(18, 214, 223, 0.06);
+}
+
+.pixel-helper-release-notes > strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.pixel-helper-warning {
+  border: 1px solid rgba(255, 107, 25, 0.25);
+  background: rgba(255, 107, 25, 0.07);
+}
+
+.pixel-helper-message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.pixel-helper-signature {
+  justify-self: end;
+  font-weight: 850;
+}
+
+.pixel-helper-update-link {
+  width: 100%;
+  color: var(--cyan) !important;
+}
+
+@media (max-width: 560px) {
+  .pixel-guide-button {
+    right: 12px;
+    padding-right: 10px;
+  }
+
+  .pixel-guide-button strong {
+    display: none;
+  }
+
+  .pixel-helper-modal {
+    padding: 20px 16px;
+  }
+
+  .pixel-helper-message-actions {
+    display: grid;
+  }
+}
+
+@media (min-width: 900px) {
+  .pixel-guide-button {
+    right: max(34px, calc((100vw - 1180px) / 2 + 34px));
+    bottom: 116px;
+  }
+}

@@ -42,6 +42,9 @@ const moduleLoaders = Object.freeze({
   accountDeletion: () => import("./account-deletion.js"),
   memberConversationsStyles: () => import("./member-conversations.css"),
   memberConversations: () => import("./member-conversations.js"),
+  pixelHelperStyles: () => import("./pixel-helper.css"),
+  pixelHelper: () => import("./pixel-helper.js"),
+  pixelHelperDownload: () => import("./pixel-helper-download.js"),
   main: () => import("./main.js"),
   interactionAccessStability: () => import("./interaction-access-stability.js"),
   offlineAccess: () => import("./offline-access.js")
@@ -126,9 +129,12 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.accountDeletionStyles, "styles de suppression du compte");
   await loadOptional(moduleLoaders.accountDeletion, "suppression du compte");
   await loadOptional(moduleLoaders.memberConversationsStyles, "styles de la messagerie privée");
+  await loadOptional(moduleLoaders.pixelHelperStyles, "styles de Pixel Helper");
 
   await loadCritical(moduleLoaders.main, "Interface principale");
   await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
+  await loadOptional(moduleLoaders.pixelHelper, "guides Pixel Helper");
+  await loadOptional(moduleLoaders.pixelHelperDownload, "téléchargement guidé Pixel Helper");
   await loadOptional(moduleLoaders.interactionAccessStability, "stabilité des accès et interactions");
   await loadOptional(moduleLoaders.offlineAccess, "accès hors ligne");
 
