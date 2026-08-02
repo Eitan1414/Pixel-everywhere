@@ -114,7 +114,7 @@ async function createLinkedMemberProfile(staff) {
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error(
-        "Le serveur PDD n’est pas à jour. Installe la version serveur 0.31.19 avant d’utiliser les MP."
+        "Le serveur PDD n’est pas à jour. Installe la version serveur 0.31.20 avant d’utiliser les MP."
       );
     }
     throw new Error(payload.error || "Le profil membre automatique du compte staff n’a pas pu être créé.");
@@ -138,7 +138,7 @@ async function probeCommunityMessaging(memberToken) {
     });
     if (response.status === 404) {
       setCompatibilityError(
-        "Les MP ne sont pas encore installés sur le serveur PDD. Mets le serveur Termux à jour vers la 0.31.19."
+        "Les MP ne sont pas encore installés sur le serveur PDD. Mets le serveur Termux à jour vers la 0.31.20."
       );
       return false;
     }
@@ -149,7 +149,7 @@ async function probeCommunityMessaging(memberToken) {
   }
 }
 
-async function synchronizeStaffMemberSession({ reloadAfterChange = false } = {}) {
+async function synchronizeStaffMemberSession() {
   if (synchronizationPromise) return synchronizationPromise;
 
   synchronizationPromise = (async () => {
@@ -162,11 +162,8 @@ async function synchronizeStaffMemberSession({ reloadAfterChange = false } = {})
         localStorage.removeItem(staffMemberKeys.memberUser);
         sessionStorage.removeItem("pixel-staff-member-profile-ready");
         dispatchMemberCleared();
-        refreshMemberAccessDom();
-        if (reloadAfterChange) window.location.reload();
-      } else {
-        refreshMemberAccessDom();
       }
+      refreshMemberAccessDom();
       return memberIdentity();
     }
 
@@ -186,7 +183,6 @@ async function synchronizeStaffMemberSession({ reloadAfterChange = false } = {})
       dispatchMemberReady(payload.token, payload.member);
       refreshMemberAccessDom();
       await probeCommunityMessaging(payload.token);
-      if (reloadAfterChange) window.location.reload();
       return { token: payload.token, member: payload.member };
     } catch (error) {
       console.error("PIXEL_STAFF_MEMBER_SESSION_FAILED", error);
@@ -203,13 +199,13 @@ async function synchronizeStaffMemberSession({ reloadAfterChange = false } = {})
   }
 }
 
-await synchronizeStaffMemberSession({ reloadAfterChange: false });
+await synchronizeStaffMemberSession();
 initialSynchronizationFinished = true;
 lastIdentitySignature = identitySignature();
 refreshMemberAccessDom();
 
 window.PixelStaffMemberSession = Object.freeze({
-  ensure: () => synchronizeStaffMemberSession({ reloadAfterChange: false }),
+  ensure: synchronizeStaffMemberSession,
   refresh: refreshMemberAccessDom,
   getIdentity: memberIdentity
 });
@@ -220,6 +216,6 @@ window.setInterval(async () => {
   if (signature === lastIdentitySignature) return;
   lastIdentitySignature = signature;
   if (!initialSynchronizationFinished) return;
-  await synchronizeStaffMemberSession({ reloadAfterChange: true });
+  await synchronizeStaffMemberSession();
   lastIdentitySignature = identitySignature();
 }, 700);
