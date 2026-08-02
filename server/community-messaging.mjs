@@ -99,7 +99,6 @@ function createCommunityMessagingSchema(db) {
 
 function memberProfileSelect(alias = "m") {
   return `
-    ${alias}.id,
     ${alias}.username,
     ${alias}.display_name,
     linked_staff.role AS staff_role
@@ -426,7 +425,7 @@ export function registerCommunityMessagingRoutes({
             body
           });
           return { conversationId: thread.id, messageId };
-        })();
+        });
         res.status(201).json(result);
       } catch (error) {
         sendRouteError(res, error);
