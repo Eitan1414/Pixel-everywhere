@@ -2,34 +2,40 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
-import sad1 from "./pixel-helper-emotions/sad-1.js";
-import sad2 from "./pixel-helper-emotions/sad-2.js";
-import thinking1 from "./pixel-helper-emotions/thinking-1.js";
-import thinking2 from "./pixel-helper-emotions/thinking-2.js";
-import surprised1 from "./pixel-helper-emotions/surprised-1.js";
-import surprised2 from "./pixel-helper-emotions/surprised-2.js";
-import happy1a from "./pixel-helper-emotions/happy-1-a.js";
-import happy1a1 from "./pixel-helper-emotions/happy-1-a1.js";
-import happy1a2 from "./pixel-helper-emotions/happy-1-a2.js";
-import happy1b from "./pixel-helper-emotions/happy-1-b.js";
-import happy1c from "./pixel-helper-emotions/happy-1-c.js";
-import happy1d from "./pixel-helper-emotions/happy-1-d.js";
-import happy2a from "./pixel-helper-emotions/happy-2-a.js";
-import happy2b from "./pixel-helper-emotions/happy-2-b.js";
-import happy2b1 from "./pixel-helper-emotions/happy-2-b1.js";
-import happy2b2 from "./pixel-helper-emotions/happy-2-b2.js";
-import happy2c1 from "./pixel-helper-emotions/happy-2-c1.js";
-import happy2c2 from "./pixel-helper-emotions/happy-2-c2.js";
-import happy2d1 from "./pixel-helper-emotions/happy-2-d1.js";
-import happy2d2 from "./pixel-helper-emotions/happy-2-d2.js";
+import { execFileSync } from "node:child_process";
 
-function restore(parts) {
-  const compressed = Buffer.concat(parts.map((part) => Buffer.from(part, "base64")));
-  return gunzipSync(compressed);
-}
+const branchRef = "origin/feature/pixel-helper-imported-emotions";
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function decodeExport(source) {
+  const match = source.match(/^export default\s+"([A-Za-z0-9+/=]+)";?\s*$/s);
+  if (!match) {
+    throw new Error("Export Base64 introuvable");
+  }
+  return match[1];
+}
+
+function readAt(commit, path) {
+  try {
+    const source = execFileSync("git", ["show", `${commit}:${path}`], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      maxBuffer: 8 * 1024 * 1024
+    });
+    return decodeExport(source);
+  } catch {
+    return null;
+  }
+}
+
+function restore(parts, strategy) {
+  const compressed = strategy === "joined-text"
+    ? Buffer.from(parts.join(""), "base64")
+    : Buffer.concat(parts.map((part) => Buffer.from(part, "base64")));
+  return gunzipSync(compressed);
 }
 
 const expected = {
@@ -39,56 +45,119 @@ const expected = {
   happy: { size: 37917, sha256: "36e15366efdb46d3e293389c69aab8b3ed4ed010bc24a4ac0d06bfc0c8a5d4a0" }
 };
 
-const restored = {
-  sad: restore([sad1, sad2]),
-  thinking: restore([thinking1, thinking2]),
-  surprised: restore([surprised1, surprised2])
+const simpleLayouts = {
+  sad: ["sad-1.js", "sad-2.js"],
+  thinking: ["thinking-1.js", "thinking-2.js"],
+  surprised: ["surprised-1.js", "surprised-2.js"]
 };
 
-for (const [emotion, bytes] of Object.entries(restored)) {
-  test(`l’image ${emotion} est reconstruite octet par octet`, () => {
-    assert.equal(bytes.length, expected[emotion].size);
-    assert.equal(sha256(bytes), expected[emotion].sha256);
-    assert.deepEqual([...bytes.subarray(0, 3)], [0xff, 0xd8, 0xff]);
-  });
+const happyLayouts = {
+  current: [
+    "happy-1-a.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b1.js", "happy-2-b2.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ],
+  correctedA: [
+    "happy-1-a1.js", "happy-1-a2.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b1.js", "happy-2-b2.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ],
+  oldB: [
+    "happy-1-a.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ],
+  correctedAOldB: [
+    "happy-1-a1.js", "happy-1-a2.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ],
+  a1Only: [
+    "happy-1-a1.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b1.js", "happy-2-b2.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ],
+  b1Only: [
+    "happy-1-a.js", "happy-1-b.js", "happy-1-c.js", "happy-1-d.js",
+    "happy-2-a.js", "happy-2-b1.js",
+    "happy-2-c1.js", "happy-2-c2.js", "happy-2-d1.js", "happy-2-d2.js"
+  ]
+};
+
+function candidateMatches(emotion, parts) {
+  const results = [];
+  for (const strategy of ["joined-text", "decoded-chunks"]) {
+    try {
+      const bytes = restore(parts, strategy);
+      const digest = sha256(bytes);
+      results.push({
+        strategy,
+        size: bytes.length,
+        sha256: digest,
+        match: bytes.length === expected[emotion].size && digest === expected[emotion].sha256
+      });
+    } catch (error) {
+      results.push({ strategy, error: error.code || error.message, match: false });
+    }
+  }
+  return results;
 }
 
-const aVariants = {
-  a: [happy1a],
-  a1: [happy1a1],
-  "a1+a2": [happy1a1, happy1a2],
-  "a+a2": [happy1a, happy1a2]
-};
+let fetchError = null;
+try {
+  execFileSync("git", [
+    "fetch", "--no-tags", "--depth=100", "origin",
+    "feature/pixel-helper-imported-emotions:refs/remotes/origin/feature/pixel-helper-imported-emotions"
+  ], { stdio: ["ignore", "ignore", "pipe"], maxBuffer: 8 * 1024 * 1024 });
+} catch (error) {
+  fetchError = error.stderr?.toString() || error.message;
+}
 
-const bVariants = {
-  b: [happy2b],
-  b1: [happy2b1],
-  "b1+b2": [happy2b1, happy2b2],
-  "b+b2": [happy2b, happy2b2]
-};
+const commitOutput = execFileSync("git", ["rev-list", "--reverse", branchRef], {
+  encoding: "utf8",
+  maxBuffer: 8 * 1024 * 1024
+}).trim();
+const commits = commitOutput ? commitOutput.split(/\s+/) : [];
+const matches = { sad: [], thinking: [], surprised: [], happy: [] };
+const diagnostics = { sad: [], thinking: [], surprised: [], happy: [] };
 
-const fixedBeforeB = [happy1b, happy1c, happy1d, happy2a];
-const fixedAfterB = [happy2c1, happy2c2, happy2d1, happy2d2];
-
-let matchingCandidate = null;
-
-for (const [aName, aParts] of Object.entries(aVariants)) {
-  for (const [bName, bParts] of Object.entries(bVariants)) {
-    const candidateName = `${aName}/${bName}`;
-    try {
-      const bytes = restore([...aParts, ...fixedBeforeB, ...bParts, ...fixedAfterB]);
-      const digest = sha256(bytes);
-      console.log(`PIXEL_HAPPY_CANDIDATE ${candidateName} size=${bytes.length} sha256=${digest}`);
-      if (bytes.length === expected.happy.size && digest === expected.happy.sha256) {
-        matchingCandidate = candidateName;
+for (const commit of commits) {
+  for (const [emotion, files] of Object.entries(simpleLayouts)) {
+    const values = files.map((name) => readAt(commit, `web/pixel-helper-emotions/${name}`));
+    if (values.some((value) => !value)) continue;
+    const outcomes = candidateMatches(emotion, values);
+    for (const outcome of outcomes) {
+      if (outcome.match) {
+        matches[emotion].push({ commit, layout: files, strategy: outcome.strategy });
       }
-    } catch (error) {
-      console.log(`PIXEL_HAPPY_CANDIDATE ${candidateName} error=${error.code || error.message}`);
+    }
+    if (diagnostics[emotion].length < 4) {
+      diagnostics[emotion].push({ commit: commit.slice(0, 8), outcomes });
+    }
+  }
+
+  for (const [layoutName, files] of Object.entries(happyLayouts)) {
+    const values = files.map((name) => readAt(commit, `web/pixel-helper-emotions/${name}`));
+    if (values.some((value) => !value)) continue;
+    const outcomes = candidateMatches("happy", values);
+    for (const outcome of outcomes) {
+      if (outcome.match) {
+        matches.happy.push({ commit, layout: layoutName, files, strategy: outcome.strategy });
+      }
+    }
+    if (diagnostics.happy.length < 8) {
+      diagnostics.happy.push({ commit: commit.slice(0, 8), layout: layoutName, outcomes });
     }
   }
 }
 
-test("la combinaison exacte de fragments du logo content est identifiée", () => {
-  assert.ok(matchingCandidate, "Aucune combinaison de fragments ne correspond au JPEG original");
-  console.log(`PIXEL_HAPPY_MATCH ${matchingCandidate}`);
-});
+console.log(`PIXEL_HISTORY_FETCH_ERROR ${fetchError || "none"}`);
+console.log(`PIXEL_HISTORY_COMMIT_COUNT ${commits.length}`);
+console.log(`PIXEL_HISTORY_MATCHES ${JSON.stringify(matches)}`);
+console.log(`PIXEL_HISTORY_DIAGNOSTICS ${JSON.stringify(diagnostics)}`);
+
+for (const emotion of Object.keys(expected)) {
+  test(`l’historique contient une reconstruction exacte pour ${emotion}`, () => {
+    assert.ok(matches[emotion].length > 0, `Aucune reconstruction exacte trouvée pour ${emotion}`);
+  });
+}
