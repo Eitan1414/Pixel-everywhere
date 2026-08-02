@@ -14,11 +14,12 @@ test("le profil membre staff est préparé avant main.js", () => {
   assert.match(source, /\/conversations\/staff\/member-profile/);
 });
 
-test("la session membre liée est stockée et partagée avec l’interface", () => {
+test("la session membre liée est stockée et partagée sans recharger l’application", () => {
   assert.match(source, /pixel-member-token/);
   assert.match(source, /pixel-member-session-ready/);
   assert.match(source, /pixel-staff-member-profile-ready/);
-  assert.match(source, /window\.location\.reload\(\)/);
+  assert.doesNotMatch(source, /window\.location\.reload\(\)/);
+  assert.doesNotMatch(source, /reloadAfterChange/);
 });
 
 test("Ma messagerie reconnaît le profil membre lié", () => {
@@ -30,5 +31,5 @@ test("Ma messagerie reconnaît le profil membre lié", () => {
 test("un serveur sans routes MP affiche une explication précise", () => {
   assert.match(source, /\/member-direct\/members/);
   assert.match(source, /response\.status === 404/);
-  assert.match(source, /serveur Termux à jour vers la 0\.31\.19/);
+  assert.match(source, /serveur Termux à jour vers la 0\.31\.20/);
 });
