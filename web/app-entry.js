@@ -42,6 +42,8 @@ const moduleLoaders = Object.freeze({
   accountDeletion: () => import("./account-deletion.js"),
   memberConversationsStyles: () => import("./member-conversations.css"),
   memberConversations: () => import("./member-conversations.js"),
+  communityMessagingStyles: () => import("./community-messaging.css"),
+  communityMessaging: () => import("./community-messaging.js"),
   pixelHelperStyles: () => import("./pixel-helper.css"),
   pixelHelper: () => import("./pixel-helper.js"),
   pixelHelperDownload: () => import("./pixel-helper-download.js"),
@@ -131,11 +133,13 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.accountDeletionStyles, "styles de suppression du compte");
   await loadOptional(moduleLoaders.accountDeletion, "suppression du compte");
   await loadOptional(moduleLoaders.memberConversationsStyles, "styles de la messagerie privée");
+  await loadOptional(moduleLoaders.communityMessagingStyles, "styles du chat public et des MP");
   await loadOptional(moduleLoaders.pixelHelperStyles, "styles de Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperInteractiveStyles, "styles interactifs de Pixel Helper");
 
   await loadCritical(moduleLoaders.main, "Interface principale");
   await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
+  await loadOptional(moduleLoaders.communityMessaging, "chat public et MP entre membres");
   await loadOptional(moduleLoaders.pixelHelper, "guides Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperDownload, "téléchargement guidé Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperInteractive, "tutoriel interactif Pixel Helper");
