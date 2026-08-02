@@ -202,12 +202,18 @@ async function saveWindowsAwareSettings(event) {
 
 async function decorateWindowsUpdateDialog() {
   if (!(await windowsRuntime())) return;
+
+  const instructionText = "L’installateur Windows sera téléchargé puis lancé automatiquement. Pixel Everywhere se fermera pendant l’installation.";
   const instructions = document.querySelector("#appUpdateInstructions");
-  if (instructions) {
-    instructions.textContent = "L’installateur Windows sera téléchargé puis lancé automatiquement. Pixel Everywhere se fermera pendant l’installation.";
+  if (instructions && instructions.textContent !== instructionText) {
+    instructions.textContent = instructionText;
   }
+
+  const buttonText = "Installer automatiquement";
   const button = document.querySelector("#downloadAppUpdateButton");
-  if (button) button.textContent = "Installer automatiquement";
+  if (button && button.textContent !== buttonText) {
+    button.textContent = buttonText;
+  }
 }
 
 document.addEventListener("submit", saveWindowsAwareSettings, true);
