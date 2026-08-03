@@ -17,26 +17,33 @@ export function createToken(user, kind = "staff") {
   );
 }
 
-function readToken(req, res, kind) {
+function tokenFromRequest(req) {
   const header = req.get("authorization") || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7) : "";
+  return header.startsWith("Bearer ") ? header.slice(7) : "";
+}
 
+function verifyToken(token, res) {
   if (!token) {
     res.status(401).json({ error: "Connexion requise." });
     return null;
   }
 
   try {
-    const payload = jwt.verify(token, secret, { issuer: "pixel-everywhere" });
-    if (payload.kind !== kind) {
-      res.status(401).json({ error: "Cette session ne correspond pas à cet espace." });
-      return null;
-    }
-    return payload;
+    return jwt.verify(token, secret, { issuer: "pixel-everywhere" });
   } catch {
     res.status(401).json({ error: "Session expirée ou invalide." });
     return null;
   }
+}
+
+function readToken(req, res, kind) {
+  const payload = verifyToken(tokenFromRequest(req), res);
+  if (!payload) return null;
+  if (payload.kind !== kind) {
+    res.status(401).json({ error: "Cette session ne correspond pas à cet espace." });
+    return null;
+  }
+  return payload;
 }
 
 export function authenticate(req, res, next) {
@@ -50,6 +57,18 @@ export function authenticateMember(req, res, next) {
   const payload = readToken(req, res, "member");
   if (!payload) return;
   req.member = payload;
+  next();
+}
+
+export function authenticateAny(req, res, next) {
+  const payload = verifyToken(tokenFromRequest(req), res);
+  if (!payload) return;
+  if (payload.kind !== "member" && payload.kind !== "staff") {
+    return res.status(401).json({ error: "Cette session ne correspond à aucun compte Pixel Everywhere." });
+  }
+  req.identity = payload;
+  if (payload.kind === "staff") req.staff = payload;
+  else req.member = payload;
   next();
 }
 
