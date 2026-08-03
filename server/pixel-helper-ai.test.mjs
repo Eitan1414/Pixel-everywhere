@@ -13,7 +13,7 @@ const source = await readFile(new URL("./pixel-helper-ai.mjs", import.meta.url),
 const start = await readFile(new URL("./start.mjs", import.meta.url), "utf8");
 const auth = await readFile(new URL("./auth.mjs", import.meta.url), "utf8");
 
-test("Pixel Guide reçoit les fonctions réelles et le rôle vérifié", () => {
+test("Pixel Guide reçoit les fonctions réelles et uniquement le rôle vérifié", () => {
   const instructions = buildPixelHelperInstructions({
     bot: "guide",
     role: "moderator",
@@ -23,8 +23,10 @@ test("Pixel Guide reçoit les fonctions réelles et le rôle vérifié", () => {
   assert.match(instructions, /Pixel Guide/);
   assert.match(instructions, /# Chat public/);
   assert.match(instructions, /MP entre membres/);
-  assert.match(instructions, /rôle vérifié est moderator/);
+  assert.match(instructions, /rôle vérifié du compte connecté est moderator/);
   assert.match(instructions, /community-chat/);
+  assert.doesNotMatch(instructions, /Kamiko/);
+  assert.match(instructions, /Aucun pseudo ni identifiant personnel/);
 });
 
 test("Pixel Guard adapte son analyse au rôle sans prétendre sanctionner", () => {
@@ -40,6 +42,7 @@ test("Pixel Guard adapte son analyse au rôle sans prétendre sanctionner", () =
   assert.match(instructions, /action proportionnée/);
   assert.match(instructions, /ne prétends jamais avoir supprimé/);
   assert.match(instructions, /humain doit vérifier/);
+  assert.doesNotMatch(instructions, /Eitan/);
 });
 
 test("l’historique est nettoyé, limité et conserve seulement user et assistant", () => {
