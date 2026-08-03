@@ -1,7 +1,8 @@
 import rateLimit from "express-rate-limit";
 
 const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const DEFAULT_MODEL = "gemini-flash-lite-latest";
+const MODEL_CACHE_MS = 10 * 60 * 1000;
 const ALLOWED_BOTS = new Set(["guide", "moderation"]);
 const ALLOWED_HISTORY_ROLES = new Set(["user", "assistant"]);
 const SAFETY_CATEGORIES = [
@@ -10,6 +11,8 @@ const SAFETY_CATEGORIES = [
   "HARM_CATEGORY_SEXUALLY_EXPLICIT",
   "HARM_CATEGORY_DANGEROUS_CONTENT"
 ];
+
+let cachedModel = null;
 
 const APP_KNOWLEDGE = `
 Pixel Everywhere est l’application communautaire officielle du serveur Discord Pixel Difficult Drawer (PDD).
@@ -103,6 +106,28 @@ export function buildGeminiContents(history, message) {
   ];
 }
 
+export function selectGeminiModel(availableModels, requestedModel = "") {
+  const available = [...new Set((Array.isArray(availableModels) ? availableModels : [])
+    .map(normalizeGeminiModel)
+    .filter((name) => name.startsWith("gemini-") && !/(embedding|imagen|veo|tts|live|audio|image)/i.test(name))
+  )];
+  const requested = requestedModel ? normalizeGeminiModel(requestedModel) : "";
+  if (requested && available.includes(requested)) return requested;
+
+  const preferred = [
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
+  for (const model of preferred) {
+    if (available.includes(model)) return model;
+  }
+  return available.find((name) => /flash-lite/i.test(name)) ||
+    available.find((name) => /flash/i.test(name)) ||
+    available[0] || "";
+}
+
 function safetySettings(bot) {
   const threshold = bot === "moderation" ? "BLOCK_ONLY_HIGH" : "BLOCK_MEDIUM_AND_ABOVE";
   return SAFETY_CATEGORIES.map((category) => ({ category, threshold }));
@@ -116,9 +141,7 @@ function responseSafetySignals(payload) {
       signals.push(String(candidate.finishReason));
     }
     for (const rating of Array.isArray(candidate?.safetyRatings) ? candidate.safetyRatings : []) {
-      if (["HIGH", "MEDIUM"].includes(rating?.probability)) {
-        signals.push(String(rating.category || rating.probability));
-      }
+      if (["HIGH", "MEDIUM"].includes(rating?.probability)) signals.push(String(rating.category || rating.probability));
     }
   }
   return [...new Set(signals)];
@@ -131,23 +154,19 @@ function isSafetyBlocked(payload) {
     ));
 }
 
-async function geminiRequest({ model, body, apiKey, timeoutMs = 22000 }) {
+async function fetchGeminiJson(url, { apiKey, method = "GET", body, timeoutMs = 22000 } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const normalizedModel = normalizeGeminiModel(model);
   try {
-    const response = await fetch(
-      `${GEMINI_API_BASE}/models/${encodeURIComponent(normalizedModel)}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
-        },
-        body: JSON.stringify(body),
-        signal: controller.signal
-      }
-    );
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal
+    });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = new Error(payload?.error?.message || `Gemini HTTP ${response.status}`);
@@ -168,6 +187,42 @@ async function geminiRequest({ model, body, apiKey, timeoutMs = 22000 }) {
   }
 }
 
+async function listAvailableGeminiModels(apiKey) {
+  const payload = await fetchGeminiJson(`${GEMINI_API_BASE}/models?pageSize=1000`, {
+    apiKey,
+    timeoutMs: 12000
+  });
+  return (Array.isArray(payload?.models) ? payload.models : [])
+    .filter((model) => Array.isArray(model?.supportedGenerationMethods) && model.supportedGenerationMethods.includes("generateContent"))
+    .map((model) => normalizeGeminiModel(model.name));
+}
+
+async function resolveGeminiModel(apiKey, requestedModel = "", excludedModels = []) {
+  const requested = requestedModel ? normalizeGeminiModel(requestedModel) : "";
+  const now = Date.now();
+  if (cachedModel && cachedModel.apiKey === apiKey && cachedModel.requested === requested && cachedModel.expiresAt > now && !excludedModels.includes(cachedModel.model)) {
+    return cachedModel.model;
+  }
+
+  const available = (await listAvailableGeminiModels(apiKey)).filter((model) => !excludedModels.includes(model));
+  const selected = selectGeminiModel(available, requested);
+  if (!selected) {
+    const error = new Error("Aucun modèle Gemini compatible avec generateContent n’est disponible pour cette clé.");
+    error.code = "AI_NO_COMPATIBLE_MODEL";
+    throw error;
+  }
+  cachedModel = { apiKey, requested, model: selected, expiresAt: now + MODEL_CACHE_MS };
+  return selected;
+}
+
+async function geminiRequest({ model, body, apiKey, timeoutMs = 22000 }) {
+  const normalizedModel = normalizeGeminiModel(model);
+  return fetchGeminiJson(
+    `${GEMINI_API_BASE}/models/${encodeURIComponent(normalizedModel)}:generateContent`,
+    { apiKey, method: "POST", body, timeoutMs }
+  );
+}
+
 function currentIdentity(req, db) {
   if (req.identity?.kind === "staff") {
     const user = db.prepare(`
@@ -178,26 +233,20 @@ function currentIdentity(req, db) {
     if (!user || !user.active || user.must_change_password) return null;
     return { id: user.id, role: user.role, kind: "staff" };
   }
-
-  const member = db.prepare(`
-    SELECT id
-    FROM member_users
-    WHERE id = ?
-  `).get(Number(req.identity?.sub));
+  const member = db.prepare(`SELECT id FROM member_users WHERE id = ?`).get(Number(req.identity?.sub));
   if (!member) return null;
   return { id: member.id, role: "member", kind: "member" };
 }
 
 function mapAiError(error) {
-  if (error?.code === "AI_TIMEOUT") {
-    return { status: 504, code: "AI_TIMEOUT", message: error.message };
-  }
+  if (error?.code === "AI_TIMEOUT") return { status: 504, code: "AI_TIMEOUT", message: error.message };
+  if (error?.code === "AI_NO_COMPATIBLE_MODEL") return { status: 503, code: error.code, message: error.message };
   const message = String(error?.message || "");
   if ([400, 401, 403].includes(error?.status) && /api.?key|key.*invalid|permission/i.test(message)) {
     return { status: 503, code: "AI_KEY_INVALID", message: "La clé Gemini du serveur est absente, invalide ou sans autorisation." };
   }
   if (error?.status === 404 || error?.providerCode === "NOT_FOUND") {
-    return { status: 503, code: "AI_MODEL_INVALID", message: "Le modèle Gemini configuré n’existe pas ou n’est plus disponible." };
+    return { status: 503, code: "AI_MODEL_INVALID", message: "Aucun modèle Gemini utilisable n’a été trouvé pour cette clé." };
   }
   if (error?.status === 429 || error?.providerCode === "RESOURCE_EXHAUSTED") {
     return { status: 429, code: "AI_BUSY", message: "Le quota Gemini est atteint pour le moment. Réessaie plus tard." };
@@ -218,55 +267,47 @@ export function registerPixelHelperAiRoutes({ app, db, authenticateAny }) {
     res.json({
       aiConfigured: Boolean(process.env.GEMINI_API_KEY),
       provider: "Google Gemini",
-      model: normalizeGeminiModel(process.env.GEMINI_MODEL)
+      model: cachedModel?.model || "détection automatique"
     });
   });
 
   app.post("/api/pixel-helper/ask", aiLimiter, authenticateAny, async (req, res) => {
     const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
-    if (!apiKey) {
-      return res.status(503).json({
-        error: "Gemini n’est pas encore configuré sur le serveur Termux.",
-        code: "AI_NOT_CONFIGURED"
-      });
-    }
+    if (!apiKey) return res.status(503).json({ error: "Gemini n’est pas encore configuré sur le serveur Termux.", code: "AI_NOT_CONFIGURED" });
 
     const identity = currentIdentity(req, db);
-    if (!identity) {
-      return res.status(403).json({ error: "Ce compte n’est pas autorisé à utiliser l’IA.", code: "AI_ACCOUNT_INACTIVE" });
-    }
+    if (!identity) return res.status(403).json({ error: "Ce compte n’est pas autorisé à utiliser l’IA.", code: "AI_ACCOUNT_INACTIVE" });
 
     const bot = String(req.body?.bot || "");
     const message = String(req.body?.message || "").trim();
     const page = String(req.body?.page || "").trim().slice(0, 80);
-    if (!ALLOWED_BOTS.has(bot)) {
-      return res.status(400).json({ error: "Assistant Pixel Helper inconnu." });
-    }
-    if (message.length < 2 || message.length > 1200) {
-      return res.status(400).json({ error: "La question doit contenir entre 2 et 1 200 caractères." });
-    }
+    if (!ALLOWED_BOTS.has(bot)) return res.status(400).json({ error: "Assistant Pixel Helper inconnu." });
+    if (message.length < 2 || message.length > 1200) return res.status(400).json({ error: "La question doit contenir entre 2 et 1 200 caractères." });
 
-    const model = normalizeGeminiModel(process.env.GEMINI_MODEL);
+    const requestedModel = String(process.env.GEMINI_MODEL || "").trim();
     try {
       const history = normalizeAiHistory(req.body?.history);
-      const instructions = buildPixelHelperInstructions({
-        bot,
-        role: identity.role,
-        page
-      });
-      const response = await geminiRequest({
-        model,
-        apiKey,
-        body: {
-          systemInstruction: { parts: [{ text: instructions }] },
-          contents: buildGeminiContents(history, message),
-          generationConfig: {
-            temperature: bot === "moderation" ? 0.2 : 0.35,
-            maxOutputTokens: 500
-          },
-          safetySettings: safetySettings(bot)
-        }
-      });
+      const instructions = buildPixelHelperInstructions({ bot, role: identity.role, page });
+      const body = {
+        systemInstruction: { parts: [{ text: instructions }] },
+        contents: buildGeminiContents(history, message),
+        generationConfig: {
+          temperature: bot === "moderation" ? 0.2 : 0.35,
+          maxOutputTokens: 500
+        },
+        safetySettings: safetySettings(bot)
+      };
+
+      let model = await resolveGeminiModel(apiKey, requestedModel);
+      let response;
+      try {
+        response = await geminiRequest({ model, apiKey, body });
+      } catch (error) {
+        if (error?.status !== 404 && error?.providerCode !== "NOT_FOUND") throw error;
+        cachedModel = null;
+        model = await resolveGeminiModel(apiKey, requestedModel, [model]);
+        response = await geminiRequest({ model, apiKey, body });
+      }
 
       const signals = responseSafetySignals(response);
       if (isSafetyBlocked(response)) {
