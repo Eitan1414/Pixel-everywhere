@@ -3,6 +3,7 @@ const helperBotState = {
   installed: false,
   busy: false,
   aiConfigured: null,
+  provider: "",
   model: "",
   histories: {
     guide: [],
@@ -91,12 +92,14 @@ async function pixelHelperRequest(path, options = {}) {
   return data;
 }
 
-function updateAiBadge(root, state, label, model = "") {
+function updateAiBadge(root, state, label, model = "", provider = "") {
   const badge = root?.querySelector(".pixel-helper-ai-status");
   if (!badge) return;
   badge.className = `pixel-helper-ai-status ${state}`;
   badge.textContent = label;
-  badge.title = model ? `Modèle : ${model}` : label;
+  badge.title = model
+    ? `${provider || "IA"} — Modèle : ${model}`
+    : label;
 }
 
 async function loadAiStatus(root) {
@@ -104,16 +107,19 @@ async function loadAiStatus(root) {
   try {
     const status = await pixelHelperRequest("/pixel-helper/status", { method: "GET" });
     helperBotState.aiConfigured = Boolean(status.aiConfigured);
+    helperBotState.provider = String(status.provider || "");
     helperBotState.model = String(status.model || "");
+    const providerName = helperBotState.provider.includes("Gemini") ? "Gemini" : "IA";
     updateAiBadge(
       root,
       status.aiConfigured ? "online" : "offline",
-      status.aiConfigured ? "IA en ligne" : "IA non configurée",
-      status.model
+      status.aiConfigured ? `${providerName} en ligne` : `${providerName} non configuré`,
+      status.model,
+      status.provider
     );
   } catch {
     helperBotState.aiConfigured = false;
-    updateAiBadge(root, "offline", "Serveur IA hors ligne");
+    updateAiBadge(root, "offline", "Serveur Gemini hors ligne");
   }
 }
 
@@ -252,8 +258,8 @@ function switchBot(root, bot) {
       log,
       "bot",
       bot === "moderation"
-        ? `Je suis Pixel Guard. Quand l’IA du serveur est configurée, j’analyse réellement le contexte et j’adapte mes conseils à ton rôle ${helperRoleLabel()}. Je ne sanctionne personne automatiquement.`
-        : "Je suis Pixel Guide. Quand l’IA du serveur est configurée, je comprends les questions libres et je garde le contexte de notre conversation au lieu de choisir une réponse prédéfinie.",
+        ? `Je suis Pixel Guard. Quand Gemini est configuré, j’analyse réellement le contexte et j’adapte mes conseils à ton rôle ${helperRoleLabel()}. Je ne sanctionne personne automatiquement.`
+        : "Je suis Pixel Guide. Quand Gemini est configuré, je comprends les questions libres et je garde le contexte de notre conversation au lieu de choisir une réponse prédéfinie.",
       { bot }
     );
   }
@@ -298,7 +304,7 @@ async function submitBotQuestion(root, forcedQuestion = "") {
   }
 
   setBotBusy(root, true);
-  const pending = appendBotMessage(log, "bot", `${botDisplayName(bot)} analyse ta demande…`, { bot, pending: true });
+  const pending = appendBotMessage(log, "bot", `${botDisplayName(bot)} analyse ta demande avec Gemini…`, { bot, pending: true });
   const previousHistory = helperBotState.histories[bot].slice(-10);
 
   try {
@@ -314,26 +320,27 @@ async function submitBotQuestion(root, forcedQuestion = "") {
     pending.remove();
     const answer = String(data.answer || "").trim();
     const shortcut = suggestedAction(question, bot);
-    appendBotMessage(log, "bot", answer || "L’IA a renvoyé une réponse vide.", { bot, ...shortcut });
+    appendBotMessage(log, "bot", answer || "Gemini a renvoyé une réponse vide.", { bot, ...shortcut });
     helperBotState.histories[bot].push(
       { role: "user", content: question },
       { role: "assistant", content: answer }
     );
     helperBotState.histories[bot] = helperBotState.histories[bot].slice(-10);
     helperBotState.aiConfigured = true;
+    helperBotState.provider = String(data.provider || helperBotState.provider || "Google Gemini");
     helperBotState.model = String(data.model || helperBotState.model || "");
-    updateAiBadge(root, "online", "IA en ligne", helperBotState.model);
+    updateAiBadge(root, "online", "Gemini en ligne", helperBotState.model, helperBotState.provider);
   } catch (error) {
     pending.remove();
     let message = error.message;
     if (error.code === "AI_NOT_CONFIGURED") {
-      message = "Pixel Guide et Pixel Guard sont prêts à devenir de vraies IA, mais la clé OPENAI_API_KEY n’est pas encore ajoutée au serveur Termux.";
+      message = "Pixel Guide et Pixel Guard sont prêts, mais la clé GEMINI_API_KEY n’est pas encore ajoutée au serveur Termux.";
       helperBotState.aiConfigured = false;
-      updateAiBadge(root, "offline", "IA non configurée");
+      updateAiBadge(root, "offline", "Gemini non configuré");
     } else if (error.status === 401) {
-      message = "Ta session a expiré. Reconnecte ton compte pour utiliser la vraie IA.";
+      message = "Ta session a expiré. Reconnecte ton compte pour utiliser Gemini.";
     } else if (error.code === "SERVER_OFFLINE") {
-      updateAiBadge(root, "offline", "Serveur IA hors ligne");
+      updateAiBadge(root, "offline", "Serveur Gemini hors ligne");
     }
     appendBotMessage(log, "bot", message, { bot });
   } finally {
@@ -350,7 +357,7 @@ function buildBotsSection() {
     <header class="pixel-helper-bots-heading">
       <div>
         <p class="eyebrow">Assistants IA Pixel Helper</p>
-        <h3>Guide et modération intelligents</h3>
+        <h3>Guide et modération avec Gemini</h3>
       </div>
       <div class="pixel-helper-bot-badges">
         <span class="pixel-helper-ai-status checking">IA : vérification…</span>
@@ -361,7 +368,7 @@ function buildBotsSection() {
       <button class="active" type="button" data-helper-bot="guide">Pixel Guide IA</button>
       <button type="button" data-helper-bot="moderation">Pixel Guard IA</button>
     </div>
-    <p class="pixel-helper-ai-disclosure">Les réponses sont générées en ligne et peuvent se tromper. Pixel Guard conseille le staff, mais ne sanctionne jamais automatiquement.</p>
+    <p class="pixel-helper-ai-disclosure">Les questions sont envoyées en ligne à Google Gemini et les réponses peuvent se tromper. N’envoie aucune information privée. Pixel Guard conseille le staff, mais ne sanctionne jamais automatiquement.</p>
     <div class="pixel-helper-bot-log" aria-live="polite"></div>
     <div class="pixel-helper-bot-prompts"></div>
     <form class="pixel-helper-bot-form">
@@ -413,5 +420,6 @@ window.PixelHelperBots = Object.freeze({
     window.setTimeout(() => document.querySelector('[data-helper-bot="moderation"]')?.click(), 0);
   },
   isAiConfigured: () => helperBotState.aiConfigured,
+  provider: () => helperBotState.provider,
   model: () => helperBotState.model
 });
