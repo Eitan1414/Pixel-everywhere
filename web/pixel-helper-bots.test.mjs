@@ -6,12 +6,13 @@ const source = await readFile(new URL("./pixel-helper-bots.js", import.meta.url)
 const styles = await readFile(new URL("./pixel-helper-bots.css", import.meta.url), "utf8");
 const entry = await readFile(new URL("./app-entry.js", import.meta.url), "utf8");
 
-test("Pixel Helper contient Pixel Guide IA et Pixel Guard IA", () => {
+test("Pixel Helper contient Pixel Guide IA et Pixel Guard IA avec Gemini", () => {
   assert.match(source, /Pixel Guide IA/);
   assert.match(source, /Pixel Guard IA/);
   assert.match(source, /data-helper-bot="guide"/);
   assert.match(source, /data-helper-bot="moderation"/);
-  assert.match(source, /Les réponses sont générées en ligne/);
+  assert.match(source, /Google Gemini/);
+  assert.match(source, /N’envoie aucune information privée/);
 });
 
 test("les assistants appellent la route IA au lieu d’une table de réponses", () => {
@@ -23,10 +24,12 @@ test("les assistants appellent la route IA au lieu d’une table de réponses", 
   assert.doesNotMatch(source, /answerFromActiveBot/);
 });
 
-test("l’interface indique clairement si la vraie IA est configurée", () => {
+test("l’interface indique clairement si Gemini est configuré", () => {
   assert.match(source, /\/pixel-helper\/status/);
-  assert.match(source, /IA en ligne/);
-  assert.match(source, /IA non configurée/);
+  assert.match(source, /Gemini en ligne/);
+  assert.match(source, /Gemini non configuré/);
+  assert.match(source, /GEMINI_API_KEY/);
+  assert.doesNotMatch(source, /OPENAI_API_KEY/);
   assert.match(styles, /pixel-helper-ai-status\.online/);
   assert.match(styles, /pixel-helper-ai-status\.offline/);
   assert.match(styles, /pixel-helper-bot-message\.pending/);
