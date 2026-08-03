@@ -1,0 +1,168 @@
+/* La barre reste utilisable même avec les catégories ajoutées dynamiquement. */
+.bottom-nav {
+  display: flex !important;
+  justify-content: stretch;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.bottom-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.bottom-nav > button {
+  flex: 1 0 56px;
+  min-width: 56px;
+}
+
+#communityChatNavButton > span {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  margin-inline: auto;
+  place-items: center;
+  border-radius: 10px;
+  color: #071012;
+  font-size: 1.12rem;
+  font-weight: 950;
+  background: linear-gradient(145deg, #12d6df, #72f0c7);
+  box-shadow: 0 7px 18px rgba(18, 214, 223, 0.24);
+}
+
+#communityChatNavButton.active > span {
+  box-shadow: 0 0 0 3px rgba(18, 214, 223, 0.18), 0 8px 20px rgba(18, 214, 223, 0.28);
+}
+
+.community-chat-form-enhanced {
+  position: relative;
+}
+
+.community-mention {
+  display: inline;
+  padding: 0.08em 0.35em;
+  border: 1px solid transparent;
+  border-radius: 0.42em;
+  font-weight: 850;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Couleurs demandées : Admin jaune, Modérateur rouge, Membre vert. */
+.community-mention-admin,
+.community-mention-option-admin > span {
+  border-color: rgba(255, 211, 75, 0.45);
+  color: #ffe07a;
+  background: rgba(255, 205, 55, 0.16);
+}
+
+.community-mention-moderator,
+.community-mention-option-moderator > span {
+  border-color: rgba(255, 82, 102, 0.45);
+  color: #ff8b9a;
+  background: rgba(255, 66, 88, 0.16);
+}
+
+.community-mention-member,
+.community-mention-option-member > span {
+  border-color: rgba(72, 214, 137, 0.45);
+  color: #79e7a9;
+  background: rgba(54, 197, 119, 0.15);
+}
+
+.community-chat-message.mentioned-me {
+  border-color: rgba(255, 211, 75, 0.58);
+  box-shadow: 0 0 0 2px rgba(255, 211, 75, 0.09), 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+.community-mention-suggestions {
+  grid-column: 1 / -1;
+  display: grid;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0.42rem;
+  border: 1px solid rgba(18, 214, 223, 0.25);
+  border-radius: 0.95rem;
+  background: rgba(8, 12, 18, 0.98);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.42);
+}
+
+.community-mention-suggestions[hidden] {
+  display: none !important;
+}
+
+.community-mention-option {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, auto) 1fr;
+  gap: 0.65rem;
+  align-items: center;
+  padding: 0.58rem 0.65rem;
+  border: 0;
+  border-radius: 0.7rem;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.community-mention-option:hover,
+.community-mention-option.active {
+  background: rgba(18, 214, 223, 0.09);
+}
+
+.community-mention-option > span {
+  justify-self: start;
+  padding: 0.18rem 0.48rem;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  font-weight: 900;
+}
+
+.community-mention-option > small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.community-moderation-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0.58rem 0.72rem;
+  border: 1px solid rgba(18, 214, 223, 0.18);
+  border-radius: 0.78rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  background: rgba(18, 214, 223, 0.045);
+}
+
+.community-moderation-hint.safe {
+  border-color: rgba(84, 214, 139, 0.24);
+  color: #84e8af;
+  background: rgba(84, 214, 139, 0.065);
+}
+
+.community-moderation-hint.warning {
+  border-color: rgba(255, 82, 102, 0.3);
+  color: #ff9ba7;
+  background: rgba(255, 82, 102, 0.075);
+}
+
+@media (max-width: 560px) {
+  .bottom-nav > button {
+    flex-basis: 54px;
+    min-width: 54px;
+    padding-inline: 4px !important;
+  }
+
+  .bottom-nav > button small {
+    font-size: 0.61rem;
+  }
+
+  .community-mention-option {
+    grid-template-columns: 1fr;
+    gap: 0.28rem;
+  }
+}
