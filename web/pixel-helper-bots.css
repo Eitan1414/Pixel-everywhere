@@ -1,3 +1,31 @@
+/* Les deux assistants flottants restent visibles sans se superposer. */
+#pixelGuideButton {
+  right: 14px !important;
+  bottom: calc(106px + env(safe-area-inset-bottom)) !important;
+  display: inline-flex !important;
+}
+
+#pixelHelperGuideButton {
+  right: 14px !important;
+  bottom: calc(172px + env(safe-area-inset-bottom)) !important;
+  display: inline-flex !important;
+}
+
+@media (min-width: 900px) {
+  #pixelGuideButton,
+  #pixelHelperGuideButton {
+    right: max(34px, calc((100vw - 1180px) / 2 + 34px)) !important;
+  }
+
+  #pixelGuideButton {
+    bottom: 108px !important;
+  }
+
+  #pixelHelperGuideButton {
+    bottom: 176px !important;
+  }
+}
+
 .pixel-helper-bots {
   display: grid;
   gap: 12px;
