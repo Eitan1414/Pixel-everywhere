@@ -1,10 +1,15 @@
 import rateLimit from "express-rate-limit";
-import { randomUUID } from "node:crypto";
 
-const OPENAI_API_BASE = "https://api.openai.com/v1";
-const DEFAULT_MODEL = "gpt-5-mini";
+const GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta";
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
 const ALLOWED_BOTS = new Set(["guide", "moderation"]);
 const ALLOWED_HISTORY_ROLES = new Set(["user", "assistant"]);
+const SAFETY_CATEGORIES = [
+  "HARM_CATEGORY_HARASSMENT",
+  "HARM_CATEGORY_HATE_SPEECH",
+  "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+  "HARM_CATEGORY_DANGEROUS_CONTENT"
+];
 
 const APP_KNOWLEDGE = `
 Pixel Everywhere est l’application communautaire officielle du serveur Discord Pixel Difficult Drawer (PDD).
@@ -33,19 +38,19 @@ export function normalizeAiHistory(history) {
     .slice(-10);
 }
 
-export function buildPixelHelperInstructions({ bot, role, username, page, moderationCategories = [] }) {
+export function buildPixelHelperInstructions({ bot, role, username, page, safetySignals = [] }) {
   const identity = `L’utilisateur connecté est ${username || "inconnu"} et son rôle vérifié est ${role}.`;
   const location = page ? `La page actuellement ouverte est ${page}.` : "La page actuelle n’est pas connue.";
-  const moderationContext = moderationCategories.length
-    ? `Le classificateur de sécurité a signalé ces catégories dans la demande : ${moderationCategories.join(", ")}. Ne répète pas les passages choquants et réponds uniquement de façon protectrice.`
-    : "Aucune catégorie de risque particulière n’a été signalée dans la demande.";
+  const safetyContext = safetySignals.length
+    ? `Les filtres de sécurité Gemini ont signalé ces catégories : ${safetySignals.join(", ")}. Ne répète pas de contenu choquant et réponds uniquement de façon protectrice.`
+    : "Aucun signal de sécurité particulier n’a été fourni.";
 
   if (bot === "moderation") {
     return `Tu es Pixel Guard, une véritable IA d’assistance à la modération intégrée à Pixel Everywhere.
 Tu aides les membres, modérateurs et administrateurs à comprendre une situation communautaire et à choisir une réaction prudente.
 ${identity}
 ${location}
-${moderationContext}
+${safetyContext}
 Règles obligatoires :
 - Réponds en français, avec un ton calme, humain et adapté à l’âge d’un public communautaire.
 - Analyse le contexte au lieu d’appliquer une réponse automatique par mot-clé.
@@ -75,54 +80,85 @@ Réponds en 2 à 6 phrases, sans markdown compliqué.`;
 }
 
 export function extractResponseText(payload) {
-  if (typeof payload?.output_text === "string" && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
   const parts = [];
-  for (const item of Array.isArray(payload?.output) ? payload.output : []) {
-    for (const content of Array.isArray(item?.content) ? item.content : []) {
-      if ((content?.type === "output_text" || content?.type === "text") && typeof content.text === "string") {
-        parts.push(content.text);
-      }
+  for (const candidate of Array.isArray(payload?.candidates) ? payload.candidates : []) {
+    for (const part of Array.isArray(candidate?.content?.parts) ? candidate.content.parts : []) {
+      if (typeof part?.text === "string") parts.push(part.text);
     }
   }
   return parts.join("\n").trim();
 }
 
-function categoriesFlagged(moderation) {
-  const result = moderation?.results?.[0];
-  if (!result?.categories) return [];
-  return Object.entries(result.categories)
-    .filter(([, flagged]) => Boolean(flagged))
-    .map(([category]) => category);
+export function normalizeGeminiModel(value) {
+  return String(value || DEFAULT_MODEL).trim().replace(/^models\//, "") || DEFAULT_MODEL;
 }
 
-async function openAiRequest(path, body, apiKey, timeoutMs = 22000) {
+export function buildGeminiContents(history, message) {
+  return [
+    ...normalizeAiHistory(history).map((item) => ({
+      role: item.role === "assistant" ? "model" : "user",
+      parts: [{ text: item.content }]
+    })),
+    { role: "user", parts: [{ text: message }] }
+  ];
+}
+
+function safetySettings(bot) {
+  const threshold = bot === "moderation" ? "BLOCK_ONLY_HIGH" : "BLOCK_MEDIUM_AND_ABOVE";
+  return SAFETY_CATEGORIES.map((category) => ({ category, threshold }));
+}
+
+function responseSafetySignals(payload) {
+  const signals = [];
+  if (payload?.promptFeedback?.blockReason) signals.push(String(payload.promptFeedback.blockReason));
+  for (const candidate of Array.isArray(payload?.candidates) ? payload.candidates : []) {
+    if (["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST"].includes(candidate?.finishReason)) {
+      signals.push(String(candidate.finishReason));
+    }
+    for (const rating of Array.isArray(candidate?.safetyRatings) ? candidate.safetyRatings : []) {
+      if (["HIGH", "MEDIUM"].includes(rating?.probability)) {
+        signals.push(String(rating.category || rating.probability));
+      }
+    }
+  }
+  return [...new Set(signals)];
+}
+
+function isSafetyBlocked(payload) {
+  return Boolean(payload?.promptFeedback?.blockReason) ||
+    (Array.isArray(payload?.candidates) && payload.candidates.some((candidate) =>
+      ["SAFETY", "PROHIBITED_CONTENT", "BLOCKLIST"].includes(candidate?.finishReason)
+    ));
+}
+
+async function geminiRequest({ model, body, apiKey, timeoutMs = 22000 }) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  const clientRequestId = randomUUID();
+  const normalizedModel = normalizeGeminiModel(model);
   try {
-    const response = await fetch(`${OPENAI_API_BASE}${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-        "X-Client-Request-Id": clientRequestId
-      },
-      body: JSON.stringify(body),
-      signal: controller.signal
-    });
+    const response = await fetch(
+      `${GEMINI_API_BASE}/models/${encodeURIComponent(normalizedModel)}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": apiKey
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      }
+    );
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
-      const error = new Error(payload?.error?.message || `OpenAI HTTP ${response.status}`);
+      const error = new Error(payload?.error?.message || `Gemini HTTP ${response.status}`);
       error.status = response.status;
-      error.requestId = response.headers.get("x-request-id") || clientRequestId;
+      error.providerCode = payload?.error?.status || "";
       throw error;
     }
     return payload;
   } catch (error) {
     if (error?.name === "AbortError") {
-      const timeoutError = new Error("La réponse de l’IA a dépassé le délai autorisé.");
+      const timeoutError = new Error("La réponse de Gemini a dépassé le délai autorisé.");
       timeoutError.code = "AI_TIMEOUT";
       throw timeoutError;
     }
@@ -130,13 +166,6 @@ async function openAiRequest(path, body, apiKey, timeoutMs = 22000) {
   } finally {
     clearTimeout(timeout);
   }
-}
-
-async function moderate(input, apiKey) {
-  return openAiRequest("/moderations", {
-    model: "omni-moderation-latest",
-    input
-  }, apiKey, 12000);
 }
 
 function currentIdentity(req, db) {
@@ -163,13 +192,17 @@ function mapAiError(error) {
   if (error?.code === "AI_TIMEOUT") {
     return { status: 504, code: "AI_TIMEOUT", message: error.message };
   }
-  if (error?.status === 401 || error?.status === 403) {
-    return { status: 503, code: "AI_KEY_INVALID", message: "La clé de l’IA du serveur est absente ou invalide." };
+  const message = String(error?.message || "");
+  if ([400, 401, 403].includes(error?.status) && /api.?key|key.*invalid|permission/i.test(message)) {
+    return { status: 503, code: "AI_KEY_INVALID", message: "La clé Gemini du serveur est absente, invalide ou sans autorisation." };
   }
-  if (error?.status === 429) {
-    return { status: 429, code: "AI_BUSY", message: "L’IA reçoit trop de demandes pour le moment. Réessaie dans quelques instants." };
+  if (error?.status === 404 || error?.providerCode === "NOT_FOUND") {
+    return { status: 503, code: "AI_MODEL_INVALID", message: "Le modèle Gemini configuré n’existe pas ou n’est plus disponible." };
   }
-  return { status: 502, code: "AI_UNAVAILABLE", message: "L’IA est temporairement indisponible." };
+  if (error?.status === 429 || error?.providerCode === "RESOURCE_EXHAUSTED") {
+    return { status: 429, code: "AI_BUSY", message: "Le quota Gemini est atteint pour le moment. Réessaie plus tard." };
+  }
+  return { status: 502, code: "AI_UNAVAILABLE", message: "Gemini est temporairement indisponible." };
 }
 
 export function registerPixelHelperAiRoutes({ app, db, authenticateAny }) {
@@ -183,17 +216,17 @@ export function registerPixelHelperAiRoutes({ app, db, authenticateAny }) {
 
   app.get("/api/pixel-helper/status", (_req, res) => {
     res.json({
-      aiConfigured: Boolean(process.env.OPENAI_API_KEY),
-      provider: "OpenAI",
-      model: process.env.OPENAI_MODEL || DEFAULT_MODEL
+      aiConfigured: Boolean(process.env.GEMINI_API_KEY),
+      provider: "Google Gemini",
+      model: normalizeGeminiModel(process.env.GEMINI_MODEL)
     });
   });
 
   app.post("/api/pixel-helper/ask", aiLimiter, authenticateAny, async (req, res) => {
-    const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+    const apiKey = String(process.env.GEMINI_API_KEY || "").trim();
     if (!apiKey) {
       return res.status(503).json({
-        error: "La vraie IA n’est pas encore configurée sur le serveur Termux.",
+        error: "Gemini n’est pas encore configuré sur le serveur Termux.",
         code: "AI_NOT_CONFIGURED"
       });
     }
@@ -213,49 +246,55 @@ export function registerPixelHelperAiRoutes({ app, db, authenticateAny }) {
       return res.status(400).json({ error: "La question doit contenir entre 2 et 1 200 caractères." });
     }
 
+    const model = normalizeGeminiModel(process.env.GEMINI_MODEL);
     try {
-      const inputModeration = await moderate(message, apiKey);
-      const moderationCategories = categoriesFlagged(inputModeration);
       const history = normalizeAiHistory(req.body?.history);
       const instructions = buildPixelHelperInstructions({
         bot,
         role: identity.role,
         username: identity.username,
-        page,
-        moderationCategories
+        page
       });
-      const response = await openAiRequest("/responses", {
-        model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-        instructions,
-        input: [...history, { role: "user", content: message }],
-        max_output_tokens: 420,
-        store: false
-      }, apiKey);
-      const answer = extractResponseText(response);
-      if (!answer) throw new Error("Réponse vide du modèle.");
+      const response = await geminiRequest({
+        model,
+        apiKey,
+        body: {
+          systemInstruction: { parts: [{ text: instructions }] },
+          contents: buildGeminiContents(history, message),
+          generationConfig: {
+            temperature: bot === "moderation" ? 0.2 : 0.35,
+            maxOutputTokens: 500
+          },
+          safetySettings: safetySettings(bot)
+        }
+      });
 
-      const outputModeration = await moderate(answer, apiKey);
-      if (outputModeration?.results?.[0]?.flagged) {
+      const signals = responseSafetySignals(response);
+      if (isSafetyBlocked(response)) {
         return res.json({
-          answer: "Je ne peux pas afficher cette réponse. Reformule la situation sans recopier de contenu choquant ni d’informations personnelles.",
+          answer: "Je ne peux pas analyser ou afficher ce contenu tel quel. Reformule sans recopier d’informations personnelles, de menaces précises ni de passages choquants.",
           bot,
-          model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
+          provider: "Google Gemini",
+          model,
           moderated: true
         });
       }
 
+      const answer = extractResponseText(response);
+      if (!answer) throw new Error("Réponse vide de Gemini.");
       res.json({
         answer: answer.slice(0, 2400),
         bot,
-        model: process.env.OPENAI_MODEL || DEFAULT_MODEL,
-        moderated: moderationCategories.length > 0
+        provider: "Google Gemini",
+        model,
+        moderated: signals.length > 0
       });
     } catch (error) {
       const mapped = mapAiError(error);
-      console.error("PIXEL_HELPER_AI_FAILED", {
+      console.error("PIXEL_HELPER_GEMINI_FAILED", {
         code: mapped.code,
         status: error?.status,
-        requestId: error?.requestId,
+        providerCode: error?.providerCode,
         message: error?.message
       });
       res.status(mapped.status).json({ error: mapped.message, code: mapped.code });
