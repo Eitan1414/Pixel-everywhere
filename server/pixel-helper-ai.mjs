@@ -38,8 +38,8 @@ export function normalizeAiHistory(history) {
     .slice(-10);
 }
 
-export function buildPixelHelperInstructions({ bot, role, username, page, safetySignals = [] }) {
-  const identity = `L’utilisateur connecté est ${username || "inconnu"} et son rôle vérifié est ${role}.`;
+export function buildPixelHelperInstructions({ bot, role, page, safetySignals = [] }) {
+  const identity = `Le rôle vérifié du compte connecté est ${role}. Aucun pseudo ni identifiant personnel n’est transmis au modèle.`;
   const location = page ? `La page actuellement ouverte est ${page}.` : "La page actuelle n’est pas connue.";
   const safetyContext = safetySignals.length
     ? `Les filtres de sécurité Gemini ont signalé ces catégories : ${safetySignals.join(", ")}. Ne répète pas de contenu choquant et réponds uniquement de façon protectrice.`
@@ -171,21 +171,21 @@ async function geminiRequest({ model, body, apiKey, timeoutMs = 22000 }) {
 function currentIdentity(req, db) {
   if (req.identity?.kind === "staff") {
     const user = db.prepare(`
-      SELECT id, username, role, active, must_change_password
+      SELECT id, role, active, must_change_password
       FROM staff_users
       WHERE id = ? AND deleted_at IS NULL
     `).get(Number(req.identity.sub));
     if (!user || !user.active || user.must_change_password) return null;
-    return { id: user.id, username: user.username, role: user.role, kind: "staff" };
+    return { id: user.id, role: user.role, kind: "staff" };
   }
 
   const member = db.prepare(`
-    SELECT id, username
+    SELECT id
     FROM member_users
     WHERE id = ?
   `).get(Number(req.identity?.sub));
   if (!member) return null;
-  return { id: member.id, username: member.username, role: "member", kind: "member" };
+  return { id: member.id, role: "member", kind: "member" };
 }
 
 function mapAiError(error) {
@@ -252,7 +252,6 @@ export function registerPixelHelperAiRoutes({ app, db, authenticateAny }) {
       const instructions = buildPixelHelperInstructions({
         bot,
         role: identity.role,
-        username: identity.username,
         page
       });
       const response = await geminiRequest({
