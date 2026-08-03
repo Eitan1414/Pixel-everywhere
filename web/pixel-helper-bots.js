@@ -1,14 +1,14 @@
+import {
+  helperKnowledgeStats,
+  helperRoleLabel,
+  quickPromptsFor,
+  resolvePixelHelperMessage
+} from "./pixel-helper-knowledge.js";
+
 const helperBotState = {
   activeBot: "guide",
   installed: false,
-  busy: false,
-  aiConfigured: null,
-  provider: "",
-  model: "",
-  histories: {
-    guide: [],
-    moderation: []
-  }
+  busy: false
 };
 
 function parseBotStorage(storage, key) {
@@ -24,29 +24,12 @@ function currentHelperRole() {
     parseBotStorage(localStorage, "pixel-staff-user-persistent");
   if (staff?.role === "admin") return "admin";
   if (["moderator", "modo"].includes(staff?.role)) return "moderator";
-  return "member";
-}
 
-function helperRoleLabel() {
-  const role = currentHelperRole();
-  if (role === "admin") return "administrateur";
-  if (role === "moderator") return "modérateur";
-  return "membre";
-}
-
-function pixelHelperApiBase() {
-  return String(
-    localStorage.getItem("pixel-api-base-url") ||
-    import.meta.env.VITE_API_BASE_URL ||
-    "/api"
-  ).replace(/\/$/, "");
-}
-
-function helperAuthToken() {
-  return localStorage.getItem("pixel-member-token") ||
-    sessionStorage.getItem("pixel-token") ||
-    localStorage.getItem("pixel-staff-token-persistent") ||
-    "";
+  const memberToken = localStorage.getItem("pixel-member-token");
+  const member = parseBotStorage(localStorage, "pixel-member-user") ||
+    parseBotStorage(sessionStorage, "pixel-member-user");
+  if (memberToken || member) return "member";
+  return "guest";
 }
 
 function currentPageName() {
@@ -60,67 +43,6 @@ function botDisplayName(bot = helperBotState.activeBot) {
 
 function botClass(bot = helperBotState.activeBot) {
   return bot === "moderation" ? "moderation" : "guide";
-}
-
-async function pixelHelperRequest(path, options = {}) {
-  const headers = { ...(options.headers || {}) };
-  const token = helperAuthToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
-  if (options.body && !(options.body instanceof FormData)) {
-    headers["Content-Type"] = "application/json";
-  }
-  const base = pixelHelperApiBase();
-  if (base.includes(".ngrok-free.")) {
-    headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
-  }
-
-  let response;
-  try {
-    response = await fetch(`${base}${path}`, { ...options, headers, cache: "no-store" });
-  } catch {
-    const error = new Error("Le serveur Pixel Everywhere est inaccessible.");
-    error.code = "SERVER_OFFLINE";
-    throw error;
-  }
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.error || "L’IA n’a pas pu répondre.");
-    error.code = data.code || `HTTP_${response.status}`;
-    error.status = response.status;
-    throw error;
-  }
-  return data;
-}
-
-function updateAiBadge(root, state, label, model = "", provider = "") {
-  const badge = root?.querySelector(".pixel-helper-ai-status");
-  if (!badge) return;
-  badge.className = `pixel-helper-ai-status ${state}`;
-  badge.textContent = label;
-  badge.title = model
-    ? `${provider || "IA"} — Modèle : ${model}`
-    : label;
-}
-
-async function loadAiStatus(root) {
-  updateAiBadge(root, "checking", "IA : vérification…");
-  try {
-    const status = await pixelHelperRequest("/pixel-helper/status", { method: "GET" });
-    helperBotState.aiConfigured = Boolean(status.aiConfigured);
-    helperBotState.provider = String(status.provider || "");
-    helperBotState.model = String(status.model || "");
-    const providerName = helperBotState.provider.includes("Gemini") ? "Gemini" : "IA";
-    updateAiBadge(
-      root,
-      status.aiConfigured ? "online" : "offline",
-      status.aiConfigured ? `${providerName} en ligne` : `${providerName} non configuré`,
-      status.model,
-      status.provider
-    );
-  } catch {
-    helperBotState.aiConfigured = false;
-    updateAiBadge(root, "offline", "Serveur Gemini hors ligne");
-  }
 }
 
 function appendBotMessage(log, sender, text, { bot = "", action = "", actionLabel = "", pending = false } = {}) {
@@ -176,56 +98,11 @@ function performBotAction(action) {
   document.querySelector(`[data-page-target="${page}"]`)?.click();
 }
 
-function suggestedAction(question, bot) {
-  const text = String(question || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  if (/chat|salon|mention|@/.test(text)) {
-    return { action: "open-chat", actionLabel: "Ouvrir # Chat public" };
-  }
-  if (/mp|message prive|messagerie/.test(text)) {
-    return { action: "open-mp", actionLabel: "Ouvrir les MP" };
-  }
-  if (/compte|connexion|inscription/.test(text)) {
-    return { action: "open-account", actionLabel: "Ouvrir mon compte" };
-  }
-  if (/pixel|tamagotchi|piece|boutique/.test(text)) {
-    return { action: "open-pixel", actionLabel: "Ouvrir Mon Pixel" };
-  }
-  if (/annonce|mise a jour|version/.test(text)) {
-    return { action: "open-announcements", actionLabel: "Ouvrir les annonces" };
-  }
-  if (/candidature|postuler/.test(text)) {
-    return { action: "open-application", actionLabel: "Ouvrir Candidature" };
-  }
-  if (bot === "moderation" && currentHelperRole() !== "member" && /staff|panel|moderation/.test(text)) {
-    return { action: "open-staff", actionLabel: "Ouvrir l’espace staff" };
-  }
-  return {};
-}
-
-function quickPrompts(bot) {
-  return bot === "moderation"
-    ? [
-        "Deux membres se disputent, comment savoir si c’est du harcèlement ?",
-        "Quelle réaction proportionnée face à plusieurs messages de spam ?",
-        "Un membre a envoyé un lien douteux, que dois-je vérifier ?",
-        "Comment aider quelqu’un qui partage une information personnelle ?"
-      ]
-    : [
-        "Explique-moi comment fonctionne le chat public.",
-        "Comment envoyer un MP à un autre membre ?",
-        "Que peut faire un compte modérateur ?",
-        "Comment gagner et utiliser les pièces de Mon Pixel ?"
-      ];
-}
-
 function renderQuickPrompts(root) {
   const container = root.querySelector(".pixel-helper-bot-prompts");
   if (!container) return;
   container.replaceChildren();
-  quickPrompts(helperBotState.activeBot).forEach((prompt) => {
+  quickPromptsFor({ bot: helperBotState.activeBot, role: currentHelperRole() }).forEach((prompt) => {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = prompt;
@@ -235,18 +112,30 @@ function renderQuickPrompts(root) {
   });
 }
 
+function introMessage(bot, role) {
+  if (bot === "moderation") {
+    if (role === "guest" || role === "member") {
+      return `Je suis Pixel Guard. Je peux t’expliquer comment réagir face au spam, au harcèlement, aux liens douteux, aux informations personnelles ou à une menace, puis t’indiquer comment prévenir le staff. Je ne sanctionne personne.`;
+    }
+    return `Je suis Pixel Guard. Mes fiches de modération s’adaptent à ton rôle ${helperRoleLabel(role)} et proposent des réactions prudentes, proportionnées et toujours vérifiées par un humain.`;
+  }
+  return `Je suis Pixel Guide. Je connais les catégories, les outils et les droits de Pixel Everywhere. Mes réponses sont prédéfinies, fonctionnent localement et ne sont envoyées à aucun service extérieur.`;
+}
+
 function switchBot(root, bot) {
   if (helperBotState.busy) return;
   helperBotState.activeBot = bot;
   root.querySelectorAll("[data-helper-bot]").forEach((button) => {
     button.classList.toggle("active", button.dataset.helperBot === bot);
   });
+
   const input = root.querySelector("input[name='helperBotQuestion']");
   if (input) {
     input.placeholder = bot === "moderation"
-      ? "Décris toute la situation à analyser…"
-      : "Pose une vraie question à Pixel Guide…";
+      ? "Décris le type de situation à gérer…"
+      : "Demande où se trouve un outil ou comment l’utiliser…";
   }
+
   renderQuickPrompts(root);
   const log = root.querySelector(".pixel-helper-bot-log");
   if (log && !log.querySelector(`[data-intro-bot="${bot}"]`)) {
@@ -254,14 +143,7 @@ function switchBot(root, bot) {
     marker.hidden = true;
     marker.dataset.introBot = bot;
     log.append(marker);
-    appendBotMessage(
-      log,
-      "bot",
-      bot === "moderation"
-        ? `Je suis Pixel Guard. Quand Gemini est configuré, j’analyse réellement le contexte et j’adapte mes conseils à ton rôle ${helperRoleLabel()}. Je ne sanctionne personne automatiquement.`
-        : "Je suis Pixel Guide. Quand Gemini est configuré, je comprends les questions libres et je garde le contexte de notre conversation au lieu de choisir une réponse prédéfinie.",
-      { bot }
-    );
+    appendBotMessage(log, "bot", introMessage(bot, currentHelperRole()), { bot });
   }
 }
 
@@ -273,7 +155,7 @@ function setBotBusy(root, busy) {
   if (input) input.disabled = busy;
   if (submit) {
     submit.disabled = busy;
-    submit.textContent = busy ? "Réflexion…" : "Envoyer";
+    submit.textContent = busy ? "Pixel cherche…" : "Envoyer";
   }
   root.querySelectorAll("[data-helper-bot]").forEach((button) => {
     button.disabled = busy;
@@ -288,91 +170,59 @@ async function submitBotQuestion(root, forcedQuestion = "") {
   const question = String(forcedQuestion || input?.value || "").trim();
   if (question.length < 2) return;
 
-  const token = helperAuthToken();
   const log = root.querySelector(".pixel-helper-bot-log");
   const bot = helperBotState.activeBot;
+  const role = currentHelperRole();
   appendBotMessage(log, "user", question);
   if (input) input.value = "";
 
-  if (!token) {
-    appendBotMessage(log, "bot", "Connecte d’abord un compte membre ou staff : l’accès à la vraie IA est protégé pour éviter les abus.", {
-      bot,
-      action: "open-account",
-      actionLabel: "Ouvrir mon compte"
-    });
-    return;
-  }
-
   setBotBusy(root, true);
-  const pending = appendBotMessage(log, "bot", `${botDisplayName(bot)} analyse ta demande avec Gemini…`, { bot, pending: true });
-  const previousHistory = helperBotState.histories[bot].slice(-10);
+  const pending = appendBotMessage(log, "bot", `${botDisplayName(bot)} consulte ses fiches…`, { bot, pending: true });
 
-  try {
-    const data = await pixelHelperRequest("/pixel-helper/ask", {
-      method: "POST",
-      body: JSON.stringify({
-        bot,
-        message: question,
-        history: previousHistory,
-        page: currentPageName()
-      })
-    });
-    pending.remove();
-    const answer = String(data.answer || "").trim();
-    const shortcut = suggestedAction(question, bot);
-    appendBotMessage(log, "bot", answer || "Gemini a renvoyé une réponse vide.", { bot, ...shortcut });
-    helperBotState.histories[bot].push(
-      { role: "user", content: question },
-      { role: "assistant", content: answer }
-    );
-    helperBotState.histories[bot] = helperBotState.histories[bot].slice(-10);
-    helperBotState.aiConfigured = true;
-    helperBotState.provider = String(data.provider || helperBotState.provider || "Google Gemini");
-    helperBotState.model = String(data.model || helperBotState.model || "");
-    updateAiBadge(root, "online", "Gemini en ligne", helperBotState.model, helperBotState.provider);
-  } catch (error) {
-    pending.remove();
-    let message = error.message;
-    if (error.code === "AI_NOT_CONFIGURED") {
-      message = "Pixel Guide et Pixel Guard sont prêts, mais la clé GEMINI_API_KEY n’est pas encore ajoutée au serveur Termux.";
-      helperBotState.aiConfigured = false;
-      updateAiBadge(root, "offline", "Gemini non configuré");
-    } else if (error.status === 401) {
-      message = "Ta session a expiré. Reconnecte ton compte pour utiliser Gemini.";
-    } else if (error.code === "SERVER_OFFLINE") {
-      updateAiBadge(root, "offline", "Serveur Gemini hors ligne");
-    }
-    appendBotMessage(log, "bot", message, { bot });
-  } finally {
-    setBotBusy(root, false);
-    input?.focus();
-  }
+  await new Promise((resolve) => window.setTimeout(resolve, 120));
+  const result = resolvePixelHelperMessage({
+    bot,
+    question,
+    role,
+    page: currentPageName()
+  });
+
+  pending.remove();
+  appendBotMessage(log, "bot", result.answer, {
+    bot,
+    action: result.action,
+    actionLabel: result.actionLabel
+  });
+  setBotBusy(root, false);
+  input?.focus();
 }
 
 function buildBotsSection() {
+  const role = currentHelperRole();
+  const stats = helperKnowledgeStats();
   const section = document.createElement("section");
   section.id = "pixelHelperBots";
   section.className = "pixel-helper-bots";
   section.innerHTML = `
     <header class="pixel-helper-bots-heading">
       <div>
-        <p class="eyebrow">Assistants IA Pixel Helper</p>
-        <h3>Guide et modération avec Gemini</h3>
+        <p class="eyebrow">Personnages d’aide Pixel Helper</p>
+        <h3>Guide de l’application et conseils de modération</h3>
       </div>
       <div class="pixel-helper-bot-badges">
-        <span class="pixel-helper-ai-status checking">IA : vérification…</span>
-        <span class="pixel-helper-bot-role">Compte ${helperRoleLabel()}</span>
+        <span class="pixel-helper-local-status">100 % local • ${stats.totalTopics} fiches</span>
+        <span class="pixel-helper-bot-role">Compte ${helperRoleLabel(role)}</span>
       </div>
     </header>
     <div class="pixel-helper-bot-tabs" role="tablist">
-      <button class="active" type="button" data-helper-bot="guide">Pixel Guide IA</button>
-      <button type="button" data-helper-bot="moderation">Pixel Guard IA</button>
+      <button class="active" type="button" data-helper-bot="guide">Pixel Guide</button>
+      <button type="button" data-helper-bot="moderation">Pixel Guard</button>
     </div>
-    <p class="pixel-helper-ai-disclosure">Les questions sont envoyées en ligne à Google Gemini et les réponses peuvent se tromper. Avec le niveau gratuit, Google peut utiliser les requêtes pour améliorer ses produits. N’envoie aucune information privée. Pixel Guard conseille le staff, mais ne sanctionne jamais automatiquement.</p>
+    <p class="pixel-helper-local-disclosure">Pixel utilise uniquement des messages préparés dans l’application. Aucune question n’est envoyée à un service extérieur. Les réponses dépendent du rôle détecté et de la catégorie ouverte. Pixel Guard conseille, mais ne sanctionne jamais automatiquement.</p>
     <div class="pixel-helper-bot-log" aria-live="polite"></div>
     <div class="pixel-helper-bot-prompts"></div>
     <form class="pixel-helper-bot-form">
-      <input name="helperBotQuestion" maxlength="1200" autocomplete="off" placeholder="Pose une vraie question à Pixel Guide…" required>
+      <input name="helperBotQuestion" maxlength="500" autocomplete="off" placeholder="Demande où se trouve un outil ou comment l’utiliser…" required>
       <button class="primary-button" type="submit">Envoyer</button>
     </form>`;
 
@@ -384,7 +234,6 @@ function buildBotsSection() {
     submitBotQuestion(section);
   });
   switchBot(section, "guide");
-  loadAiStatus(section);
   return section;
 }
 
@@ -399,16 +248,19 @@ function installPixelHelperBots() {
   return true;
 }
 
+function refreshRolePresentation() {
+  const root = document.querySelector("#pixelHelperBots");
+  const badge = root?.querySelector(".pixel-helper-bot-role");
+  if (badge) badge.textContent = `Compte ${helperRoleLabel(currentHelperRole())}`;
+  if (root) renderQuickPrompts(root);
+}
+
 installPixelHelperBots();
 const pixelHelperBotsObserver = new MutationObserver(installPixelHelperBots);
 pixelHelperBotsObserver.observe(document.documentElement, { childList: true, subtree: true });
 
-window.addEventListener("pixel-member-session-ready", () => {
-  const root = document.querySelector("#pixelHelperBots");
-  const badge = root?.querySelector(".pixel-helper-bot-role");
-  if (badge) badge.textContent = `Compte ${helperRoleLabel()}`;
-  if (root) loadAiStatus(root);
-});
+window.addEventListener("pixel-member-session-ready", refreshRolePresentation);
+window.addEventListener("storage", refreshRolePresentation);
 
 window.PixelHelperBots = Object.freeze({
   openGuideBot: () => {
@@ -419,7 +271,7 @@ window.PixelHelperBots = Object.freeze({
     window.PixelHelper?.openGuide?.();
     window.setTimeout(() => document.querySelector('[data-helper-bot="moderation"]')?.click(), 0);
   },
-  isAiConfigured: () => helperBotState.aiConfigured,
-  provider: () => helperBotState.provider,
-  model: () => helperBotState.model
+  mode: () => "local-predefined",
+  role: () => currentHelperRole(),
+  knowledgeStats: () => helperKnowledgeStats()
 });
