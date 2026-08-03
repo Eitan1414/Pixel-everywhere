@@ -67,6 +67,12 @@ if (!source.includes('from "./member-conversations.mjs"')) {
 if (!source.includes('from "./community-messaging.mjs"')) {
   extraImports.push('import { registerCommunityMessagingRoutes } from "./community-messaging.mjs";');
 }
+if (!source.includes('from "./pixel-helper-ai.mjs"')) {
+  extraImports.push('import { registerPixelHelperAiRoutes } from "./pixel-helper-ai.mjs";');
+}
+if (!source.includes("authenticateAny")) {
+  extraImports.push('import { authenticateAny } from "./auth.mjs";');
+}
 if (extraImports.length) {
   source = source.replace(
     'import "dotenv/config";',
@@ -246,6 +252,13 @@ if (!source.includes("registerCommunityMessagingRoutes({")) {
   db,
   authenticateMember,
   requireActiveMember
+});`);
+}
+if (!source.includes("registerPixelHelperAiRoutes({")) {
+  registrations.push(`registerPixelHelperAiRoutes({
+  app,
+  db,
+  authenticateAny
 });`);
 }
 if (registrations.length) {
