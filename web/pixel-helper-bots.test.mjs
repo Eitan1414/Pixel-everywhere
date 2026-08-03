@@ -6,22 +6,37 @@ const source = await readFile(new URL("./pixel-helper-bots.js", import.meta.url)
 const styles = await readFile(new URL("./pixel-helper-bots.css", import.meta.url), "utf8");
 const entry = await readFile(new URL("./app-entry.js", import.meta.url), "utf8");
 
-test("Pixel Helper contient un bot guide et un bot de modération", () => {
-  assert.match(source, /Pixel Guide/);
-  assert.match(source, /Pixel Guard/);
+test("Pixel Helper contient Pixel Guide IA et Pixel Guard IA", () => {
+  assert.match(source, /Pixel Guide IA/);
+  assert.match(source, /Pixel Guard IA/);
   assert.match(source, /data-helper-bot="guide"/);
   assert.match(source, /data-helper-bot="moderation"/);
-  assert.match(source, /spam|flood/);
-  assert.match(source, /harcelement/);
-  assert.match(source, /phishing/);
+  assert.match(source, /Les réponses sont générées en ligne/);
 });
 
-test("les réponses de modération s’adaptent au rôle connecté", () => {
-  assert.match(source, /currentHelperRole/);
-  assert.match(source, /role === "member"/);
-  assert.match(source, /Compte \$\{helperRoleLabel\(\)\}/);
-  assert.match(source, /administrateur/);
-  assert.match(source, /modérateur/);
+test("les assistants appellent la route IA au lieu d’une table de réponses", () => {
+  assert.match(source, /\/pixel-helper\/ask/);
+  assert.match(source, /history: previousHistory/);
+  assert.match(source, /helperBotState\.histories/);
+  assert.doesNotMatch(source, /function guideAnswer/);
+  assert.doesNotMatch(source, /function moderationAnswer/);
+  assert.doesNotMatch(source, /answerFromActiveBot/);
+});
+
+test("l’interface indique clairement si la vraie IA est configurée", () => {
+  assert.match(source, /\/pixel-helper\/status/);
+  assert.match(source, /IA en ligne/);
+  assert.match(source, /IA non configurée/);
+  assert.match(styles, /pixel-helper-ai-status\.online/);
+  assert.match(styles, /pixel-helper-ai-status\.offline/);
+  assert.match(styles, /pixel-helper-bot-message\.pending/);
+});
+
+test("les réponses restent protégées par une session membre ou staff", () => {
+  assert.match(source, /pixel-member-token/);
+  assert.match(source, /pixel-token/);
+  assert.match(source, /Authorization/);
+  assert.match(source, /Connecte d’abord un compte membre ou staff/);
 });
 
 test("les bots peuvent ouvrir le chat public, les MP et les catégories utiles", () => {
