@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  buildGeminiContents,
   buildPixelHelperInstructions,
   extractResponseText,
-  normalizeAiHistory
+  normalizeAiHistory,
+  normalizeGeminiModel
 } from "./pixel-helper-ai.mjs";
 
 const source = await readFile(new URL("./pixel-helper-ai.mjs", import.meta.url), "utf8");
@@ -31,10 +33,10 @@ test("Pixel Guard adapte son analyse au rôle sans prétendre sanctionner", () =
     role: "admin",
     username: "Eitan",
     page: "staff",
-    moderationCategories: ["harassment"]
+    safetySignals: ["HARM_CATEGORY_HARASSMENT"]
   });
   assert.match(instructions, /Pixel Guard/);
-  assert.match(instructions, /harassment/);
+  assert.match(instructions, /HARM_CATEGORY_HARASSMENT/);
   assert.match(instructions, /action proportionnée/);
   assert.match(instructions, /ne prétends jamais avoir supprimé/);
   assert.match(instructions, /humain doit vérifier/);
@@ -52,20 +54,34 @@ test("l’historique est nettoyé, limité et conserve seulement user et assista
   assert.equal(history.at(-1).content, "message 11");
 });
 
-test("le texte est extrait de la réponse REST OpenAI", () => {
-  assert.equal(extractResponseText({ output_text: " Bonjour " }), "Bonjour");
+test("l’historique est converti vers les rôles user et model de Gemini", () => {
+  const contents = buildGeminiContents([
+    { role: "user", content: "Salut" },
+    { role: "assistant", content: "Bonjour" }
+  ], "Où est le chat ?");
+  assert.deepEqual(contents.map((item) => item.role), ["user", "model", "user"]);
+  assert.equal(contents.at(-1).parts[0].text, "Où est le chat ?");
+});
+
+test("le texte est extrait de la réponse REST Gemini", () => {
   assert.equal(extractResponseText({
-    output: [{ content: [{ type: "output_text", text: "Réponse réelle" }] }]
+    candidates: [{ content: { parts: [{ text: " Réponse réelle " }] } }]
   }), "Réponse réelle");
 });
 
-test("la clé reste côté serveur et les réponses ne sont pas stockées", () => {
-  assert.match(source, /process\.env\.OPENAI_API_KEY/);
-  assert.match(source, /Authorization: `Bearer \$\{apiKey\}`/);
-  assert.match(source, /store: false/);
-  assert.match(source, /\/moderations/);
-  assert.match(source, /omni-moderation-latest/);
-  assert.doesNotMatch(source, /VITE_OPENAI/);
+test("le modèle Gemini est normalisé et Flash-Lite reste le choix économique par défaut", () => {
+  assert.equal(normalizeGeminiModel("models/gemini-2.5-flash"), "gemini-2.5-flash");
+  assert.equal(normalizeGeminiModel(""), "gemini-2.5-flash-lite");
+});
+
+test("la clé Gemini reste uniquement côté serveur", () => {
+  assert.match(source, /process\.env\.GEMINI_API_KEY/);
+  assert.match(source, /"x-goog-api-key": apiKey/);
+  assert.match(source, /generativelanguage\.googleapis\.com/);
+  assert.match(source, /generateContent/);
+  assert.match(source, /safetySettings/);
+  assert.doesNotMatch(source, /OPENAI_API_KEY/);
+  assert.doesNotMatch(source, /VITE_GEMINI/);
 });
 
 test("les routes IA sont enregistrées et protégées par une session quelconque", () => {
