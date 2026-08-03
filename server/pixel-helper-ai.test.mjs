@@ -6,7 +6,8 @@ import {
   buildPixelHelperInstructions,
   extractResponseText,
   normalizeAiHistory,
-  normalizeGeminiModel
+  normalizeGeminiModel,
+  selectGeminiModel
 } from "./pixel-helper-ai.mjs";
 
 const source = await readFile(new URL("./pixel-helper-ai.mjs", import.meta.url), "utf8");
@@ -72,9 +73,19 @@ test("le texte est extrait de la réponse REST Gemini", () => {
   }), "Réponse réelle");
 });
 
-test("le modèle Gemini est normalisé et Flash-Lite reste le choix économique par défaut", () => {
+test("le modèle Gemini est normalisé", () => {
   assert.equal(normalizeGeminiModel("models/gemini-2.5-flash"), "gemini-2.5-flash");
-  assert.equal(normalizeGeminiModel(""), "gemini-2.5-flash-lite");
+  assert.equal(normalizeGeminiModel(""), "gemini-flash-lite-latest");
+});
+
+test("le serveur choisit un modèle réellement listé par Google", () => {
+  const available = [
+    "models/text-embedding-004",
+    "models/gemini-2.5-flash",
+    "models/gemini-2.5-flash-lite"
+  ];
+  assert.equal(selectGeminiModel(available, "gemini-inexistant"), "gemini-2.5-flash-lite");
+  assert.equal(selectGeminiModel(available, "models/gemini-2.5-flash"), "gemini-2.5-flash");
 });
 
 test("la clé Gemini reste uniquement côté serveur", () => {
@@ -82,6 +93,8 @@ test("la clé Gemini reste uniquement côté serveur", () => {
   assert.match(source, /"x-goog-api-key": apiKey/);
   assert.match(source, /generativelanguage\.googleapis\.com/);
   assert.match(source, /generateContent/);
+  assert.match(source, /supportedGenerationMethods/);
+  assert.match(source, /selectGeminiModel/);
   assert.match(source, /safetySettings/);
   assert.doesNotMatch(source, /OPENAI_API_KEY/);
   assert.doesNotMatch(source, /VITE_GEMINI/);
