@@ -368,7 +368,7 @@ function buildBotsSection() {
       <button class="active" type="button" data-helper-bot="guide">Pixel Guide IA</button>
       <button type="button" data-helper-bot="moderation">Pixel Guard IA</button>
     </div>
-    <p class="pixel-helper-ai-disclosure">Les questions sont envoyées en ligne à Google Gemini et les réponses peuvent se tromper. N’envoie aucune information privée. Pixel Guard conseille le staff, mais ne sanctionne jamais automatiquement.</p>
+    <p class="pixel-helper-ai-disclosure">Les questions sont envoyées en ligne à Google Gemini et les réponses peuvent se tromper. Avec le niveau gratuit, Google peut utiliser les requêtes pour améliorer ses produits. N’envoie aucune information privée. Pixel Guard conseille le staff, mais ne sanctionne jamais automatiquement.</p>
     <div class="pixel-helper-bot-log" aria-live="polite"></div>
     <div class="pixel-helper-bot-prompts"></div>
     <form class="pixel-helper-bot-form">
