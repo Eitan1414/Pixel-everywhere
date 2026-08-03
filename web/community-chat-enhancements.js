@@ -27,16 +27,25 @@ function communityEnhancementApiBase() {
   return String(configured || import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 }
 
-function readStoredMember() {
+function parseMentionStorage(storage, key) {
   try {
-    return JSON.parse(localStorage.getItem("pixel-member") || "null");
+    return JSON.parse(storage.getItem(key) || "null");
   } catch {
     return null;
   }
 }
 
+function readStoredMember() {
+  return parseMentionStorage(localStorage, "pixel-member");
+}
+
+function readStoredStaff() {
+  return parseMentionStorage(sessionStorage, "pixel-user") ||
+    parseMentionStorage(localStorage, "pixel-staff-user-persistent");
+}
+
 function memberMentionType(member) {
-  const role = normalizeMention(member?.staff_role || member?.staffRole || "");
+  const role = normalizeMention(member?.staff_role || member?.staffRole || member?.role || "");
   if (role === "admin") return "admin";
   if (["moderator", "moderateur", "modo"].includes(role)) return "moderator";
   return "member";
@@ -70,7 +79,8 @@ function isMentionForCurrentMember(token, type) {
   const member = readStoredMember();
   if (!member) return false;
   if (normalizeMention(token) === normalizeMention(member.username)) return true;
-  const currentType = memberMentionType(member);
+  const staff = readStoredStaff();
+  const currentType = staff ? memberMentionType(staff) : memberMentionType(member);
   return Boolean(roleMentionType(token) && currentType === type);
 }
 
@@ -214,7 +224,7 @@ function insertMention(textarea, form, target) {
   if (!range) return;
   const before = textarea.value.slice(0, range.start);
   const after = textarea.value.slice(range.end);
-  const suffix = after.startsWith(" ") || after.length === 0 ? " " : " ";
+  const suffix = " ";
   textarea.value = `${before}${target.insert}${suffix}${after}`;
   const caret = before.length + target.insert.length + suffix.length;
   textarea.setSelectionRange(caret, caret);
@@ -253,7 +263,13 @@ function renderMentionSuggestions(textarea, form) {
     button.type = "button";
     button.className = `community-mention-option community-mention-option-${target.type}`;
     button.classList.toggle("active", index === mentionState.activeIndex);
-    button.innerHTML = `<span>${target.insert}</span><small>${target.description}</small>`;
+
+    const mention = document.createElement("span");
+    mention.textContent = target.insert;
+    const description = document.createElement("small");
+    description.textContent = target.description;
+    button.append(mention, description);
+
     button.addEventListener("pointerdown", (event) => event.preventDefault());
     button.addEventListener("click", () => insertMention(textarea, form, target));
     popup.append(button);
