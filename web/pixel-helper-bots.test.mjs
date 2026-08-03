@@ -12,6 +12,7 @@ test("Pixel Helper contient Pixel Guide IA et Pixel Guard IA avec Gemini", () =>
   assert.match(source, /data-helper-bot="guide"/);
   assert.match(source, /data-helper-bot="moderation"/);
   assert.match(source, /Google Gemini/);
+  assert.match(source, /niveau gratuit/);
   assert.match(source, /N’envoie aucune information privée/);
 });
 
