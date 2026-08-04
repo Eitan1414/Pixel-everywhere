@@ -18,6 +18,7 @@ test("Windows 0.31.26 est compilé avec un installateur complet", () => {
   assert.equal(packageJson.version, "0.31.26");
   assert.match(packageJson.scripts["win:build"], /--win nsis --x64/);
   assert.equal(packageJson.build.win.target[0].target, "nsis");
+  assert.equal(packageJson.build.compression, "maximum");
   assert.match(packageJson.build.win.artifactName, /Setup/);
   assert.equal(packageJson.build.nsis.oneClick, false);
   assert.equal(packageJson.build.nsis.allowToChangeInstallationDirectory, true);
