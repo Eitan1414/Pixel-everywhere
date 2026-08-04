@@ -94,6 +94,7 @@ function windowsFormatDate(value) {
 
 let windowsFileMetadata = {};
 let windowsSettingsLoaded = false;
+let windowsSettingsLoading = false;
 
 function ensureWindowsExternalUrlField() {
   const details = document.querySelector("#updateAdminForm .update-link-details");
@@ -103,7 +104,7 @@ function ensureWindowsExternalUrlField() {
   const input = document.createElement("input");
   input.name = "windowsX64Url";
   input.type = "url";
-  input.placeholder = "https://…/Windows-x64-Setup.exe";
+  input.placeholder = "https://…/Windows-x64-Portable.exe";
   label.append(input);
   details.append(label);
 }
@@ -142,7 +143,8 @@ function ensureWindowsAdminInterface() {
 
 async function loadWindowsUpdateSettings() {
   const form = document.querySelector("#updateAdminForm");
-  if (!form || windowsCurrentStaffUser()?.role !== "admin") return;
+  if (!form || windowsCurrentStaffUser()?.role !== "admin" || windowsSettingsLoading) return;
+  windowsSettingsLoading = true;
   try {
     const data = await windowsUpdateApi("/admin/update-settings");
     const settings = data.settings || {};
@@ -157,6 +159,8 @@ async function loadWindowsUpdateSettings() {
   } catch {
     // L’ancien serveur peut ne pas encore connaître Windows. Les autres cibles
     // restent utilisables et la mise à niveau Termux activera ensuite ce champ.
+  } finally {
+    windowsSettingsLoading = false;
   }
 }
 
@@ -203,13 +207,13 @@ async function saveWindowsAwareSettings(event) {
 async function decorateWindowsUpdateDialog() {
   if (!(await windowsRuntime())) return;
 
-  const instructionText = "L’installateur Windows sera téléchargé puis lancé automatiquement. Pixel Everywhere se fermera pendant l’installation.";
+  const instructionText = "La version portable Windows sera téléchargée. Ouvre simplement le fichier .exe : aucune installation n’est nécessaire.";
   const instructions = document.querySelector("#appUpdateInstructions");
   if (instructions && instructions.textContent !== instructionText) {
     instructions.textContent = instructionText;
   }
 
-  const buttonText = "Installer automatiquement";
+  const buttonText = "Télécharger la version portable";
   const button = document.querySelector("#downloadAppUpdateButton");
   if (button && button.textContent !== buttonText) {
     button.textContent = buttonText;
@@ -223,13 +227,21 @@ document.addEventListener("click", (event) => {
   }
 });
 
-const windowsObserver = new MutationObserver(() => {
-  ensureWindowsAdminInterface();
-  decorateWindowsUpdateDialog();
-  if (!windowsSettingsLoaded && document.querySelector("#updateAdminForm")) {
-    loadWindowsUpdateSettings();
-  }
-});
+let windowsUiFrame = 0;
+
+function scheduleWindowsUiRefresh() {
+  if (windowsUiFrame) return;
+  windowsUiFrame = window.requestAnimationFrame(() => {
+    windowsUiFrame = 0;
+    ensureWindowsAdminInterface();
+    void decorateWindowsUpdateDialog();
+    if (!windowsSettingsLoaded && !windowsSettingsLoading && document.querySelector("#updateAdminForm")) {
+      void loadWindowsUpdateSettings();
+    }
+  });
+}
+
+const windowsObserver = new MutationObserver(scheduleWindowsUiRefresh);
 windowsObserver.observe(document.documentElement, {
   childList: true,
   subtree: true,
@@ -237,5 +249,4 @@ windowsObserver.observe(document.documentElement, {
   attributeFilter: ["open"]
 });
 
-ensureWindowsAdminInterface();
-decorateWindowsUpdateDialog();
+scheduleWindowsUiRefresh();
