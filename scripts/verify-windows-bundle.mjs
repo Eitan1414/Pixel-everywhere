@@ -62,7 +62,7 @@ const featureChecks = [
   },
   {
     label: "prise en charge des mises à jour Windows",
-    markers: ["windows-x64", "Installer automatiquement"]
+    markers: ["windows-x64", "Télécharger la version portable"]
   },
   {
     label: "tolérance aux erreurs de modules",
