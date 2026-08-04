@@ -43,11 +43,11 @@ function updateSteps(platform = helperRuntime()) {
   }
   if (platform === "windows") {
     return [
-      "Appuie sur « Installer automatiquement » ou « Télécharger la mise à jour ».",
-      "Ouvre le fichier Pixel-Everywhere…Setup.exe téléchargé.",
+      "Appuie sur « Télécharger la version portable ».",
+      "Ouvre le fichier Pixel-Everywhere…Portable.exe téléchargé.",
       "Si Windows SmartScreen apparaît, choisis Informations complémentaires puis Exécuter quand même.",
-      "Suis l’installateur et conserve le même dossier d’installation.",
-      "Relance Pixel Everywhere après la fin de l’installation."
+      "Pixel Everywhere se lance directement : aucune installation n’est nécessaire.",
+      "Tu peux déplacer le fichier .exe dans le dossier de ton choix."
     ];
   }
   if (platform === "macos") {
