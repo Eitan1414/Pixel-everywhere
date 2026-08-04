@@ -104,7 +104,7 @@ function ensureWindowsExternalUrlField() {
   const input = document.createElement("input");
   input.name = "windowsX64Url";
   input.type = "url";
-  input.placeholder = "https://…/Windows-x64-Portable.exe";
+  input.placeholder = "https://…/Windows-x64-Setup.exe";
   label.append(input);
   details.append(label);
 }
@@ -207,13 +207,13 @@ async function saveWindowsAwareSettings(event) {
 async function decorateWindowsUpdateDialog() {
   if (!(await windowsRuntime())) return;
 
-  const instructionText = "La version portable Windows sera téléchargée. Ouvre simplement le fichier .exe : aucune installation n’est nécessaire.";
+  const instructionText = "L’installateur Windows sera téléchargé. Ouvre le fichier Setup.exe puis suis l’assistant d’installation.";
   const instructions = document.querySelector("#appUpdateInstructions");
   if (instructions && instructions.textContent !== instructionText) {
     instructions.textContent = instructionText;
   }
 
-  const buttonText = "Télécharger la version portable";
+  const buttonText = "Télécharger l’installateur";
   const button = document.querySelector("#downloadAppUpdateButton");
   if (button && button.textContent !== buttonText) {
     button.textContent = buttonText;
