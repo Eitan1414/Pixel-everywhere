@@ -27,6 +27,8 @@ test("Windows 0.31.26 est compilé avec un installateur complet", () => {
   assert.match(workflow, /--win nsis --x64/);
   assert.match(workflow, /Windows-x64-Setup\.exe/);
   assert.doesNotMatch(workflow, /--win portable|Windows-x64-Portable\.exe/);
+  assert.match(workflow, /Setup\.exe\.part-001/);
+  assert.match(workflow, /INSTALLER-PART-3/);
 });
 
 test("Windows masque complètement la barre File Edit View", () => {
