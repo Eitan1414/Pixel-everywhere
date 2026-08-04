@@ -2,14 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const [packageSource, workflow, windowsSupport, nativeStability, desktopLayout, updater, helper] = await Promise.all([
+const [packageSource, workflow, windowsSupport, nativeStability, desktopLayout, updater, helper, electronMain] = await Promise.all([
   readFile(new URL("../package.json", import.meta.url), "utf8"),
   readFile(new URL("../.github/workflows/windows.yml", import.meta.url), "utf8"),
   readFile(new URL("./windows-support.js", import.meta.url), "utf8"),
   readFile(new URL("./native-interaction-stability.js", import.meta.url), "utf8"),
   readFile(new URL("./desktop-layout.css", import.meta.url), "utf8"),
   readFile(new URL("./app-updater.js", import.meta.url), "utf8"),
-  readFile(new URL("./pixel-helper.js", import.meta.url), "utf8")
+  readFile(new URL("./pixel-helper.js", import.meta.url), "utf8"),
+  readFile(new URL("../electron/main.cjs", import.meta.url), "utf8")
 ]);
 const packageJson = JSON.parse(packageSource);
 
@@ -22,6 +23,13 @@ test("Windows 0.31.26 est compilé en exécutable portable sans installateur", (
   assert.match(workflow, /--win portable --x64/);
   assert.match(workflow, /Windows-x64-Portable\.exe/);
   assert.doesNotMatch(workflow, /--win nsis|Windows-x64-Setup\.exe/);
+});
+
+test("Windows masque complètement la barre File Edit View", () => {
+  assert.match(electronMain, /Menu\.setApplicationMenu\(null\)/);
+  assert.match(electronMain, /autoHideMenuBar: true/);
+  assert.match(electronMain, /window\.setMenu\(null\)/);
+  assert.match(electronMain, /window\.setMenuBarVisibility\(false\)/);
 });
 
 test("Windows conserve les clics même si le serveur est indisponible", () => {
