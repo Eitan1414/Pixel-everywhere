@@ -259,3 +259,21 @@
     transition: none;
   }
 }
+
+.pixel-helper-interactive-stage.no-character {
+  grid-template-columns: 1fr;
+}
+
+.pixel-helper-interactive-stage.no-character .pixel-helper-speech,
+.pixel-helper-interactive-stage.no-character .pixel-helper-progress,
+.pixel-helper-interactive-stage.no-character .pixel-helper-navigation {
+  grid-column: 1;
+}
+
+.pixel-helper-update-stage.no-character {
+  grid-template-columns: 1fr;
+}
+
+.pixel-helper-update-stage.no-character > div {
+  min-width: 0;
+}
