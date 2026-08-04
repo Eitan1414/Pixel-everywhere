@@ -95,6 +95,53 @@ jobs:
 
           Write-Host "Installateur vérifié : $($installer.Name) — $([math]::Round($installer.Length / 1MB, 1)) Mo"
 
+      - name: Découper l’installateur pour la récupération
+        shell: pwsh
+        run: |
+          $version = node -p "require('./package.json').version"
+          $expected = "release/Pixel-Everywhere-$version-Windows-x64-Setup.exe"
+          $source = [System.IO.File]::OpenRead($expected)
+          try {
+            $buffer = New-Object byte[] (40MB)
+            $index = 1
+            while (($read = $source.Read($buffer, 0, $buffer.Length)) -gt 0) {
+              $partPath = "{0}.part-{1:D3}" -f $expected, $index
+              $part = [System.IO.File]::Create($partPath)
+              try {
+                $part.Write($buffer, 0, $read)
+              } finally {
+                $part.Dispose()
+              }
+              $index++
+            }
+          } finally {
+            $source.Dispose()
+          }
+
+      - name: Publier le fragment 1 de l’installateur
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-Windows-x64-INSTALLER-PART-1
+          path: release/*-Windows-x64-Setup.exe.part-001
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publier le fragment 2 de l’installateur
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-Windows-x64-INSTALLER-PART-2
+          path: release/*-Windows-x64-Setup.exe.part-002
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publier le fragment 3 de l’installateur
+        uses: actions/upload-artifact@v4
+        with:
+          name: Pixel-Everywhere-Windows-x64-INSTALLER-PART-3
+          path: release/*-Windows-x64-Setup.exe.part-003
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Publier l’installateur Windows complet
         uses: actions/upload-artifact@v4
         with:
