@@ -43,11 +43,11 @@ function updateSteps(platform = helperRuntime()) {
   }
   if (platform === "windows") {
     return [
-      "Appuie sur « Télécharger la version portable ».",
-      "Ouvre le fichier Pixel-Everywhere…Portable.exe téléchargé.",
+      "Appuie sur « Télécharger l’installateur ».",
+      "Ouvre le fichier Pixel-Everywhere…Setup.exe téléchargé.",
       "Si Windows SmartScreen apparaît, choisis Informations complémentaires puis Exécuter quand même.",
-      "Pixel Everywhere se lance directement : aucune installation n’est nécessaire.",
-      "Tu peux déplacer le fichier .exe dans le dossier de ton choix."
+      "Suis l’assistant et choisis le dossier d’installation si tu le souhaites.",
+      "Lance ensuite Pixel Everywhere depuis le Bureau ou le menu Démarrer."
     ];
   }
   if (platform === "macos") {
