@@ -81,6 +81,7 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Pixel Everywhere"
-    }
+    },
+    "compression": "maximum"
   }
 }
