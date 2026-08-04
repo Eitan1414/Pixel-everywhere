@@ -72,33 +72,33 @@ jobs:
       - name: Vérifier les catégories, interactions et réglages serveur
         run: node scripts/verify-windows-bundle.mjs
 
-      - name: Compiler l’installateur Windows 64 bits
-        run: npx electron-builder --win nsis --x64 --publish never
+      - name: Compiler l’application Windows portable 64 bits
+        run: npx electron-builder --win portable --x64 --publish never
 
-      - name: Vérifier l’installateur Windows
+      - name: Vérifier l’application Windows portable
         shell: pwsh
         run: |
           $version = node -p "require('./package.json').version"
-          $expected = "release/Pixel-Everywhere-$version-Windows-x64-Setup.exe"
+          $expected = "release/Pixel-Everywhere-$version-Windows-x64-Portable.exe"
 
           if (-not (Test-Path $expected)) {
-            Write-Error "Installateur Windows introuvable: $expected"
+            Write-Error "Application Windows portable introuvable: $expected"
             Get-ChildItem -Path release -Recurse -ErrorAction SilentlyContinue
             exit 1
           }
 
           $installer = Get-Item $expected
           if ($installer.Length -lt 1MB) {
-            Write-Error "L’installateur Windows semble incomplet: $($installer.Length) octets."
+            Write-Error "L’application Windows portable semble incomplet: $($installer.Length) octets."
             exit 1
           }
 
           Write-Host "Installateur vérifié : $($installer.Name) — $([math]::Round($installer.Length / 1MB, 1)) Mo"
 
-      - name: Publier l’installateur Windows complet
+      - name: Publier l’application Windows portable complet
         uses: actions/upload-artifact@v4
         with:
-          name: Pixel-Everywhere-Windows-x64-COMPLETE
-          path: release/*-Windows-x64-Setup.exe
+          name: Pixel-Everywhere-Windows-x64-PORTABLE
+          path: release/*-Windows-x64-Portable.exe
           if-no-files-found: error
           retention-days: 14
