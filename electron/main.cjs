@@ -19,7 +19,7 @@ const UPDATE_TARGETS = {
   android: { extension: ".apk", contentType: "application/vnd.android.package-archive", filters: [{ name: "Application Android", extensions: ["apk"] }] },
   "macos-arm64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Apple Silicon", extensions: ["zip"] }] },
   "macos-x64": { extension: ".zip", contentType: "application/zip", filters: [{ name: "Application macOS Intel", extensions: ["zip"] }] },
-  "windows-x64": { extension: ".exe", contentType: "application/vnd.microsoft.portable-executable", filters: [{ name: "Application Windows portable 64 bits", extensions: ["exe"] }] }
+  "windows-x64": { extension: ".exe", contentType: "application/vnd.microsoft.portable-executable", filters: [{ name: "Installateur Windows 64 bits", extensions: ["exe"] }] }
 };
 
 function safeExternalUrl(value) {
@@ -181,7 +181,7 @@ ipcMain.handle("pixel:api-request", async (_event, request = {}) => {
   }
 });
 
-// Les APK, archives macOS et applications Windows portables dépassent largement la
+// Les APK, archives macOS et installateurs Windows dépassent largement la
 // limite du relais JSON. Electron ouvre donc un sélecteur natif, puis transmet
 // directement le fichier au serveur sous forme de flux, sans le charger en mémoire.
 // Le flux natif http/https évite le bug AbortSignal d’Undici observé sur macOS.
