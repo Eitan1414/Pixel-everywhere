@@ -118,6 +118,9 @@
 
   .bottom-nav {
     right: auto;
+    grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
+    overflow-x: auto;
+    scrollbar-width: thin;
     bottom: 18px;
     left: 50%;
     width: min(calc(100% - 64px), 780px);
