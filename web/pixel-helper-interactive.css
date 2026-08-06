@@ -1,315 +1,111 @@
-.pixel-helper-logo-frame {
-  position: relative;
-  display: inline-grid;
-  flex: 0 0 auto;
-  place-items: center;
-  overflow: hidden;
-  width: 46px;
-  height: 46px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 15px;
-  background: #000;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+/*
+ * Garde-fous pour les anciens WebView Android :
+ * - le nouveau logo est inséré avant l'ancien rond « P » ;
+ * - un éventuel second bouton portant le même identifiant est masqué.
+ */
+#pixelHelperGuideButton > .pixel-helper-logo-frame ~ span {
+  display: none !important;
 }
 
-.pixel-helper-logo-frame img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transform: scale(1.15);
+#pixelHelperGuideButton ~ #pixelHelperGuideButton,
+.pixel-guide-button ~ .pixel-guide-button {
+  display: none !important;
+}
+
+.pixel-helper-logo-frame {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  background: #000;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
 }
 
 .pixel-helper-logo-frame.compact {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
 }
 
 .pixel-helper-logo-frame.heading {
-  width: 56px;
-  height: 56px;
-  border-radius: 17px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
 }
 
-.pixel-helper-logo-frame.stage-logo {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  z-index: 3;
-  width: 48px;
-  height: 48px;
-  border-radius: 15px;
-}
-
-.pixel-helper-thread-logo,
-.pixel-helper-inline-logo,
-.pixel-helper-message-logo {
-  width: 28px;
-  height: 28px;
-  overflow: hidden;
-  border-radius: 9px;
+.pixel-helper-emotion-image {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  vertical-align: middle;
   background: #000;
 }
 
-.pixel-helper-thread-logo,
-.pixel-helper-message-logo {
-  margin-right: 8px;
-}
-
-.pixel-helper-inline-logo {
-  width: 24px;
-  height: 24px;
-  margin-right: 7px;
+.pixel-helper-interactive-stage,
+.pixel-helper-update-stage {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  overflow: hidden;
+  padding: 16px;
+  border: 1px solid rgba(18, 214, 223, 0.26);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 0 0, rgba(255, 107, 25, 0.08), transparent 13rem),
+    radial-gradient(circle at 100% 0, rgba(18, 214, 223, 0.12), transparent 15rem),
+    rgba(4, 8, 13, 0.9);
 }
 
 .pixel-helper-interactive-stage {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(150px, 0.7fr) minmax(220px, 1.3fr);
-  gap: 16px;
-  padding: 16px;
-  border: 1px solid rgba(18, 214, 223, 0.22);
-  border-radius: 20px;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(255, 107, 25, 0.12), transparent 12rem),
-    radial-gradient(circle at 90% 10%, rgba(18, 214, 223, 0.13), transparent 14rem),
-    rgba(255, 255, 255, 0.028);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  grid-template-columns: minmax(112px, 0.42fr) minmax(0, 1fr);
+  align-items: center;
 }
 
-.pixel-helper-stage-visual {
-  position: relative;
+.pixel-helper-stage-visual,
+.pixel-helper-update-emotion {
   display: grid;
-  min-height: 190px;
   place-items: center;
-  overflow: hidden;
-  border-radius: 17px;
-  background:
-    linear-gradient(180deg, rgba(18, 214, 223, 0.09), rgba(255, 107, 25, 0.045)),
-    rgba(3, 7, 12, 0.76);
+  min-height: 132px;
+  padding: 8px;
 }
 
-.pixel-helper-stage-visual::before,
-.pixel-helper-stage-visual::after {
-  position: absolute;
-  content: "";
-  border-radius: 999px;
-  opacity: 0.34;
-  filter: blur(1px);
-}
-
-.pixel-helper-stage-visual::before {
-  top: 22px;
-  right: 24px;
-  width: 42px;
-  height: 42px;
-  background: rgba(18, 214, 223, 0.2);
-}
-
-.pixel-helper-stage-visual::after {
-  right: 46px;
-  bottom: 20px;
-  width: 70px;
-  height: 20px;
-  background: rgba(255, 107, 25, 0.16);
-}
-
-.pixel-helper-animated-pixel {
-  position: relative;
-  z-index: 2;
-  width: 132px;
-  height: 132px;
-  transform-origin: 50% 88%;
-  animation: pixelHelperFloat 2.8s ease-in-out infinite;
-}
-
-.pixel-helper-pixel-body,
-.pixel-helper-pixel-eye {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+.pixel-helper-stage-emotion {
+  width: min(100%, 178px);
+  aspect-ratio: 1;
   object-fit: contain;
-  pointer-events: none;
+  border-radius: 22px;
+  background: #000;
+  filter: drop-shadow(0 15px 22px rgba(0, 0, 0, 0.42));
 }
 
-.pixel-helper-pixel-eye {
-  transform-origin: 52% 43%;
-  transition: transform 0.25s ease, filter 0.25s ease;
-}
-
-.pixel-helper-pixel-brow,
-.pixel-helper-pixel-mouth,
-.pixel-helper-pixel-cheek,
-.pixel-helper-pixel-hand,
-.pixel-helper-pixel-sparkles {
-  position: absolute;
-  z-index: 4;
-  pointer-events: none;
-}
-
-.pixel-helper-pixel-brow {
-  top: 35%;
-  left: 49%;
-  width: 22px;
-  height: 4px;
-  border-radius: 999px;
-  background: #191919;
-  transform: rotate(-5deg);
-  opacity: 0;
-}
-
-.pixel-helper-pixel-mouth {
-  top: 58%;
-  left: 51%;
-  width: 22px;
-  height: 11px;
-  border-bottom: 4px solid #e83d49;
-  border-radius: 0 0 999px 999px;
-  transform: translateX(-50%);
-}
-
-.pixel-helper-pixel-cheek {
-  top: 54%;
-  width: 10px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 107, 116, 0.58);
-  opacity: 0;
-}
-
-.pixel-helper-pixel-cheek.left {
-  left: 38%;
-}
-
-.pixel-helper-pixel-cheek.right {
-  right: 34%;
-}
-
-.pixel-helper-pixel-hand {
-  right: -5px;
-  top: 26px;
-  font-size: 30px;
-  transform-origin: 20% 90%;
-  opacity: 0;
-}
-
-.pixel-helper-pixel-sparkles {
-  top: 7px;
-  right: 2px;
-  color: var(--cyan);
-  font-size: 18px;
-  opacity: 0;
-}
-
-.pixel-helper-react {
-  animation: pixelHelperReact 0.48s ease, pixelHelperFloat 2.8s 0.48s ease-in-out infinite;
-}
-
-.expression-happy .pixel-helper-pixel-cheek,
-.expression-excited .pixel-helper-pixel-cheek,
-.expression-proud .pixel-helper-pixel-cheek {
-  opacity: 1;
-}
-
-.expression-curious .pixel-helper-pixel-brow {
-  opacity: 1;
-  transform: rotate(-16deg) translateY(-2px);
-}
-
-.expression-curious .pixel-helper-pixel-mouth {
-  width: 10px;
-  height: 10px;
-  border: 3px solid #e83d49;
-  border-radius: 50%;
-}
-
-.expression-curious .pixel-helper-pixel-eye {
-  transform: translate(3px, -1px) rotate(3deg);
-}
-
-.expression-excited {
-  animation: pixelHelperExcited 0.72s ease, pixelHelperFloat 2.3s 0.72s ease-in-out infinite;
-}
-
-.expression-excited .pixel-helper-pixel-sparkles {
-  opacity: 1;
-  animation: pixelHelperSparkle 1s ease-in-out infinite alternate;
-}
-
-.expression-excited .pixel-helper-pixel-mouth {
-  width: 25px;
-  height: 18px;
-  border: 4px solid #e83d49;
-  border-top: 0;
-}
-
-.expression-wink .pixel-helper-pixel-eye {
-  transform: scaleY(0.18) rotate(-8deg);
-}
-
-.expression-wink .pixel-helper-pixel-mouth {
-  transform: translateX(-50%) rotate(-8deg);
-}
-
-.expression-proud {
-  transform: rotate(-4deg);
-}
-
-.expression-proud .pixel-helper-pixel-brow {
-  opacity: 1;
-  transform: rotate(8deg);
-}
-
-.expression-proud .pixel-helper-pixel-mouth {
-  width: 25px;
-}
-
-.expression-wave .pixel-helper-pixel-hand {
-  opacity: 1;
-  animation: pixelHelperWave 0.72s ease-in-out infinite alternate;
-}
-
-.expression-wave .pixel-helper-pixel-mouth {
-  width: 24px;
-}
-
-.expression-calm .pixel-helper-pixel-eye {
-  transform: scaleY(0.62);
-}
-
-.expression-calm .pixel-helper-pixel-mouth {
-  width: 18px;
-  border-bottom-width: 3px;
+.pixel-helper-emotion-react {
+  animation: pixel-helper-emotion-react 0.38s ease;
 }
 
 .pixel-helper-speech {
-  align-self: center;
   display: grid;
   gap: 7px;
   min-width: 0;
-  padding: 17px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 17px;
-  background: rgba(7, 11, 17, 0.82);
 }
 
-.pixel-helper-speech small {
+.pixel-helper-speech small,
+.pixel-helper-update-stage small {
   color: var(--cyan);
-  font-size: 0.72rem;
   font-weight: 850;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .pixel-helper-speech h3,
-.pixel-helper-speech p {
+.pixel-helper-speech p,
+.pixel-helper-update-stage p {
   margin: 0;
 }
 
-.pixel-helper-speech p {
+.pixel-helper-speech p,
+.pixel-helper-update-stage p {
   color: var(--muted);
   line-height: 1.55;
 }
@@ -319,7 +115,7 @@
   height: 6px;
   overflow: hidden;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.09);
 }
 
 .pixel-helper-progress i {
@@ -328,19 +124,18 @@
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--orange), var(--cyan));
-  transition: width 0.3s ease;
+  transition: width 0.28s ease;
 }
 
 .pixel-helper-navigation {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: auto minmax(170px, 1fr) auto;
-  gap: 10px;
-  align-items: center;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
 }
 
-.pixel-helper-navigation .primary-button {
-  justify-self: center;
+.pixel-helper-navigation button {
+  min-height: 43px;
 }
 
 .pixel-helper-guide-item {
@@ -348,120 +143,137 @@
   transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
 }
 
-.pixel-helper-guide-item:hover,
-.pixel-helper-guide-item:focus-visible,
-.pixel-helper-guide-item.selected,
-.pixel-helper-message li:hover,
-.pixel-helper-message li:focus-visible,
-.pixel-helper-message li.selected {
-  border-color: rgba(18, 214, 223, 0.46);
+.pixel-helper-guide-item:active {
+  transform: scale(0.99);
+}
+
+.pixel-helper-guide-item.selected {
+  border-color: rgba(18, 214, 223, 0.48);
   background: rgba(18, 214, 223, 0.08);
-  outline: none;
 }
 
-.pixel-helper-guide-item.selected,
-.pixel-helper-message li.selected {
-  transform: translateX(3px);
-}
-
-.pixel-helper-message li {
-  padding: 9px 11px;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.pixel-helper-message > strong {
-  display: flex;
+.pixel-helper-update-stage {
+  grid-template-columns: 116px minmax(0, 1fr);
   align-items: center;
 }
 
-.update-stage {
-  margin: 5px 0 3px;
+.pixel-helper-update-stage > div:last-child {
+  display: grid;
+  gap: 7px;
 }
 
-.update-stage .pixel-helper-stage-visual {
-  min-height: 170px;
+.pixel-helper-update-stage strong {
+  font-size: 1rem;
 }
 
-.compact-navigation {
-  grid-template-columns: auto 1fr;
+.pixel-helper-message ol li {
+  padding: 10px 10px 10px 4px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
-.compact-navigation .primary-button {
-  justify-self: end;
+.pixel-helper-message ol li:hover,
+.pixel-helper-message ol li.selected {
+  border-color: rgba(18, 214, 223, 0.27);
+  background: rgba(18, 214, 223, 0.06);
 }
 
-@keyframes pixelHelperFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+.pixel-helper-release-notes[role="button"] {
+  cursor: pointer;
 }
 
-@keyframes pixelHelperReact {
-  0% { transform: scale(0.9) rotate(-4deg); }
-  55% { transform: scale(1.08) rotate(3deg); }
-  100% { transform: scale(1); }
+.pixel-helper-thread-logo,
+.pixel-helper-inline-logo,
+.pixel-helper-message-logo {
+  display: inline-block;
+  width: 27px;
+  height: 27px;
+  margin-right: 8px;
+  overflow: hidden;
+  border-radius: 9px;
+  object-fit: cover;
+  vertical-align: middle;
+  background: #000;
 }
 
-@keyframes pixelHelperExcited {
-  0%, 100% { transform: translateY(0) rotate(0); }
-  30% { transform: translateY(-12px) rotate(-5deg); }
-  65% { transform: translateY(-4px) rotate(5deg); }
+.pixel-helper-message-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
 }
 
-@keyframes pixelHelperWave {
-  from { transform: rotate(-16deg); }
-  to { transform: rotate(18deg); }
+.pixel-helper-popup-logo {
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
 }
 
-@keyframes pixelHelperSparkle {
-  from { transform: scale(0.9) rotate(-4deg); opacity: 0.45; }
-  to { transform: scale(1.15) rotate(5deg); opacity: 1; }
+.pixel-helper-popup-logo .pixel-helper-logo-frame {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
 }
 
-@media (max-width: 640px) {
-  .pixel-helper-interactive-stage {
+@keyframes pixel-helper-emotion-react {
+  0% { transform: scale(0.94) translateY(5px); opacity: 0.62; }
+  70% { transform: scale(1.025) translateY(-2px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@media (max-width: 580px) {
+  .pixel-helper-interactive-stage,
+  .pixel-helper-update-stage {
     grid-template-columns: 1fr;
   }
 
-  .pixel-helper-stage-visual {
-    min-height: 160px;
+  .pixel-helper-stage-visual,
+  .pixel-helper-update-emotion {
+    min-height: 112px;
   }
 
-  .pixel-helper-animated-pixel {
-    width: 112px;
-    height: 112px;
+  .pixel-helper-stage-emotion {
+    width: min(58vw, 156px);
   }
 
-  .pixel-helper-navigation,
-  .compact-navigation {
-    grid-template-columns: 1fr 1fr;
+  .pixel-helper-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .pixel-helper-navigation [data-helper-open-category] {
+  .pixel-helper-navigation [data-open] {
     grid-column: 1 / -1;
     grid-row: 1;
-    width: 100%;
-  }
-
-  .pixel-helper-navigation .primary-button,
-  .compact-navigation .primary-button {
-    justify-self: stretch;
-  }
-
-  .pixel-helper-logo-frame.stage-logo {
-    width: 40px;
-    height: 40px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pixel-helper-animated-pixel,
-  .pixel-helper-react,
-  .expression-excited,
-  .expression-wave .pixel-helper-pixel-hand,
-  .expression-excited .pixel-helper-pixel-sparkles {
-    animation: none !important;
+  .pixel-helper-emotion-react {
+    animation: none;
   }
+
+  .pixel-helper-progress i,
+  .pixel-helper-guide-item,
+  .pixel-helper-message ol li {
+    transition: none;
+  }
+}
+
+.pixel-helper-interactive-stage.no-character {
+  grid-template-columns: 1fr;
+}
+
+.pixel-helper-interactive-stage.no-character .pixel-helper-speech,
+.pixel-helper-interactive-stage.no-character .pixel-helper-progress,
+.pixel-helper-interactive-stage.no-character .pixel-helper-navigation {
+  grid-column: 1;
+}
+
+.pixel-helper-update-stage.no-character {
+  grid-template-columns: 1fr;
+}
+
+.pixel-helper-update-stage.no-character > div {
+  min-width: 0;
 }

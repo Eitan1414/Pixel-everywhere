@@ -43,11 +43,11 @@ function updateSteps(platform = helperRuntime()) {
   }
   if (platform === "windows") {
     return [
-      "Appuie sur « Installer automatiquement » ou « Télécharger la mise à jour ».",
+      "Appuie sur « Télécharger l’installateur ».",
       "Ouvre le fichier Pixel-Everywhere…Setup.exe téléchargé.",
       "Si Windows SmartScreen apparaît, choisis Informations complémentaires puis Exécuter quand même.",
-      "Suis l’installateur et conserve le même dossier d’installation.",
-      "Relance Pixel Everywhere après la fin de l’installation."
+      "Suis l’assistant et choisis le dossier d’installation si tu le souhaites.",
+      "Lance ensuite Pixel Everywhere depuis le Bureau ou le menu Démarrer."
     ];
   }
   if (platform === "macos") {

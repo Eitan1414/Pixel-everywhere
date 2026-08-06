@@ -87,6 +87,15 @@ async function detectRuntime() {
   try {
     if (window.pixelDesktop?.getRuntime) {
       const desktop = await window.pixelDesktop.getRuntime();
+      if (desktop?.platform === "win32") {
+        updateState.runtime = {
+          platform: "windows",
+          arch: desktop.arch === "arm64" ? "arm64" : "x64",
+          version: desktop.version || BUILD_VERSION,
+          label: desktop.arch === "arm64" ? "Windows ARM64" : "Windows 64 bits"
+        };
+        return updateState.runtime;
+      }
       if (desktop?.platform === "darwin") {
         updateState.runtime = {
           platform: "macos",

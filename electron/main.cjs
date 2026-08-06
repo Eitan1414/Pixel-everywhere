@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, dialog, ipcMain, Menu, shell } = require("electron");
 const fs = require("fs");
 const http = require("http");
 const https = require("https");
@@ -249,6 +249,7 @@ function createWindow() {
     center: true,
     title: "Pixel Everywhere",
     backgroundColor: "#08090c",
+    autoHideMenuBar: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -260,6 +261,11 @@ function createWindow() {
   });
 
   guardWindow(window);
+
+  if (process.platform === "win32") {
+    window.setMenu(null);
+    window.setMenuBarVisibility(false);
+  }
 
   if (process.platform !== "darwin") {
     window.once("ready-to-show", () => window.show());
@@ -274,6 +280,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  if (process.platform === "win32") Menu.setApplicationMenu(null);
   createWindow();
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

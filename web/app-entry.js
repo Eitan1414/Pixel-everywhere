@@ -42,11 +42,18 @@ const moduleLoaders = Object.freeze({
   accountDeletion: () => import("./account-deletion.js"),
   memberConversationsStyles: () => import("./member-conversations.css"),
   memberConversations: () => import("./member-conversations.js"),
+  communityMessagingStyles: () => import("./community-messaging.css"),
+  communityMessaging: () => import("./community-messaging.js"),
+  communityChatEnhancementsStyles: () => import("./community-chat-enhancements.css"),
+  communityChatEnhancements: () => import("./community-chat-enhancements.js"),
+  staffMemberSession: () => import("./staff-member-session.js"),
   pixelHelperStyles: () => import("./pixel-helper.css"),
   pixelHelper: () => import("./pixel-helper.js"),
   pixelHelperDownload: () => import("./pixel-helper-download.js"),
   pixelHelperInteractiveStyles: () => import("./pixel-helper-interactive.css"),
   pixelHelperInteractive: () => import("./pixel-helper-interactive.js"),
+  pixelHelperBotsStyles: () => import("./pixel-helper-bots.css"),
+  pixelHelperBots: () => import("./pixel-helper-bots.js"),
   main: () => import("./main.js"),
   interactionAccessStability: () => import("./interaction-access-stability.js"),
   offlineAccess: () => import("./offline-access.js")
@@ -131,14 +138,21 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.accountDeletionStyles, "styles de suppression du compte");
   await loadOptional(moduleLoaders.accountDeletion, "suppression du compte");
   await loadOptional(moduleLoaders.memberConversationsStyles, "styles de la messagerie privée");
+  await loadOptional(moduleLoaders.communityMessagingStyles, "styles du chat public et des MP");
+  await loadOptional(moduleLoaders.communityChatEnhancementsStyles, "styles des mentions et de la catégorie chat public");
   await loadOptional(moduleLoaders.pixelHelperStyles, "styles de Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperInteractiveStyles, "styles interactifs de Pixel Helper");
+  await loadOptional(moduleLoaders.pixelHelperBotsStyles, "styles des bots Pixel Helper");
 
+  await loadOptional(moduleLoaders.staffMemberSession, "profil membre automatique des comptes staff");
   await loadCritical(moduleLoaders.main, "Interface principale");
   await loadOptional(moduleLoaders.memberConversations, "messagerie membres et staff");
+  await loadOptional(moduleLoaders.communityMessaging, "chat public et MP entre membres");
+  await loadOptional(moduleLoaders.communityChatEnhancements, "catégorie chat public, mentions et aide de modération");
   await loadOptional(moduleLoaders.pixelHelper, "guides Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperDownload, "téléchargement guidé Pixel Helper");
   await loadOptional(moduleLoaders.pixelHelperInteractive, "tutoriel interactif Pixel Helper");
+  await loadOptional(moduleLoaders.pixelHelperBots, "bots de guide et de modération Pixel Helper");
   await loadOptional(moduleLoaders.interactionAccessStability, "stabilité des accès et interactions");
   await loadOptional(moduleLoaders.offlineAccess, "accès hors ligne");
 

@@ -1,12 +1,14 @@
 const userAgent = navigator.userAgent || "";
 const platform = navigator.platform || "";
 const isAndroid = window.Capacitor?.getPlatform?.() === "android" || /Android/i.test(userAgent);
-const isMacOS = Boolean(window.pixelDesktop) && /Mac/i.test(`${platform} ${userAgent}`);
-const isStableNativeRuntime = isAndroid || isMacOS;
+const isDesktop = Boolean(window.pixelDesktop);
+const isMacOS = isDesktop && /Mac/i.test(`${platform} ${userAgent}`);
+const isWindows = isDesktop && /Win/i.test(`${platform} ${userAgent}`);
+const isStableNativeRuntime = isAndroid || isMacOS || isWindows;
 
 window.PixelNativeStability = {
   enabled: isStableNativeRuntime,
-  platform: isAndroid ? "android" : isMacOS ? "macos" : "other"
+  platform: isAndroid ? "android" : isMacOS ? "macos" : isWindows ? "windows" : "other"
 };
 
 document.documentElement.dataset.pixelStableNative = String(isStableNativeRuntime);
