@@ -165,3 +165,6 @@ complètement fermée nécessiteront l’ajout ultérieur de Firebase Cloud Mess
 - **Kamiko** — Co-créateur
 - **Simgi** — Directeur du staff
 - **Baba**, **Touille** et **Maggie** — Modérateurs responsables
+
+Du au manque croissant de membres dans l'application Pixel Everywhere est désormais un projet abandonner ou du moins suspendu les serveurs coutent de l'argent reel et sans membres pour les utiliser de l'argent reel donner pour rien a partir d'aujourd'hui 05/10/2026 Pixel Everywhere ne sera plus mis en ligne a travers les serveurs officiel jusqu'a nouvelle ordre vous pouvez toujours utiliser l'application mais avec des fonctionaliter tres restreinte du a l'incompetance de connexion aux serveur PDD 
+Pixel Electronics Arts
