@@ -168,7 +168,7 @@ function install() {
   // Additional staff modules can register buttons after this module starts.
   new MutationObserver(() => {
     if (currentView === "dashboard") drawDashboard();
-  }).observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+  }).observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
 
   showDashboard();
   document.documentElement.classList.add("v17-admin-ready");
