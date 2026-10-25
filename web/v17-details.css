@@ -1,0 +1,36 @@
+/* Pixel Everywhere v1.7: dossier views inspired by paper wireframes 3–6. */
+.v17-d-dialog {
+  width:min(92vw,620px);
+  max-height:90dvh;
+  overflow-y:auto;
+  padding:0;border:1px solid var(--line);border-radius:23px;
+  color:var(--text);background:#11141c;
+}
+.v17-d-dialog::backdrop {background:rgba(0,0,0,.76)}
+.v17-d-shell {padding:20px;display:grid;gap:16px}
+.v17-d-heading {display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.v17-d-heading h2 {font-size:clamp(1.35rem,4vw,1.9rem);overflow-wrap:anywhere}
+.v17-d-close {width:38px;height:38px;flex-shrink:0;border:1px solid var(--line);border-radius:50%;background:var(--surface);color:var(--text);font-size:1.4rem;cursor:pointer}
+.v17-d-grid {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.v17-d-field {display:grid;gap:5px;padding:13px;min-width:0;border:1px solid var(--line);border-radius:13px;background:#0d1016}
+.v17-d-field small,.v17-d-message small {font-size:.73rem;color:var(--muted)}
+.v17-d-field strong {font-size:.9rem;overflow-wrap:anywhere}
+.v17-d-message {margin-top:12px;padding:15px;border:1px solid var(--line);border-radius:14px;background:rgba(20,24,33,.84)}
+.v17-d-message p {white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;margin:10px 0 0}
+.v17-d-status {margin:0;color:#ffbf88;font-size:.85rem}
+.v17-d-status:empty {display:none}
+.v17-d-actions,.v17-d-confirm-buttons {display:flex;gap:10px;flex-wrap:wrap}
+.v17-d-actions[hidden],.v17-d-confirm[hidden] {display:none}
+.v17-d-actions button,.v17-d-confirm-buttons button {min-height:43px;padding:10px 15px;border-radius:12px;font-weight:750;cursor:pointer}
+.v17-d-primary {border:1px solid transparent;background:var(--orange);color:#17110a}
+.v17-d-neutral {border:1px solid var(--line);background:#232936;color:var(--text)}
+.v17-d-danger {border:1px solid rgba(255,84,104,.5);background:rgba(255,84,104,.14);color:#ffd7dc}
+.v17-d-confirm {padding:15px;border:1px solid rgba(255,184,96,.4);border-radius:14px;background:rgba(255,175,65,.07)}
+.v17-d-confirm p {line-height:1.5;margin:0 0 13px}
+.v17-d-open {display:inline-flex;justify-content:center;align-items:center;min-height:36px;padding:8px 13px;border:1px solid rgba(255,107,25,.35);border-radius:11px;color:var(--orange-2);background:rgba(255,107,25,.07);font-size:.82rem;font-weight:700;cursor:pointer}
+.v17-admin-ready #staffWorkspace.v17-admin-reports .staff-alert-actions {display:none}
+.v17-admin-ready #staffWorkspace.v17-admin-accounts #staffAccountsList .account-card-actions,
+.v17-admin-ready #staffWorkspace.v17-admin-accounts #staffAccountsList .account-card > button:not(.v17-d-open) {display:none}
+.v17-admin-ready .member-control-card > .v17-d-open {align-self:center}
+.v17-admin-ready .staff-alert-card > .v17-d-open {margin-top:10px}
+@media(max-width:470px) {.v17-d-grid {grid-template-columns:1fr}.v17-d-shell {padding:15px}}
