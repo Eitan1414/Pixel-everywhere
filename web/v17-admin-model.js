@@ -6,6 +6,7 @@ export const V17_STAFF_SECTIONS = Object.freeze([
  {id:"announcements",tab:"publications",label:"Annonces",description:"Publications et journaux de versions",icon:"▤"},
  {id:"accounts",tab:"accounts",label:"Comptes staff",description:"Créer, activer ou désactiver",icon:"▣",adminOnly:true},
  {id:"members",tab:"live-control",label:"Utilisateurs",description:"Présences, comptes et pièces",icon:"◉",adminOnly:true},
+ {id:"discord-activity",tab:"discord-activity",label:"Activité Discord",description:"Statistiques et annonces du serveur PDD",icon:"◎"},
  {id:"ratings",tab:"ratings",label:"Avis",description:"Retours sur l'application",icon:"★"}
 ]);
 export function getV17StaffSections(role, availableTabs) {
