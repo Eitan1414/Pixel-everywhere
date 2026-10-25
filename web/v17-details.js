@@ -203,15 +203,13 @@ function install() {
   }
   function addButtons(list,selector,text) {
     for(const card of $$(selector,list)) {
-      if(card.dataset.v17DetailsReady)returnCheck(card);
-      else {
-        card.dataset.v17DetailsReady="yes";
-        const button=el("button","v17-d-open",text);
-        button.type="button";card.append(button);
-      }
+      if(card.dataset.v17DetailsReady)continue;
+      card.dataset.v17DetailsReady="yes";
+      const button=el("button","v17-d-open",text);
+      button.type="button";
+      card.append(button);
     }
   }
-  function returnCheck(_card) {}
   function decorate() {
     if(me()?.role==="admin"){
       addButtons(accounts,".account-card[data-v17-account-id]","Voir la fiche");
