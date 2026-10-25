@@ -1,9 +1,16 @@
 import crypto from "node:crypto";
+import rateLimit from "express-rate-limit";
 import { fetchAnnouncements } from "./discord.mjs";
 
 const API = "https://discord.com/api/v10";
 const STATE_TTL_SECONDS = 10 * 60;
-const STATE_MAX_PER_USER = 3;
+const linkStartLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 12,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "Trop de demandes de liaison. Réessaie dans quelques minutes." }
+});
 
 export function discordOAuthConfiguration(env = process.env) {
   const clientId = String(env.DISCORD_CLIENT_ID || "").trim();
@@ -93,7 +100,7 @@ export function registerDiscordV17Routes({
     });
   });
 
-  app.post("/api/members/discord/link/start", ...memberOnly, (req, res) => {
+  app.post("/api/members/discord/link/start", ...memberOnly, linkStartLimiter, (req, res) => {
     const config = discordOAuthConfiguration();
     if (!config) return res.status(503).json({ error: "La connexion Discord n'est pas encore configurée sur le serveur." });
     const now = Math.floor(Date.now() / 1000);
