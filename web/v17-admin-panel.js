@@ -112,7 +112,7 @@ function install() {
   function showDashboard() {
     currentView = "dashboard";
     workspace.classList.add("v17-admin-overview");
-    workspace.classList.remove("v17-admin-section", "v17-admin-reports", "v17-admin-discussions");
+    workspace.classList.remove("v17-admin-section", "v17-admin-reports", "v17-admin-discussions", "v17-admin-accounts", "v17-admin-members");
     dashboard.hidden = false;
     detail.hidden = true;
     home.setAttribute("aria-current", "page");
@@ -128,9 +128,9 @@ function install() {
     currentView = target.id;
     // Let the original handlers fetch data, open dialogs, and perform staff actions.
     button.click();
-    workspace.classList.remove("v17-admin-overview", "v17-admin-reports", "v17-admin-discussions");
+    workspace.classList.remove("v17-admin-overview", "v17-admin-reports", "v17-admin-discussions", "v17-admin-accounts", "v17-admin-members");
     workspace.classList.add("v17-admin-section");
-    if (target.id === "reports" || target.id === "discussions") {
+    if (["reports", "discussions", "accounts", "members"].includes(target.id)) {
       workspace.classList.add("v17-admin-" + target.id);
     }
     dashboard.hidden = true;
