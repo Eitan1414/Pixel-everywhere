@@ -1,0 +1,27 @@
+/* Discord account linking and staff-only read-only activity preview (v1.7). */
+.v17-discord-page,.v17-discord-staff {max-width:770px;margin-inline:auto}
+.v17-discord-page > h2 {margin-bottom:17px}
+.v17-discord-card {padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface);display:grid;gap:14px}
+.v17-discord-muted {color:var(--muted);line-height:1.5;font-size:.89rem}
+.v17-discord-identity {display:grid;gap:4px}
+.v17-discord-identity small {color:var(--muted)}
+.v17-discord-actions {display:flex;flex-wrap:wrap;gap:9px}
+.v17-discord-actions > [hidden] {display:none!important}
+.v17-discord-actions button,.v17-discord-actions a,.v17-discord-staff button {
+ display:inline-flex;justify-content:center;align-items:center;min-height:43px;
+ padding:10px 14px;border-radius:13px;font-weight:750;cursor:pointer;text-decoration:none;font-size:.86rem
+}
+.v17-discord-primary,.v17-discord-link {color:#121019;background:var(--orange);border:1px solid transparent}
+.v17-discord-secondary {color:var(--text);background:var(--surface);border:1px solid var(--line)}
+.v17-discord-danger {color:#ffd7dc;background:rgba(255,84,104,.11);border:1px solid rgba(255,84,104,.45)}
+.v17-discord-staff-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.v17-discord-staff h3,.v17-discord-staff h4 {margin:0}
+.v17-discord-stats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0 22px}
+.v17-discord-stat {display:grid;gap:7px;padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.v17-discord-stat strong {font-size:1.65rem}
+.v17-discord-stat small {font-size:.74rem;color:var(--muted)}
+.v17-discord-announcements {display:grid;gap:10px;margin-top:12px}
+.v17-discord-announcement {padding:14px;border-radius:15px;border:1px solid var(--line);background:var(--surface);display:grid;gap:7px}
+.v17-discord-announcement small {color:var(--muted);font-size:.72rem}
+.v17-discord-announcement p {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+@media(max-width:420px) {.v17-discord-card {padding:15px}.v17-discord-stats {gap:6px}.v17-discord-stat {padding:10px}.v17-discord-stat strong {font-size:1.3rem}.v17-discord-actions button,.v17-discord-actions a {width:100%}}

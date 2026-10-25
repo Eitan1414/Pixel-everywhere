@@ -56,7 +56,11 @@ const moduleLoaders = Object.freeze({
   pixelHelperBots: () => import("./pixel-helper-bots.js"),
   main: () => import("./main.js"),
   interactionAccessStability: () => import("./interaction-access-stability.js"),
-  offlineAccess: () => import("./offline-access.js")
+  offlineAccess: () => import("./offline-access.js"),
+  v17Shell: () => import("./v17-shell.js"),
+  v17AdminPanel: () => import("./v17-admin-panel.js"),
+  v17Details: () => import("./v17-details.js"),
+  v17Discord: () => import("./v17-discord.js")
 });
 
 async function loadOptional(loader, label) {
@@ -155,6 +159,10 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.pixelHelperBots, "bots de guide et de modération Pixel Helper");
   await loadOptional(moduleLoaders.interactionAccessStability, "stabilité des accès et interactions");
   await loadOptional(moduleLoaders.offlineAccess, "accès hors ligne");
+  await loadOptional(moduleLoaders.v17Shell, "interface v1.7 (accueil et navigation)");
+  await loadOptional(moduleLoaders.v17AdminPanel, "refonte du panneau staff v1.7");
+  await loadOptional(moduleLoaders.v17Details, "dossiers et confirmations staff v1.7");
+  await loadOptional(moduleLoaders.v17Discord, "liaison Discord et activité du serveur v1.7");
 
   exposeBootState();
   window.pixelDesktop?.reportRendererReady?.();

@@ -1274,7 +1274,8 @@ async function loadStaffRatings() {
 function renderStaffAlert(alert) {
   const isBug = alert.alert_type === "bug_report";
   const card = element("article", {
-    className: `staff-alert-card ${alert.resolved ? "resolved" : ""}`.trim()
+    className: `staff-alert-card ${alert.resolved ? "resolved" : ""}`.trim(),
+    dataset: { v17AlertId: String(alert.id), v17AlertType: alert.alert_type }
   }, [
     element("div", { className: "staff-alert-head" }, [
       element("strong", { text: isBug ? "🐞 Signalement de bug" : "✦ Conversion XP PDD" }),
@@ -1381,7 +1382,10 @@ function renderAccount(account) {
       toast(error.message);
     }
   });
-  return element("article", { className: "account-card" }, [
+  return element("article", {
+    className: "account-card",
+    dataset: { v17AccountId: String(account.id) }
+  }, [
     info,
     element("span", {
       className: `role-pill ${account.active ? "active-pill" : "inactive-pill"}`,
