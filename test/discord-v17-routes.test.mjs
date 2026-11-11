@@ -29,6 +29,17 @@ function createDatabase() {
           } finally {
             statement.free();
           }
+        },
+        all(...args) {
+          const statement = sqlite.prepare(sql);
+          const rows = [];
+          try {
+            statement.bind(args);
+            while (statement.step()) rows.push(statement.getAsObject());
+            return rows;
+          } finally {
+            statement.free();
+          }
         }
       };
     }
@@ -53,14 +64,15 @@ function authentication(kind) {
 }
 
 test("Discord OAuth2: liaison, unicité, expiration, révocation et accès protégés", async (t) => {
-  const keys = ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI", "DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN"];
+  const keys = ["DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET", "DISCORD_REDIRECT_URI", "DISCORD_GUILD_ID", "DISCORD_BOT_TOKEN", "DISCORD_ACTIVITY_GATEWAY_ENABLED"];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   Object.assign(process.env, {
     DISCORD_CLIENT_ID: "123456789012345678",
     DISCORD_CLIENT_SECRET: "test-secret-not-for-production",
     DISCORD_REDIRECT_URI: "https://pixel.example.org/api/discord/oauth/callback",
     DISCORD_GUILD_ID: "",
-    DISCORD_BOT_TOKEN: ""
+    DISCORD_BOT_TOKEN: "",
+    DISCORD_ACTIVITY_GATEWAY_ENABLED: "false"
   });
   const nativeFetch = globalThis.fetch;
   const identity = { id: "888888888888888888", username: "pixeluser", global_name: "Pixel User", avatar: "a_abcdef0123456789abcdef0123456789" };
@@ -147,6 +159,14 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     assert.equal((await request("/api/members/discord/link/start", "", "POST")).status, 401);
     assert.equal((await request("/api/staff/discord/activity", "member-1")).status, 401);
     assert.equal((await request("/api/staff/discord/activity", "staff")).status, 503);
+    assert.equal((await request("/api/staff/discord/activity/events", "")).status, 401);
+    assert.equal((await request("/api/staff/discord/activity/events", "member-1")).status, 401);
+    const activity = await request("/api/staff/discord/activity/events?type=roles&days=30", "staff");
+    assert.equal(activity.status, 200);
+    const activityData = await activity.json();
+    assert.deepEqual(activityData.events, []);
+    assert.equal(activityData.gateway.status, "disabled");
+    assert.equal(activity.headers.get("cache-control"), "no-store");
     assert.deepEqual(await status("member-1"), { linked: false, discord: null, configured: true });
   });
 
