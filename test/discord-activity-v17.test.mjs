@@ -91,6 +91,20 @@ test("journal Discord: premier update initialise un référentiel sans inventer 
   } finally {close();}
 });
 
+test("Gateway GUILD_CREATE initialise les roles des membres existants sans faux événements", () => {
+  const {store,member,close} = fixture();
+  try {
+    store.observe("GUILD_CREATE",{
+      id:GUILD,roles:[{id:ROLE,name:"Artiste"}],
+      members:[{user:{id:ID,username:"PixelUser"},roles:[ROLE]}]
+    });
+    assert.equal(store.list().length,0);
+    assert.equal(store.observe("GUILD_MEMBER_UPDATE",member([ROLE])),false);
+    assert.equal(store.observe("GUILD_MEMBER_UPDATE",member([])),true);
+    assert.deepEqual(store.list()[0].removedRoles,[{id:ROLE,name:"Artiste"}]);
+  } finally {close();}
+});
+
 test("journal Discord: conservation de 30 jours et filtres de dates", () => {
   const {store,member,advanceDays,close} = fixture();
   try {
@@ -151,4 +165,24 @@ test("Gateway: Identify demande seulement GUILDS et GUILD_MEMBERS; logs à l'arr
     assert.ok(gateway.getStatus().lastEventAt);
     socket.emit("message",JSON.stringify({op:11,d:null}));
   } finally {gateway.close();}
+});
+
+test("Gateway refuse les membres sans intent privilégié (4014) sans reconnexion en boucle", () => {
+  class MockSocket extends EventEmitter {
+    static OPEN = 1;
+    constructor(){super();this.readyState=1;MockSocket.last=this;}
+    close(code=1000){this.readyState=3;this.emit("close",code);}
+    send(){}
+  }
+  const gateway=startDiscordActivityGateway({
+    store:{observe:()=>false},
+    env:{DISCORD_ACTIVITY_GATEWAY_ENABLED:"true",DISCORD_BOT_TOKEN:"test-token",DISCORD_GUILD_ID:GUILD},
+    WebSocketImpl:MockSocket
+  });
+  try{
+    MockSocket.last.close(4014);
+    const status=gateway.getStatus();
+    assert.equal(status.status,"unauthorized");
+    assert.match(status.error,/Server Members Intent/);
+  }finally{gateway.close();}
 });
