@@ -34,3 +34,15 @@
 .v17-discord-login-button{background:#5865f2;color:white;border:1px solid #5865f2}
 .v17-discord-login-continue{background:var(--orange);color:#121019;border:1px solid transparent}
 .v17-discord-login > button:disabled{opacity:.65;cursor:wait}
+
+/* Discord identity shared by the dedicated linking screen and PE member profile. */
+.v17-discord-identity{display:flex;align-items:center;gap:13px;min-width:0}
+.v17-discord-identity-details{display:grid;gap:3px;min-width:0}
+.v17-discord-identity-details strong{overflow-wrap:anywhere}
+.v17-discord-identity-details small{color:var(--muted);overflow-wrap:anywhere}
+.v17-discord-avatar,.v17-discord-avatar-fallback{width:54px;height:54px;flex-shrink:0;border-radius:18px;object-fit:cover}
+.v17-discord-avatar-fallback{display:grid;place-items:center;color:#fff;background:#5865f2;font-size:1.4rem}
+.v17-discord-quick{width:100%;display:grid;gap:11px;padding:15px;margin-block:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.v17-discord-quick > strong{font-size:1rem}
+.v17-discord-quick .v17-discord-actions{gap:8px}
+.v17-discord-quick .v17-discord-actions button{flex:1;min-width:120px}
