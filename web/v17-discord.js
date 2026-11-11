@@ -233,10 +233,66 @@ function makeStaffPanel(){
  const status=node("p","v17-discord-muted","Données du serveur Discord PDD");
  status.setAttribute("role","status");
  const stats=node("div","v17-discord-stats"),announcements=node("div","v17-discord-announcements");
- panel.append(head,status,stats,node("h4","","Dernières annonces Discord"),announcements,
-  node("p","v17-discord-muted","Statistiques approximatives, actualisées au plus une fois par minute. Le journal complet des arrivées/départs nécessitera Discord Gateway."));
+ const activityHeading=node("h4","","Journal des événements Discord");
+ const filters=node("div","v17-discord-filters");
+ const typeFilter=node("select","v17-discord-select");
+ typeFilter.setAttribute("aria-label","Filtrer les événements Discord");
+ for(const [value,label] of [["all","Tous les événements"],["join","Arrivées"],["leave","Départs"],["roles","Changements de rôles"]]){
+  const option=node("option","",label);option.value=value;typeFilter.append(option);
+ }
+ const daysFilter=node("select","v17-discord-select");
+ daysFilter.setAttribute("aria-label","Période des événements Discord");
+ for(const [value,label] of [["1","24 dernières heures"],["7","7 derniers jours"],["30","30 derniers jours"]]){
+  const option=node("option","",label);option.value=value;daysFilter.append(option);
+ }
+ daysFilter.value="7";
+ const gatewayStatus=node("p","v17-discord-muted","Journal d'activité en préparation…");
+ gatewayStatus.setAttribute("role","status");
+ const events=node("div","v17-discord-events");
+ filters.append(typeFilter,daysFilter);
+ panel.append(head,status,stats,activityHeading,filters,gatewayStatus,events,
+  node("p","v17-discord-muted","Historique réservé au staff, conservé 30 jours maximum et limité aux 5 000 derniers événements. Les départs ne permettent pas de distinguer un départ volontaire d'une exclusion. Les périodes sans connexion Gateway peuvent présenter des lacunes."),
+  node("h4","","Dernières annonces Discord"),announcements,
+  node("p","v17-discord-muted","Statistiques du serveur approximatives, mises en cache pendant une minute."));
  workspace.append(panel);
+ function formatDiscordDate(value){
+  const date=new Date(value);
+  return Number.isNaN(date.getTime())?"Date inconnue":date.toLocaleString("fr-FR");
+ }
+ async function loadEvents(){
+  try{
+   const query=new URLSearchParams({type:typeFilter.value,days:daysFilter.value});
+   const result=await callAPI("/staff/discord/activity/events?"+query.toString(),"staff");
+   const gateway=result.gateway||{};
+   const label={connected:"Connecté au Gateway Discord",starting:"Démarrage du Gateway",connecting:"Connexion au Gateway…",reconnecting:"Gateway momentanément déconnecté",disabled:"Journal non activé sur Termux",unauthorized:"Autorisation Discord refusée",misconfigured:"Configuration Gateway manquante",stopped:"Journal arrêté"};
+   gatewayStatus.textContent=(label[gateway.status]||"État Gateway inconnu")+
+    (gateway.error?" · "+gateway.error:"")+
+    (gateway.lastEventAt?" · Dernier événement : "+formatDiscordDate(gateway.lastEventAt):"");
+   events.replaceChildren();
+   if(!result.events?.length){
+    events.append(node("p","v17-discord-muted","Aucun événement enregistré pour ces filtres. Les événements ne seront capturés qu'après activation du Gateway."));
+    return;
+   }
+   for(const item of result.events){
+    const card=node("article","v17-discord-event");
+    const title={join:"Arrivée",leave:"Départ",roles:"Rôles modifiés"}[item.type]||"Événement";
+    const heading=node("div","v17-discord-event-head");
+    heading.append(node("strong","",title+" · "+String(item.username||"Membre")),
+     node("time","",formatDiscordDate(item.createdAt)));
+    const detail=node("small","","ID : "+String(item.discordId||"—"));
+    card.append(heading,detail);
+    if(item.type==="roles"){
+     const added=(item.addedRoles||[]).map(role=>String(role.name||role.id)).join(", ");
+     const removed=(item.removedRoles||[]).map(role=>String(role.name||role.id)).join(", ");
+     if(added)card.append(node("p","","+ "+added));
+     if(removed)card.append(node("p","","− "+removed));
+    }
+    events.append(card);
+   }
+  }catch(err){gatewayStatus.textContent=err.message;events.replaceChildren();}
+ }
  async function load(){
+  void loadEvents();
   refresh.disabled=true;status.textContent="Lecture du serveur Discord…";
   try{
    const result=await callAPI("/staff/discord/activity","staff");
@@ -261,6 +317,13 @@ function makeStaffPanel(){
  }
  refresh.addEventListener("click",load);
  tab.addEventListener("click",load);
+ typeFilter.addEventListener("change",loadEvents);
+ daysFilter.addEventListener("change",loadEvents);
+ window.setInterval(()=>{
+  if(panel.classList.contains("active")&&document.visibilityState!=="hidden"&&sessionStorage.getItem("pixel-token")){
+   void loadEvents();
+  }
+ },20000);
 }
 
 function makeDiscordLogin(){
