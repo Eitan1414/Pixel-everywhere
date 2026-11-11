@@ -206,8 +206,9 @@ function makeMemberPage(){
   if(localStorage.getItem("pixel-member-token"))void load();
   else{
    identity.replaceChildren();quickIdentity.replaceChildren();
+   status.textContent="Connecte-toi à ton compte membre PE pour gérer Discord.";
    quickStatus.textContent="Aucun compte PE connecté.";
-   quickUnlink.hidden=true;
+   connect.hidden=true;unlink.hidden=true;quickUnlink.hidden=true;
   }
  });
  if(accountDialog){
