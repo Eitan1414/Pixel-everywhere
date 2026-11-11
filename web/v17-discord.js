@@ -10,13 +10,14 @@ function node(tag,cls,text) {
 function apiBase(){
  return String(localStorage.getItem("pixel-api-base-url") || import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/,"");
 }
-async function callAPI(path,kind="member",method="GET"){
- const token=kind==="staff"?sessionStorage.getItem("pixel-token"):localStorage.getItem("pixel-member-token");
- if(!token)throw Error("Connecte-toi d'abord à Pixel Everywhere.");
- const headers={Authorization:"Bearer "+token};
+async function callAPI(path,kind="member",method="GET",body){
+ const token=kind==="guest"?"":kind==="staff"?sessionStorage.getItem("pixel-token"):localStorage.getItem("pixel-member-token");
+ if(kind!=="guest"&&!token)throw Error("Connecte-toi d'abord à Pixel Everywhere.");
+ const headers=token?{Authorization:"Bearer "+token}:{};
+ if(body!==undefined)headers["Content-Type"]="application/json";
  if(apiBase().includes(".ngrok-free."))headers["ngrok-skip-browser-warning"]="pixel-everywhere";
  let response;
- try { response=await fetch(apiBase()+path,{method,headers,cache:"no-store"}); }
+ try { response=await fetch(apiBase()+path,{method,headers,cache:"no-store",body:body===undefined?undefined:JSON.stringify(body)}); }
  catch { throw Error("Impossible de joindre le serveur PDD. Vérifie la connexion et l'adresse du serveur."); }
  const contentType=String(response.headers.get("content-type")||"").toLowerCase();
  if(!contentType.includes("application/json")) {
@@ -168,5 +169,100 @@ function makeStaffPanel(){
  refresh.addEventListener("click",load);
  tab.addEventListener("click",load);
 }
+
+function makeDiscordLogin(){
+ const guest=$("#memberGuest");
+ if(!guest||$("#v17DiscordLoginButton"))return;
+ const area=node("div","v17-discord-login");
+ const heading=node("p","v17-discord-muted",
+  "Ou connecte-toi avec ton compte Discord déjà associé à Pixel Everywhere.");
+ const start=node("button","v17-discord-login-button","Se connecter avec Discord");
+ start.id="v17DiscordLoginButton";start.type="button";
+ const open=node("a","v17-discord-login-continue","Autoriser avec Discord");
+ open.target="_blank";open.rel="noopener noreferrer";open.hidden=true;
+ const refresh=node("button","v17-discord-secondary","J'ai autorisé, vérifier");
+ refresh.type="button";refresh.hidden=true;
+ const cancel=node("button","v17-discord-secondary","Annuler");
+ cancel.type="button";cancel.hidden=true;
+ const status=node("p","v17-discord-muted","");
+ status.setAttribute("role","status");status.setAttribute("aria-live","polite");
+ area.append(heading,start,open,refresh,cancel,status);
+ guest.append(area);
+ let pending=null;
+ let busy=false;
+ let timer=null;
+ function clearAttempt(){
+  pending=null;
+  if(timer!==null){window.clearTimeout(timer);timer=null;}
+  start.disabled=false;
+  open.hidden=true;open.removeAttribute("href");
+  refresh.hidden=true;cancel.hidden=true;
+ }
+ async function finish(){
+  if(busy||!pending)return;
+  if(localStorage.getItem("pixel-member-token")){clearAttempt();return;}
+  if(Date.now()>=pending.expiresAt){
+   clearAttempt();status.textContent="L'autorisation Discord a expiré. Recommence la connexion.";return;
+  }
+  busy=true;refresh.disabled=true;
+  try{
+   const result=await callAPI("/members/discord/login/finish","guest","POST",{
+    requestId:pending.requestId,claimKey:pending.claimKey
+   });
+   if(result.status==="pending"){
+    status.textContent="En attente de la confirmation Discord…";
+   }else if(result.token&&result.member){
+    clearAttempt();
+    status.textContent="Connexion Discord réussie !";
+    window.dispatchEvent(new CustomEvent("pixel:discord-member-login",{
+     detail:{token:result.token,member:result.member}
+    }));
+   }else{
+    throw Error("Le serveur n'a pas renvoyé de session membre valide.");
+   }
+  }catch(error){
+   status.textContent=error.message;
+   if(/expir|annul|associ|utilis|refus|invalide/.test(error.message.toLowerCase()))clearAttempt();
+  }finally{busy=false;refresh.disabled=false;}
+ }
+ function onReturn(){
+  if(!pending||document.visibilityState==="hidden")return;
+  if(timer!==null)window.clearTimeout(timer);
+  let remaining=6;
+  const retry=async()=>{
+   timer=null;
+   await finish();
+   if(pending&&remaining-->0&&document.visibilityState!=="hidden"){
+    timer=window.setTimeout(retry,1800);
+   }
+  };
+  void retry();
+ }
+ start.addEventListener("click",async()=>{
+  start.disabled=true;status.textContent="Préparation de la connexion Discord…";
+  try{
+   const response=await callAPI("/members/discord/login/start","guest","POST");
+   const url=new URL(response.authorizationUrl);
+   if(url.protocol!=="https:"||url.hostname!=="discord.com"||
+    typeof response.requestId!=="string"||typeof response.claimKey!=="string"){
+    throw Error("Lien Discord non valide.");
+   }
+   pending={
+    requestId:response.requestId,claimKey:response.claimKey,
+    expiresAt:Date.now()+Math.max(1,Number(response.expiresInSeconds)||600)*1000
+   };
+   open.href=url.href;open.hidden=false;refresh.hidden=false;cancel.hidden=false;
+   status.textContent="Ouvre Discord, autorise l'accès puis reviens dans PE.";
+  }catch(error){status.textContent=error.message;start.disabled=false;}
+ });
+ refresh.addEventListener("click",onReturn);
+ cancel.addEventListener("click",()=>{
+  clearAttempt();status.textContent="Connexion Discord annulée sur cet appareil.";
+ });
+ window.addEventListener("focus",onReturn);
+ document.addEventListener("visibilitychange",onReturn);
+}
+
 makeMemberPage();
+makeDiscordLogin();
 makeStaffPanel();
