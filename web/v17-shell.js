@@ -23,7 +23,9 @@ function prepareHomeHero() {
 }
 
 function menuItems() {
-  const originalCards = $$("#page-home .feature-grid > button");
+  const originalCards = $("#page-home .feature-grid > button").filter((card) =>
+    !card.classList.contains("v17-inbox-legacy") && !card.hidden && !card.classList.contains("hidden")
+  );
   const candidates = originalCards.map((card, index) => ({
     id: card.dataset.pageTarget || card.id || `feature-${index}`,
     label: $("strong", card)?.textContent || card.textContent,
