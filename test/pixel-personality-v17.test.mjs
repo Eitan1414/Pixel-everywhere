@@ -102,3 +102,12 @@ test("Pixel 2.0: petites pensées sans consommation de pièce ni progression", (
   assert.notEqual(first,second);
   assert.deepEqual(initial,snapshot);
 });
+
+test("Pixel 2.0: ses pensées révèlent son caractère hors des besoins urgents", () => {
+  const gourmand = pet({ joy: 70, habits: { feed: 6 } });
+  assert.match(petIdleThought(gourmand, 12, 1), /goûter|recette/i);
+  const joueur = pet({ joy: 70, habits: { bounce: 5 } });
+  assert.match(petIdleThought(joueur, 12, 1), /jeu|partie/i);
+  const affame = pet({ hunger: 15, habits: { bounce: 9 } });
+  assert.match(petIdleThought(affame, 12, 1), /gamelle|orange/i);
+});
