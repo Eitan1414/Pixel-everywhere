@@ -27,6 +27,31 @@ async function callAPI(path,kind="member",method="GET",body){
  if(!response.ok)throw Error(data.error||"Une erreur s'est produite.");
  return data;
 }
+function safeDiscordAvatarUrl(value){
+ try{
+  const url=new URL(String(value||""));
+  if(url.protocol!=="https:"||url.hostname!=="cdn.discordapp.com")return null;
+  if(!/^\/(?:avatars\/\d{15,25}\/(?:a_)?[a-f0-9]{32}\.webp|embed\/avatars\/[0-5]\.png)$/i.test(url.pathname))return null;
+  return url.href;
+ }catch{return null;}
+}
+function showDiscordIdentity(target,discord){
+ target.replaceChildren();
+ const avatarUrl=safeDiscordAvatarUrl(discord.avatarUrl);
+ const avatar=avatarUrl?node("img","v17-discord-avatar"):node("span","v17-discord-avatar-fallback","◉");
+ if(avatarUrl){
+  avatar.src=avatarUrl;
+  avatar.alt="Avatar Discord";
+  avatar.loading="lazy";
+  avatar.referrerPolicy="no-referrer";
+  avatar.addEventListener("error",()=>avatar.replaceWith(node("span","v17-discord-avatar-fallback","◉")),{once:true});
+ }
+ const details=node("div","v17-discord-identity-details");
+ details.append(node("strong","",discord.displayName||discord.username||"Compte Discord"),
+  node("small","","@"+String(discord.username||"inconnu")),
+  node("small","","ID Discord : "+String(discord.id||"inconnu")));
+ target.append(avatar,details);
+}
 function showPage(page) {
  document.querySelectorAll(".page.active").forEach(n=>n.classList.remove("active"));
  page.classList.add("active");
@@ -42,6 +67,25 @@ function makeMemberPage(){
  const status=node("p","v17-discord-muted","Vérification du compte Discord…");
  status.setAttribute("role","status");
  const identity=node("div","v17-discord-identity");
+ const account=$("#memberSignedIn"),accountDialog=$("#loginDialog");
+ const quickPanel=node("section","v17-discord-quick");
+ quickPanel.id="v17-discord-quick";
+ const quickTitle=node("strong","","Compte Discord");
+ const quickStatus=node("p","v17-discord-muted","Vérification du compte Discord…");
+ quickStatus.setAttribute("role","status");
+ const quickIdentity=node("div","v17-discord-identity");
+ const quickActions=node("div","v17-discord-actions");
+ const quickManage=node("button","v17-discord-secondary","Gérer la liaison");
+ const quickUnlink=node("button","v17-discord-danger","Délier Discord");
+ for(const button of [quickManage,quickUnlink])button.type="button";
+ quickUnlink.hidden=true;
+ quickActions.append(quickManage,quickUnlink);
+ quickPanel.append(quickTitle,quickStatus,quickIdentity,quickActions);
+ if(account&&!$("#v17-discord-quick")){
+  const logout=$("#memberLogoutButton");
+  if(logout&&logout.parentNode===account)account.insertBefore(quickPanel,logout);
+  else account.append(quickPanel);
+ }
  const actions=node("div","v17-discord-actions");
  const connect=node("button","v17-discord-primary","Préparer la connexion Discord");
  const refresh=node("button","v17-discord-secondary","Actualiser l'état");
@@ -67,15 +111,20 @@ function makeMemberPage(){
  async function load(){
   if(loading)return;
   loading=true;
+  const tokenAtStart=localStorage.getItem("pixel-member-token");
   connect.disabled=true;refresh.disabled=true;
   if(!hasValidPendingAuth())clearPendingAuth();
   try{
    const result=await callAPI("/members/discord/link");
+   if(tokenAtStart!==localStorage.getItem("pixel-member-token"))return;
    identity.replaceChildren();
+   quickIdentity.replaceChildren();
    if(result.linked&&result.discord) {
     clearPendingAuth();
     status.textContent="Compte Discord lié ✓";
-    identity.append(node("strong","",result.discord.displayName),node("small","","@"+result.discord.username));
+    quickStatus.textContent="Discord est lié à ce compte membre.";
+    showDiscordIdentity(identity,result.discord);
+    showDiscordIdentity(quickIdentity,result.discord);
    } else {
     if(!result.configured)clearPendingAuth();
     status.textContent=!result.configured
@@ -83,11 +132,22 @@ function makeMemberPage(){
      :hasValidPendingAuth()
       ?"Autorisation Discord en attente. Reviens ici après l'avoir acceptée."
       :"Aucun compte Discord lié.";
+    quickStatus.textContent=result.configured
+     ?"Aucun compte Discord lié. Associe ton compte pour utiliser la connexion avec Discord."
+     :"La connexion Discord n'est pas encore configurée.";
    }
    open.hidden=!hasValidPendingAuth();
    connect.hidden=result.linked||!result.configured;
    unlink.hidden=!result.linked;
-  }catch(err){status.textContent=err.message;connect.hidden=true;unlink.hidden=true;}
+   quickUnlink.hidden=!result.linked;
+  }catch(err){
+   if(tokenAtStart===localStorage.getItem("pixel-member-token")){
+    status.textContent=err.message;
+    quickStatus.textContent=err.message;
+    identity.replaceChildren();quickIdentity.replaceChildren();
+    connect.hidden=true;unlink.hidden=true;quickUnlink.hidden=true;
+   }
+  }
   finally{connect.disabled=false;refresh.disabled=false;loading=false;}
  }
  connect.addEventListener("click",async()=>{
@@ -106,12 +166,24 @@ function makeMemberPage(){
   finally{connect.disabled=false;}
  });
  refresh.addEventListener("click",load);
- unlink.addEventListener("click",async()=>{
-  if(!window.confirm("Délier Discord de ton compte Pixel Everywhere ?"))return;
-  unlink.disabled=true;
-  try{await callAPI("/members/discord/link","member","DELETE");clearPendingAuth();await load();}
-  catch(err){status.textContent=err.message;}
-  finally{unlink.disabled=false;}
+ async function unlinkDiscord(){
+  if(!window.confirm("Délier Discord de ton compte Pixel Everywhere ? Tu ne pourras plus te connecter avec Discord tant que tu ne l'auras pas relié."))return;
+  unlink.disabled=true;quickUnlink.disabled=true;
+  try{
+   await callAPI("/members/discord/link","member","DELETE");
+   clearPendingAuth();
+   await load();
+  }catch(err){
+   status.textContent=err.message;
+   quickStatus.textContent=err.message;
+  }finally{unlink.disabled=false;quickUnlink.disabled=false;}
+ }
+ unlink.addEventListener("click",unlinkDiscord);
+ quickUnlink.addEventListener("click",unlinkDiscord);
+ quickManage.addEventListener("click",()=>{
+  if(accountDialog?.open)accountDialog.close();
+  showPage(page);
+  void load();
  });
  const feature=node("button","feature-card");feature.type="button";
  const icon=node("span","feature-icon purple","⌁");
@@ -120,10 +192,26 @@ function makeMemberPage(){
  feature.append(icon,label);
  feature.addEventListener("click",()=>{showPage(page);void load();});
  const refreshOnReturn=()=>{
-  if(document.visibilityState!=="hidden"&&page.classList.contains("active")&&pendingAuth)void load();
+  if(document.visibilityState!=="hidden"&&localStorage.getItem("pixel-member-token")&&
+   (page.classList.contains("active")||accountDialog?.open))void load();
  };
  window.addEventListener("focus",refreshOnReturn);
  document.addEventListener("visibilitychange",refreshOnReturn);
+ window.addEventListener("pixel:member-session-changed",()=>{
+  clearPendingAuth();
+  if(localStorage.getItem("pixel-member-token"))void load();
+  else{
+   identity.replaceChildren();quickIdentity.replaceChildren();
+   quickStatus.textContent="Aucun compte PE connecté.";
+   quickUnlink.hidden=true;
+  }
+ });
+ if(accountDialog){
+  new MutationObserver(()=>{
+   if(accountDialog.open&&localStorage.getItem("pixel-member-token"))void load();
+  }).observe(accountDialog,{attributes:true,attributeFilter:["open"]});
+ }
+ if(localStorage.getItem("pixel-member-token"))void load();
  grid.append(feature);
 }
 
