@@ -1,0 +1,14 @@
+/* Visible only in the isolated 1.7 beta builds. */
+.v17-beta-notice{
+ margin:14px 0 20px;
+ padding:16px 19px;
+ display:grid;gap:8px;
+ border:1px solid rgba(240,175,76,.38);
+ border-radius:17px;
+ background:linear-gradient(120deg,rgba(244,183,73,.12),rgba(84,159,214,.07));
+}
+.v17-beta-notice strong{font-size:1.06rem}
+.v17-beta-notice p{margin:0;line-height:1.48;font-size:.9rem}
+.v17-beta-notice small{color:var(--muted);line-height:1.5}
+.v17-beta-warning{color:var(--text);font-weight:600}
+@media(max-width:440px){.v17-beta-notice{padding:13px 14px}.v17-beta-notice p{font-size:.83rem}}
