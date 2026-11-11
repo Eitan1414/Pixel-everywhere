@@ -15,8 +15,14 @@ async function callAPI(path,kind="member",method="GET"){
  if(!token)throw Error("Connecte-toi d'abord à Pixel Everywhere.");
  const headers={Authorization:"Bearer "+token};
  if(apiBase().includes(".ngrok-free."))headers["ngrok-skip-browser-warning"]="pixel-everywhere";
- const response=await fetch(apiBase()+path,{method,headers,cache:"no-store"});
- const data=await response.json().catch(()=>({}));
+ let response;
+ try { response=await fetch(apiBase()+path,{method,headers,cache:"no-store"}); }
+ catch { throw Error("Impossible de joindre le serveur PDD. Vérifie la connexion et l'adresse du serveur."); }
+ const contentType=String(response.headers.get("content-type")||"").toLowerCase();
+ if(!contentType.includes("application/json")) {
+  throw Error("Réponse inattendue du serveur PDD (page HTML ou avertissement ngrok). Vérifie l'adresse du serveur.");
+ }
+ const data=await response.json().catch(()=>{throw Error("Réponse JSON invalide du serveur PDD.");});
  if(!response.ok)throw Error(data.error||"Une erreur s'est produite.");
  return data;
 }
@@ -47,21 +53,41 @@ function makeMemberPage(){
  page.append(node("p","v17-discord-muted","Associe ton compte via la page officielle Discord. Aucun mot de passe Discord n'est demandé dans l'application."),card,
    node("p","v17-discord-muted","Après l'autorisation dans le navigateur, reviens ici et appuie sur Actualiser."));
  main.append(page);
+ let pendingAuth=null;
+ let loading=false;
+ function clearPendingAuth(){
+  pendingAuth=null;open.hidden=true;open.removeAttribute("href");
+ }
+ function hasValidPendingAuth(){
+  return Boolean(pendingAuth &&
+   pendingAuth.memberToken===localStorage.getItem("pixel-member-token") &&
+   Date.now()<pendingAuth.expiresAt);
+ }
  async function load(){
-  connect.disabled=true;refresh.disabled=true;open.hidden=true;
+  if(loading)return;
+  loading=true;
+  connect.disabled=true;refresh.disabled=true;
+  if(!hasValidPendingAuth())clearPendingAuth();
   try{
    const result=await callAPI("/members/discord/link");
    identity.replaceChildren();
    if(result.linked&&result.discord) {
+    clearPendingAuth();
     status.textContent="Compte Discord lié ✓";
     identity.append(node("strong","",result.discord.displayName),node("small","","@"+result.discord.username));
    } else {
-    status.textContent=result.configured?"Aucun compte Discord lié.":"L'intégration Discord n'est pas encore configurée sur Termux.";
+    if(!result.configured)clearPendingAuth();
+    status.textContent=!result.configured
+     ?"L'intégration Discord n'est pas encore configurée sur Termux."
+     :hasValidPendingAuth()
+      ?"Autorisation Discord en attente. Reviens ici après l'avoir acceptée."
+      :"Aucun compte Discord lié.";
    }
+   open.hidden=!hasValidPendingAuth();
    connect.hidden=result.linked||!result.configured;
    unlink.hidden=!result.linked;
   }catch(err){status.textContent=err.message;connect.hidden=true;unlink.hidden=true;}
-  finally{connect.disabled=false;refresh.disabled=false;}
+  finally{connect.disabled=false;refresh.disabled=false;loading=false;}
  }
  connect.addEventListener("click",async()=>{
   connect.disabled=true;status.textContent="Préparation de l'autorisation…";
@@ -69,6 +95,10 @@ function makeMemberPage(){
    const result=await callAPI("/members/discord/link/start","member","POST");
    const url=new URL(result.authorizationUrl);
    if(url.protocol!=="https:"||url.hostname!=="discord.com")throw Error("Lien Discord non valide.");
+   pendingAuth={
+    memberToken:localStorage.getItem("pixel-member-token"),
+    expiresAt:Date.now()+Math.max(1,Number(result.expiresInSeconds)||600)*1000
+   };
    open.href=url.href;open.hidden=false;
    status.textContent="Le lien est prêt. Ouvre Discord avec le bouton ci-dessous.";
   }catch(err){status.textContent=err.message;}
@@ -78,7 +108,7 @@ function makeMemberPage(){
  unlink.addEventListener("click",async()=>{
   if(!window.confirm("Délier Discord de ton compte Pixel Everywhere ?"))return;
   unlink.disabled=true;
-  try{await callAPI("/members/discord/link","member","DELETE");await load();}
+  try{await callAPI("/members/discord/link","member","DELETE");clearPendingAuth();await load();}
   catch(err){status.textContent=err.message;}
   finally{unlink.disabled=false;}
  });
@@ -87,7 +117,12 @@ function makeMemberPage(){
  const label=node("span","");
  label.append(node("strong","","Compte Discord"),node("small","","Liaison du compte Discord"));
  feature.append(icon,label);
- feature.addEventListener("click",()=>{showPage(page);load();});
+ feature.addEventListener("click",()=>{showPage(page);void load();});
+ const refreshOnReturn=()=>{
+  if(document.visibilityState!=="hidden"&&page.classList.contains("active")&&pendingAuth)void load();
+ };
+ window.addEventListener("focus",refreshOnReturn);
+ document.addEventListener("visibilitychange",refreshOnReturn);
  grid.append(feature);
 }
 
