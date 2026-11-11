@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import rateLimit from "express-rate-limit";
 import { fetchAnnouncements } from "./discord.mjs";
+import { registerDiscordLoginV17Routes } from "./discord-login-v17.mjs";
 
 const API = "https://discord.com/api/v10";
 const STATE_TTL_SECONDS = 10 * 60;
@@ -76,10 +77,39 @@ async function discordRequest(url, options) {
   return res.json();
 }
 
+async function exchangeDiscordIdentity(code, config) {
+  const params = new URLSearchParams({
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    grant_type: "authorization_code",
+    code,
+    redirect_uri: config.redirectUri
+  });
+  const token = await discordRequest(API + "/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params.toString()
+  });
+  if (!token.access_token) throw Error("Réponse Discord incomplète.");
+  const identity = await discordRequest(API + "/users/@me", {
+    headers: { Authorization: "Bearer " + token.access_token }
+  });
+  if (!/^\d{15,25}$/.test(String(identity.id || "")) || !identity.username) {
+    throw Error("Identité Discord invalide.");
+  }
+  return identity;
+}
+
 export function registerDiscordV17Routes({
-  app, db, authenticate, authenticateMember, requireActiveStaff, requireActiveMember, staffOnly
+  app, db, authenticate, authenticateMember, requireActiveStaff, requireActiveMember, staffOnly, createToken
 }) {
   initTables(db);
+  const handleLoginCallback = registerDiscordLoginV17Routes({
+    app, db, createToken,
+    configuration: discordOAuthConfiguration,
+    exchangeIdentity: exchangeDiscordIdentity,
+    resultPage
+  });
   const memberOnly = [authenticateMember, requireActiveMember];
   const staffAccess = [authenticate, requireActiveStaff, staffOnly];
 
@@ -124,6 +154,7 @@ export function registerDiscordV17Routes({
     const state = typeof req.query.state === "string" ? req.query.state : "";
     if (!/^[a-zA-Z0-9_-]{40,64}$/.test(state)) return resultPage(res, "Connexion annulée ou lien expiré.");
     const hash = hashedState(state);
+    if (await handleLoginCallback(req, res, hash)) return;
     const pending = db.prepare("SELECT member_id, created_at FROM discord_link_states WHERE state_hash = ?").get(hash);
     // The state is one-time only, including failed/denied authorizations.
     db.prepare("DELETE FROM discord_link_states WHERE state_hash = ?").run(hash);
@@ -137,25 +168,7 @@ export function registerDiscordV17Routes({
     if (!config) return resultPage(res, "La connexion Discord n'est plus configurée sur le serveur.");
 
     try {
-      const params = new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: "authorization_code",
-        code: req.query.code,
-        redirect_uri: config.redirectUri
-      });
-      const token = await discordRequest(API + "/oauth2/token", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString()
-      });
-      if (!token.access_token) throw Error("Réponse Discord incomplète.");
-      const identity = await discordRequest(API + "/users/@me", {
-        headers: { Authorization: "Bearer " + token.access_token }
-      });
-      if (!/^\d{15,25}$/.test(String(identity.id || "")) || !identity.username) {
-        throw Error("Identité Discord invalide.");
-      }
+      const identity = await exchangeDiscordIdentity(req.query.code, config);
       const member = db.prepare("SELECT id FROM member_users WHERE id = ?").get(pending.member_id);
       if (!member) return resultPage(res, "Ce compte Pixel Everywhere n'existe plus.");
       const existing = db.prepare("SELECT member_id FROM member_discord_links WHERE discord_id = ?").get(identity.id);
@@ -184,6 +197,7 @@ export function registerDiscordV17Routes({
 
   app.delete("/api/members/discord/link", ...memberOnly, (req, res) => {
     db.prepare("DELETE FROM discord_link_states WHERE member_id = ?").run(req.currentMember.id);
+    db.prepare("DELETE FROM discord_login_attempts WHERE member_id = ?").run(req.currentMember.id);
     db.prepare("DELETE FROM member_discord_links WHERE member_id = ?").run(req.currentMember.id);
     res.set("Cache-Control", "no-store");
     res.json({ ok: true, linked: false });
