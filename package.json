@@ -30,7 +30,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "sql.js": "^1.13.0",
-    "zod": "^4.0.17"
+    "zod": "^4.0.17",
+    "ws": "8.22.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",

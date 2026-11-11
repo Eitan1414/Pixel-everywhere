@@ -1,0 +1,161 @@
+/* Pixel Everywhere 1.7: first visual foundation, based on the public UI sketch.
+   Legacy pages, click handlers and account dialogs remain intact. */
+.v17-ui #page-home .feature-grid { display: none; }
+
+.v17-ui #page-home .hero {
+  display: grid;
+  grid-template-columns: minmax(118px, 34%) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(16px, 4vw, 28px);
+  min-height: 290px;
+  padding: clamp(18px, 4vw, 30px);
+  border-radius: 22px;
+}
+
+.v17-ui #page-home .hero-logo {
+  width: 100%;
+  max-width: 270px;
+  aspect-ratio: 1;
+  margin: 0;
+  border-radius: 18px;
+}
+
+.v17-ui .v17-hero-copy {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.v17-ui .v17-hero-copy h1 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3.6vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.v17-ui .v17-hero-copy p {
+  margin: 0;
+}
+
+.v17-ui .v17-hero-copy > p:not(.eyebrow) {
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.v17-ui .v17-hero-copy .primary-button {
+  width: auto;
+  min-height: 42px;
+  padding: 11px 15px;
+  margin-top: 8px;
+}
+
+.v17-ui .v17-menu-heading {
+  margin: 2px 0 20px;
+}
+
+.v17-ui .v17-menu-heading h2 {
+  font-size: clamp(1.55rem, 5vw, 2rem);
+}
+
+.v17-ui .v17-menu-intro {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.v17-ui .v17-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.v17-ui .v17-menu-card {
+  display: flex;
+  min-width: 0;
+  min-height: 137px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 17px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  color: var(--text);
+  text-align: left;
+  background: linear-gradient(148deg, rgba(29, 33, 44, 0.98), rgba(16, 18, 25, 0.98));
+  cursor: pointer;
+}
+
+.v17-ui .v17-menu-card:hover,
+.v17-ui .v17-menu-card:focus-visible {
+  border-color: var(--orange);
+  outline-offset: 2px;
+}
+
+.v17-ui .v17-menu-icon {
+  display: grid;
+  width: 37px;
+  height: 37px;
+  place-items: center;
+  border-radius: 11px;
+  color: var(--orange-2);
+  font-size: 1.25rem;
+  background: rgba(255, 107, 25, 0.12);
+}
+
+.v17-ui .v17-menu-title {
+  font-size: 0.98rem;
+}
+
+.v17-ui .v17-menu-description {
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.v17-ui .v17-menu-empty { color: var(--muted); }
+
+.v17-ui .bottom-nav {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.v17-ui .bottom-nav > button:not(.v17-tab) {
+  display: none !important;
+}
+
+.v17-ui .bottom-nav > .v17-tab {
+  display: grid;
+  gap: 1px;
+  min-height: 55px;
+}
+
+.v17-ui .v17-tab small {
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.v17-ui .v17-tab-icon {
+  line-height: 1;
+}
+
+@media (max-width: 450px) {
+  .v17-ui #page-home .hero {
+    grid-template-columns: minmax(92px, 36%) minmax(0, 1fr);
+    gap: 13px;
+    padding: 14px;
+  }
+
+  .v17-ui .v17-hero-copy h1 { font-size: 1.27rem; }
+  .v17-ui .v17-hero-copy > p:not(.eyebrow) { font-size: 0.76rem; }
+  .v17-ui .v17-hero-copy .primary-button { font-size: 0.78rem; }
+  .v17-ui .v17-menu-card { padding: 13px; }
+}
+
+@media (min-width: 720px) {
+  .v17-ui .v17-menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .v17-ui .v17-menu-card { transition: none; }
+}

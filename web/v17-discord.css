@@ -1,0 +1,59 @@
+/* Discord account linking and staff-only read-only activity preview (v1.7). */
+.v17-discord-page,.v17-discord-staff {max-width:770px;margin-inline:auto}
+.v17-discord-page > h2 {margin-bottom:17px}
+.v17-discord-card {padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--surface);display:grid;gap:14px}
+.v17-discord-muted {color:var(--muted);line-height:1.5;font-size:.89rem}
+.v17-discord-identity {display:grid;gap:4px}
+.v17-discord-identity small {color:var(--muted)}
+.v17-discord-actions {display:flex;flex-wrap:wrap;gap:9px}
+.v17-discord-actions > [hidden] {display:none!important}
+.v17-discord-actions button,.v17-discord-actions a,.v17-discord-staff button {
+ display:inline-flex;justify-content:center;align-items:center;min-height:43px;
+ padding:10px 14px;border-radius:13px;font-weight:750;cursor:pointer;text-decoration:none;font-size:.86rem
+}
+.v17-discord-primary,.v17-discord-link {color:#121019;background:var(--orange);border:1px solid transparent}
+.v17-discord-secondary {color:var(--text);background:var(--surface);border:1px solid var(--line)}
+.v17-discord-danger {color:#ffd7dc;background:rgba(255,84,104,.11);border:1px solid rgba(255,84,104,.45)}
+.v17-discord-staff-heading {display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+.v17-discord-staff h3,.v17-discord-staff h4 {margin:0}
+.v17-discord-stats {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:16px 0 22px}
+.v17-discord-stat {display:grid;gap:7px;padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--surface)}
+.v17-discord-stat strong {font-size:1.65rem}
+.v17-discord-stat small {font-size:.74rem;color:var(--muted)}
+.v17-discord-announcements {display:grid;gap:10px;margin-top:12px}
+.v17-discord-announcement {padding:14px;border-radius:15px;border:1px solid var(--line);background:var(--surface);display:grid;gap:7px}
+.v17-discord-announcement small {color:var(--muted);font-size:.72rem}
+.v17-discord-announcement p {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
+@media(max-width:420px) {.v17-discord-card {padding:15px}.v17-discord-stats {gap:6px}.v17-discord-stat {padding:10px}.v17-discord-stat strong {font-size:1.3rem}.v17-discord-actions button,.v17-discord-actions a {width:100%}}
+
+/* Optional Discord sign-in from the existing member login dialog. */
+.v17-discord-login{display:grid;gap:10px;padding-top:16px;margin-top:14px;border-top:1px solid var(--line)}
+.v17-discord-login .v17-discord-muted{margin:0}
+.v17-discord-login > button,.v17-discord-login > a{display:flex;align-items:center;justify-content:center;min-height:43px;border-radius:12px;padding:10px 14px;text-decoration:none;font:inherit;font-weight:750;cursor:pointer}
+.v17-discord-login > [hidden]{display:none!important}
+.v17-discord-login-button{background:#5865f2;color:white;border:1px solid #5865f2}
+.v17-discord-login-continue{background:var(--orange);color:#121019;border:1px solid transparent}
+.v17-discord-login > button:disabled{opacity:.65;cursor:wait}
+
+/* Discord identity shared by the dedicated linking screen and PE member profile. */
+.v17-discord-identity{display:flex;align-items:center;gap:13px;min-width:0}
+.v17-discord-identity-details{display:grid;gap:3px;min-width:0}
+.v17-discord-identity-details strong{overflow-wrap:anywhere}
+.v17-discord-identity-details small{color:var(--muted);overflow-wrap:anywhere}
+.v17-discord-avatar,.v17-discord-avatar-fallback{width:54px;height:54px;flex-shrink:0;border-radius:18px;object-fit:cover}
+.v17-discord-avatar-fallback{display:grid;place-items:center;color:#fff;background:#5865f2;font-size:1.4rem}
+.v17-discord-quick{width:100%;display:grid;gap:11px;padding:15px;margin-block:14px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.v17-discord-quick > strong{font-size:1rem}
+.v17-discord-quick .v17-discord-actions{gap:8px}
+.v17-discord-quick .v17-discord-actions button{flex:1;min-width:120px}
+
+/* Staff-only Discord Gateway event journal (v1.7 Activity Center 2.0). */
+.v17-discord-filters{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}
+.v17-discord-select{min-height:41px;border:1px solid var(--line);border-radius:11px;padding:9px 13px;background:var(--surface);color:var(--text);font:inherit;min-width:0;max-width:100%}
+.v17-discord-events{display:grid;gap:10px;margin:12px 0 18px;max-height:520px;overflow-y:auto}
+.v17-discord-event{display:grid;gap:7px;padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0}
+.v17-discord-event-head{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:5px}
+.v17-discord-event-head strong{overflow-wrap:anywhere}
+.v17-discord-event small,.v17-discord-event time{color:var(--muted);font-size:.77rem}
+.v17-discord-event p{margin:0;overflow-wrap:anywhere;font-size:.89rem}
+@media(max-width:420px){.v17-discord-select{width:100%}}
