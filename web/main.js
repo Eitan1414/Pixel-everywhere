@@ -220,6 +220,7 @@ function saveMemberSession(token, member) {
   updateMemberAccess();
   loadMemberInbox({ notify: false });
   beginActiveSession();
+  window.dispatchEvent(new Event("pixel:member-session-changed"));
 }
 
 function clearMemberSession() {
@@ -235,6 +236,7 @@ function clearMemberSession() {
   updateAccountDialog();
   updateMemberAccess();
   if ($("#afkDialog").open) $("#afkDialog").close();
+  window.dispatchEvent(new Event("pixel:member-session-changed"));
 }
 
 function updateAccountButton() {
