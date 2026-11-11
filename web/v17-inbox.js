@@ -311,9 +311,14 @@ function installUnifiedInbox() {
     searchBox.value = "";
     // Do not leave unread counts from the previous member visible while
     // the existing message modules refresh their authenticated data.
-    for (const selector of ["#memberDirectBadge","#inboxBadge"]) {
+    for (const selector of ["#memberDirectBadge","#conversationBadge","#inboxBadge"]) {
       const badge = $(selector);
       if (badge) {badge.textContent = "0";badge.classList.add("hidden");}
+    }
+    const announcementBadge = $(".v17-notifications-bell .v17-notifications-badge");
+    if (announcementBadge) {
+      announcementBadge.textContent = "0";
+      announcementBadge.hidden = true;
     }
     updateCounts();
     syncTabs();
