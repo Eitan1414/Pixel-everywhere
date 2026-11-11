@@ -265,8 +265,14 @@ function makeStaffPanel(){
    const result=await callAPI("/staff/discord/activity/events?"+query.toString(),"staff");
    const gateway=result.gateway||{};
    const label={connected:"Connecté au Gateway Discord",starting:"Démarrage du Gateway",connecting:"Connexion au Gateway…",reconnecting:"Gateway momentanément déconnecté",disabled:"Journal non activé sur Termux",unauthorized:"Autorisation Discord refusée",misconfigured:"Configuration Gateway manquante",stopped:"Journal arrêté"};
+   const setup={
+    disabled:"Active Server Members Intent dans Discord Developer Portal, puis DISCORD_ACTIVITY_GATEWAY_ENABLED=true dans le .env de Termux et redémarre le serveur.",
+    misconfigured:"Vérifie DISCORD_BOT_TOKEN et DISCORD_GUILD_ID dans le .env de Termux.",
+    unauthorized:"Vérifie les autorisations du bot et Server Members Intent dans Discord Developer Portal."
+   };
    gatewayStatus.textContent=(label[gateway.status]||"État Gateway inconnu")+
     (gateway.error?" · "+gateway.error:"")+
+    (setup[gateway.status]?" · "+setup[gateway.status]:"")+
     (gateway.lastEventAt?" · Dernier événement : "+formatDiscordDate(gateway.lastEventAt):"");
    events.replaceChildren();
    if(!result.events?.length){

@@ -24,13 +24,8 @@ test("la catégorie Pixel Helper et son guide interactif restent présents", () 
   assert.match(styles, /\.pixel-helper-interactive-stage\.no-character/);
 });
 
-test("Pixel Guide et Pixel Guard restent chargés après le guide", () => {
-  const helperIndex = entry.indexOf('moduleLoaders.pixelHelper, "guides Pixel Helper"');
-  const interactiveIndex = entry.indexOf('moduleLoaders.pixelHelperInteractive, "tutoriel interactif Pixel Helper"');
-  const botsIndex = entry.indexOf('moduleLoaders.pixelHelperBots, "bots de guide et de modération Pixel Helper"');
-  assert.ok(helperIndex >= 0);
-  assert.ok(interactiveIndex > helperIndex);
-  assert.ok(botsIndex > interactiveIndex);
+test("le guide interactif et les bots restent désactivés pendant la refonte", () => {
+  assert.doesNotMatch(entry, /moduleLoaders\.pixelHelper/);
 });
 
 test("l’amélioration reste idempotente et observe seulement les enfants du DOM", () => {

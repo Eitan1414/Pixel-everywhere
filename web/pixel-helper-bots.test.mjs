@@ -11,6 +11,7 @@ const source = await readFile(new URL("./pixel-helper-bots.js", import.meta.url)
 const knowledge = await readFile(new URL("./pixel-helper-knowledge.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("./pixel-helper-bots.css", import.meta.url), "utf8");
 const entry = await readFile(new URL("./app-entry.js", import.meta.url), "utf8").catch(() => "");
+const shellStyles = await readFile(new URL("./v17-shell.css", import.meta.url), "utf8");
 
 test("Pixel Guide et Pixel Guard fonctionnent uniquement avec des fiches locales", () => {
   assert.match(source, /Pixel Guide/);
@@ -114,17 +115,10 @@ test("l’interface conserve les raccourcis utiles et le statut local", () => {
   assert.match(styles, /pixel-helper-local-thinking/);
 });
 
-test("les deux boutons d’aide sont visibles à des hauteurs différentes", () => {
-  assert.match(styles, /#pixelGuideButton[\s\S]*bottom: calc\(106px/);
-  assert.match(styles, /#pixelHelperGuideButton[\s\S]*bottom: calc\(172px/);
-  assert.match(styles, /#pixelGuideButton[\s\S]*display: inline-flex !important/);
-  assert.match(styles, /#pixelHelperGuideButton[\s\S]*display: inline-flex !important/);
+test("les deux anciens assistants sont cachés pendant leur refonte", () => {
+  assert.match(shellStyles, /#pixelGuideButton, #pixelHelperGuideButton \{display:none!important\}/);
 });
-
-test("les assistants restent chargés après Pixel Helper interactif", () => {
-  if (!entry) return;
-  const interactive = entry.indexOf('loadOptional(moduleLoaders.pixelHelperInteractive, "tutoriel interactif Pixel Helper")');
-  const bots = entry.indexOf('loadOptional(moduleLoaders.pixelHelperBots, "bots de guide et de modération Pixel Helper")');
-  assert.ok(interactive >= 0);
-  assert.ok(bots > interactive);
+test("les modules Pixel Helper sont conservés mais non chargés", () => {
+  assert.doesNotMatch(entry, /moduleLoaders\.pixelHelper/);
+  assert.doesNotMatch(entry, /import\("\.\/pixel-helper/);
 });

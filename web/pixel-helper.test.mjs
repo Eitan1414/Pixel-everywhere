@@ -35,9 +35,7 @@ test("l’observateur Pixel Helper est idempotent et ne surveille pas les attrib
   assert.doesNotMatch(source, /attributeFilter/);
 });
 
-test("Pixel Helper est chargé après la messagerie", () => {
-  const conversationsIndex = entry.indexOf("moduleLoaders.memberConversations");
-  const helperIndex = entry.indexOf("moduleLoaders.pixelHelper, \"guides Pixel Helper\"");
-  assert.ok(conversationsIndex >= 0);
-  assert.ok(helperIndex > conversationsIndex);
+test("Pixel Helper est conservé mais désactivé durant la refonte", () => {
+  assert.match(entry, /moduleLoaders\.memberConversations/);
+  assert.doesNotMatch(entry, /moduleLoaders\.pixelHelper/);
 });

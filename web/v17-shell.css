@@ -159,3 +159,6 @@
 @media (prefers-reduced-motion: reduce) {
   .v17-ui .v17-menu-card { transition: none; }
 }
+
+/* Les deux assistants flottants sont mis en pause jusqu'à leur refonte. */
+#pixelGuideButton, #pixelHelperGuideButton {display:none!important}

@@ -61,3 +61,7 @@
  .v17-admin-ready #staffApplicationsList {grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce) {.v17-admin-ready #staffWorkspace .staff-panel.active {animation:none}}
+
+/* Avatar Discord du compte staff : remplace uniquement le symbole de bienvenue. */
+.v17-admin-emblem {overflow:hidden;flex-shrink:0}
+.v17-admin-avatar {width:100%;height:100%;min-width:0;min-height:0;object-fit:cover;border-radius:inherit}
