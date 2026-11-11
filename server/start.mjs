@@ -265,7 +265,8 @@ if (!source.includes("registerDiscordV17Routes({")) {
   authenticateMember,
   requireActiveStaff,
   requireActiveMember,
-  staffOnly
+  staffOnly,
+  createToken
 });`);
 }
 if (!source.includes("registerPixelHelperAiRoutes({")) {
