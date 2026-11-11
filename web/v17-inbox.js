@@ -116,7 +116,8 @@ function installUnifiedInbox() {
         const active = tab.dataset.inboxTab === (current || selected);
         tab.classList.toggle("active", active);
         tab.setAttribute("aria-selected", String(active));
-        tab.tabIndex = active ? 0 : -1;
+        // Every tab remains keyboard-reachable, including inactive sections.
+        tab.tabIndex = 0;
       }
     }
     const current = pages.map(pageTab).find(Boolean);
@@ -308,6 +309,12 @@ function installUnifiedInbox() {
   window.addEventListener("pixel:member-session-changed", () => {
     search = {private:"",staff:""};
     searchBox.value = "";
+    // Do not leave unread counts from the previous member visible while
+    // the existing message modules refresh their authenticated data.
+    for (const selector of ["#memberDirectBadge","#inboxBadge"]) {
+      const badge = $(selector);
+      if (badge) {badge.textContent = "0";badge.classList.add("hidden");}
+    }
     updateCounts();
     syncTabs();
   });
