@@ -260,7 +260,7 @@ function installUnifiedInbox() {
   const emptySearch = create("p", "v17-inbox-search-empty",
     "Aucune conversation ne correspond à cette recherche.");
   emptySearch.hidden = true;
-  searchRow.after(emptySearch);
+  lettersHint.after(emptySearch);
 
   function decorateThreads(list, mode) {
     if (!list) return;
