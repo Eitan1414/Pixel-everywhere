@@ -1,4 +1,5 @@
 import "./pixel-live.css";
+import { normalizePetHabits, petMoodV17, petTemperament } from "./pixel-personality-v17.js";
 
 const PET_KEY = "pixel-pet";
 const LIVE_KEY = "pixel-pet-live-v2";
@@ -47,6 +48,7 @@ function mergeMetadata(live, app) {
     xp: Number(app.xp ?? live.xp ?? 0),
     level: Math.max(1, Number(app.level ?? live.level ?? 1)),
     interactions: Number(app.interactions ?? live.interactions ?? 0),
+    habits: normalizePetHabits(app.habits ?? live.habits),
     lastAction: app.lastAction || live.lastAction
   };
 }
@@ -74,14 +76,6 @@ function getLivePet() {
   return decay(mergeMetadata(live, read(PET_KEY)));
 }
 
-function mood(pet) {
-  const average = (pet.hunger + pet.joy + pet.energy) / 3;
-  if (average >= 80) return ["Très heureux", "Pixel rayonne de bonheur !"];
-  if (average >= 60) return ["Heureux", "Pixel est content de passer du temps avec toi."];
-  if (average >= 40) return ["Calme", "Pixel aimerait recevoir un peu d’attention."];
-  return ["Fatigué", "Pixel a besoin que tu prennes soin de lui."];
-}
-
 function render(pet) {
   for (const name of Object.keys(rates)) {
     const value = clamp(pet[name]);
@@ -90,11 +84,18 @@ function render(pet) {
     if (label) label.textContent = `${value.toFixed(1)}%`;
     if (bar) bar.style.width = `${value}%`;
   }
-  const [label, message] = mood(pet);
+  const mood = petMoodV17(pet, new Date().getHours());
   const badge = document.querySelector("#petMoodBadge");
   const messageNode = document.querySelector("#petMessage");
-  if (badge) badge.textContent = label;
-  if (messageNode) messageNode.textContent = message;
+  const stage = document.querySelector("#petStage");
+  if (badge) badge.textContent = mood.emoji + " " + mood.label;
+  if (messageNode) messageNode.textContent = mood.message;
+  if (stage) stage.dataset.pixelMood = mood.id;
+  const temperament = petTemperament(pet);
+  const personality = document.querySelector("#petPersonalityName");
+  const description = document.querySelector("#petPersonalityDescription");
+  if (personality) personality.textContent = temperament.emoji + " " + temperament.label;
+  if (description) description.textContent = temperament.description;
 }
 
 function tick() {
