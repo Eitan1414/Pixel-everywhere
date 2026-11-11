@@ -160,9 +160,23 @@ const IDLE_LINES = {
   curious:["Qu'est-ce qu'on explore aujourd'hui ? 🔎","Je me demande ce qu'il y a dehors… 👀"]
 };
 
+const TRAIT_IDLE_LINES = {
+  foodie: ["Je pense déjà au prochain goûter… 🍊", "Tu connais une bonne recette ? 🍪"],
+  cuddly: ["On s'installe ensemble ? 💛", "J'aime bien quand tu restes près de moi."],
+  playful: ["J'ai inventé un nouveau jeu ! ✨", "On fait une partie après ? 🎾"],
+  explorer: ["Il y a tant de choses à découvrir ! 👟", "J'ai envie de voir ce qu'il y a dehors."],
+  dreamer: ["J'ai fait un rêve plein d'étoiles… 🌙", "Je me demande ce que dessinent les nuages."]
+};
+
 export function petIdleThought(pet, hour = 12, index = 0) {
   const mood = petMoodV17(pet, hour);
   const lines = IDLE_LINES[mood.id];
   const safeIndex = Number.isFinite(Number(index)) ? Math.max(0,Math.floor(Number(index))) : 0;
+  const trait = petTemperament(pet);
+  const quietMoment = ["curious","happy","excited"].includes(mood.id);
+  if (quietMoment && safeIndex % 2 === 1 && TRAIT_IDLE_LINES[trait.id]) {
+    const favorites = TRAIT_IDLE_LINES[trait.id];
+    return favorites[Math.floor(safeIndex / 2) % favorites.length];
+  }
   return lines[safeIndex % lines.length];
 }
