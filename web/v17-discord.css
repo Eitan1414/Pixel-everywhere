@@ -46,3 +46,14 @@
 .v17-discord-quick > strong{font-size:1rem}
 .v17-discord-quick .v17-discord-actions{gap:8px}
 .v17-discord-quick .v17-discord-actions button{flex:1;min-width:120px}
+
+/* Staff-only Discord Gateway event journal (v1.7 Activity Center 2.0). */
+.v17-discord-filters{display:flex;gap:9px;flex-wrap:wrap;margin:14px 0}
+.v17-discord-select{min-height:41px;border:1px solid var(--line);border-radius:11px;padding:9px 13px;background:var(--surface);color:var(--text);font:inherit;min-width:0;max-width:100%}
+.v17-discord-events{display:grid;gap:10px;margin:12px 0 18px;max-height:520px;overflow-y:auto}
+.v17-discord-event{display:grid;gap:7px;padding:13px 15px;background:var(--surface);border:1px solid var(--line);border-radius:14px;min-width:0}
+.v17-discord-event-head{display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:5px}
+.v17-discord-event-head strong{overflow-wrap:anywhere}
+.v17-discord-event small,.v17-discord-event time{color:var(--muted);font-size:.77rem}
+.v17-discord-event p{margin:0;overflow-wrap:anywhere;font-size:.89rem}
+@media(max-width:420px){.v17-discord-select{width:100%}}
