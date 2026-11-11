@@ -227,6 +227,9 @@ function renderConversationList() {
       }),
       unread ? node("i", { text: String(unread) }) : null
     ]);
+    card.dataset.v17ConversationId = String(conversation.id);
+    card.dataset.v17UpdatedAt = String(conversation.last_message_at || conversation.updated_at || "");
+    card.dataset.v17UnreadCount = String(unread);
     list.append(card);
   });
 }
