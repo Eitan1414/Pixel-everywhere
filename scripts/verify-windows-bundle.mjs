@@ -25,7 +25,11 @@ function assert(condition, message) {
 }
 
 const packageJson = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
-assert(/^\d+\.\d+\.\d+$/.test(packageJson.version), `Version Windows invalide : ${packageJson.version}`);
+assert(/^\d+\.\d+\.\d+(?:-beta\.\d+)?$/.test(packageJson.version), `Version Windows invalide : ${packageJson.version}`);
+if (packageJson.version.includes("-beta.")) {
+  assert(packageJson.build.appId === "com.pdd.pixeleverywhere.beta", "La bêta Windows doit avoir un appId distinct.");
+  assert(packageJson.build.productName === "Pixel Everywhere Bêta", "La bêta Windows doit porter un nom distinct.");
+}
 
 const indexPath = resolve(outputRoot, "index.html");
 assert((await stat(indexPath)).isFile(), "Le bundle www/index.html est absent.");
