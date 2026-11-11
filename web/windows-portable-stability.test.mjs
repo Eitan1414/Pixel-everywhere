@@ -15,8 +15,10 @@ const [packageSource, workflow, windowsSupport, nativeStability, desktopLayout, 
 ]);
 const packageJson = JSON.parse(packageSource);
 
-test("Windows 0.31.27 est compilé avec un installateur et une version portable", () => {
-  assert.equal(packageJson.version, "0.31.27");
+test("Windows bêta 1.7 est compilé séparément avec un installateur et un portable", () => {
+  assert.equal(packageJson.version, "1.7.0-beta.1");
+  assert.equal(packageJson.build.appId, "com.pdd.pixeleverywhere.beta");
+  assert.equal(packageJson.build.productName, "Pixel Everywhere Bêta");
   assert.match(packageJson.scripts["win:build"], /--win nsis portable --x64/);
   assert.equal(packageJson.build.win.target[0].target, "nsis");
   assert.equal(packageJson.build.win.target[1].target, "portable");
