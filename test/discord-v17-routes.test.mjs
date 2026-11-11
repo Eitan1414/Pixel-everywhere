@@ -246,7 +246,7 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
       assert.match(await callback(unlinked.state), /Aucun compte Pixel Everywhere/);
       const response = await finishDiscordLogin(unlinked);
       assert.equal(response.status, 409);
-      assert.match((await response.json()).error, /associe/);
+      assert.match((await response.json()).error, /associé/);
       assert.equal(memberSessionsCreated, 1);
     } finally {
       identity.id = formerId;
