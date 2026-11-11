@@ -316,7 +316,13 @@ function makeStaffPanel(){
   finally{refresh.disabled=false;}
  }
  refresh.addEventListener("click",load);
- tab.addEventListener("click",load);
+ // The base app attaches staff-tab listeners only to tabs present at boot.
+ // This v1.7 tab is mounted later, so it must activate its own staff panel.
+ tab.addEventListener("click",()=>{
+  document.querySelectorAll(".staff-tabs button").forEach(button=>button.classList.toggle("active",button===tab));
+  document.querySelectorAll(".staff-panel").forEach(item=>item.classList.toggle("active",item===panel));
+  void load();
+ });
  typeFilter.addEventListener("change",loadEvents);
  daysFilter.addEventListener("change",loadEvents);
  window.setInterval(()=>{
