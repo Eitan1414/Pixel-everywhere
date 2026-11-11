@@ -1,6 +1,6 @@
 {
-  "appId": "com.pdd.pixeleverywhere",
-  "appName": "Pixel Everywhere",
+  "appId": "com.pdd.pixeleverywhere.beta",
+  "appName": "Pixel Everywhere Bêta",
   "webDir": "www",
   "bundledWebRuntime": false,
   "server": {
