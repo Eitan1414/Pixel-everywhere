@@ -319,7 +319,7 @@ function renderDirectConversationList() {
   communityState.directConversations.forEach((conversation) => {
     const unread = Number(conversation.unread_count || 0);
     const role = roleLabel(conversation.peer_staff_role);
-    list.append(createNode("button", {
+    const card = createNode("button", {
       type: "button",
       className: `conversation-thread${unread ? " unread" : ""}${
         Number(conversation.id) === Number(communityState.activeDirectId) ? " active" : ""
@@ -332,7 +332,11 @@ function renderDirectConversationList() {
       ]),
       createNode("small", { text: conversation.last_message || "Nouvelle conversation privée" }),
       unread ? createNode("i", { text: String(unread) }) : null
-    ]));
+    ]);
+    card.dataset.v17ConversationId = String(conversation.id);
+    card.dataset.v17UpdatedAt = String(conversation.last_message_at || conversation.updated_at || "");
+    card.dataset.v17UnreadCount = String(unread);
+    list.append(card);
   });
 }
 

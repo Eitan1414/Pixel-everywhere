@@ -1,4 +1,9 @@
 import { LocalNotifications } from "@capacitor/local-notifications";
+import {
+  normalizePetHabits, recordPetHabit, petTemperament,
+  petMoodV17, petActionReaction, petIdleThought
+} from "./pixel-personality-v17.js";
+import "./pixel-personality-v17.css";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
 
@@ -220,6 +225,7 @@ function saveMemberSession(token, member) {
   updateMemberAccess();
   loadMemberInbox({ notify: false });
   beginActiveSession();
+  window.dispatchEvent(new Event("pixel:member-session-changed"));
 }
 
 function clearMemberSession() {
@@ -235,6 +241,7 @@ function clearMemberSession() {
   updateAccountDialog();
   updateMemberAccess();
   if ($("#afkDialog").open) $("#afkDialog").close();
+  window.dispatchEvent(new Event("pixel:member-session-changed"));
 }
 
 function updateAccountButton() {
@@ -413,6 +420,14 @@ async function prepareApplicationPage() {
 }
 
 const loginDialog = $("#loginDialog");
+window.addEventListener("pixel:discord-member-login", (event) => {
+  const { token, member } = event.detail || {};
+  if (typeof token !== "string" || !token || !member || !Number.isInteger(member.id)) return;
+  // Reuse the existing member session path: Discord never creates a staff session.
+  saveMemberSession(token, member);
+  if (loginDialog.open) loginDialog.close();
+  toast("Connexion avec Discord réussie.");
+});
 $("#accountButton").addEventListener("click", () => {
   updateAccountDialog();
   loginDialog.showModal();
@@ -1274,7 +1289,8 @@ async function loadStaffRatings() {
 function renderStaffAlert(alert) {
   const isBug = alert.alert_type === "bug_report";
   const card = element("article", {
-    className: `staff-alert-card ${alert.resolved ? "resolved" : ""}`.trim()
+    className: `staff-alert-card ${alert.resolved ? "resolved" : ""}`.trim(),
+    dataset: { v17AlertId: String(alert.id), v17AlertType: alert.alert_type }
   }, [
     element("div", { className: "staff-alert-head" }, [
       element("strong", { text: isBug ? "🐞 Signalement de bug" : "✦ Conversion XP PDD" }),
@@ -1381,7 +1397,10 @@ function renderAccount(account) {
       toast(error.message);
     }
   });
-  return element("article", { className: "account-card" }, [
+  return element("article", {
+    className: "account-card",
+    dataset: { v17AccountId: String(account.id) }
+  }, [
     info,
     element("span", {
       className: `role-pill ${account.active ? "active-pill" : "inactive-pill"}`,
@@ -1432,6 +1451,7 @@ function currentPet() {
   pet.xp = Number(pet.xp ?? 0);
   pet.level = Math.max(1, Number(pet.level ?? 1));
   pet.interactions = Number(pet.interactions ?? 0);
+  pet.habits = normalizePetHabits(pet.habits);
   pet.lastAction = pet.lastAction || defaultPet.lastAction;
   const hoursAway = Math.max(0, (Date.now() - Number(pet.updatedAt || Date.now())) / 3_600_000);
   if (hoursAway >= 0.25) {
@@ -1447,14 +1467,6 @@ function currentPet() {
 function savePet() {
   state.pet.updatedAt = Date.now();
   localStorage.setItem("pixel-pet", JSON.stringify(state.pet));
-}
-
-function petMood(pet) {
-  const average = (pet.hunger + pet.joy + pet.energy) / 3;
-  if (average >= 80) return ["Très heureux", "Pixel rayonne de bonheur !"];
-  if (average >= 60) return ["Heureux", "Pixel est content de passer du temps avec toi."];
-  if (average >= 40) return ["Calme", "Pixel aimerait recevoir un peu d’attention."];
-  return ["Fatigué", "Pixel a besoin que tu prennes soin de lui."];
 }
 
 function petEnvironment() {
@@ -1494,9 +1506,13 @@ function renderPet(reaction = "") {
     $(`#${name}Value`).textContent = `${value}%`;
     $(`#${name}Bar`).style.width = `${value}%`;
   });
-  const [mood, message] = petMood(pet);
-  $("#petMoodBadge").textContent = mood;
-  $("#petMessage").textContent = message;
+  const mood = petMoodV17(pet, new Date().getHours());
+  $("#petMoodBadge").textContent = mood.emoji + " " + mood.label;
+  $("#petMessage").textContent = mood.message;
+  $("#petStage").dataset.pixelMood = mood.id;
+  const temperament = petTemperament(pet);
+  $("#petPersonalityName").textContent = temperament.emoji + " " + temperament.label;
+  $("#petPersonalityDescription").textContent = temperament.description;
   const environment = petEnvironment();
   $("#petStage").classList.remove("pet-day", "pet-evening", "pet-night");
   $("#petStage").classList.add(environment.className);
@@ -1530,13 +1546,22 @@ function emitPetParticles(symbol) {
   }
 }
 
-function completePetInteraction(pet, xp, diary, animation, reaction, particle) {
+let lastPetInteractionAt = Date.now();
+let lastPetAmbientAt = 0;
+let petAmbientIndex = 0;
+
+function completePetInteraction(pet, xp, diary, animation, reaction, particle, options = {}) {
   pet.interactions += 1;
+  if (options.action) pet.habits = recordPetHabit(pet.habits, options.action);
   pet.lastAction = diary;
+  lastPetInteractionAt = Date.now();
   const leveledUp = gainPetXp(pet, xp);
   state.pet = pet;
   savePet();
-  animatePet(animation, leveledUp ? `Niveau ${pet.level} ! 🎉` : reaction);
+  const dialogue = options.action
+    ? petActionReaction(pet, options.action, options.previousMood)
+    : reaction;
+  animatePet(animation, leveledUp ? `Niveau ${pet.level} ! 🎉` : dialogue);
   emitPetParticles(leveledUp ? "⭐" : particle);
   navigator.vibrate?.(25);
   renderPet();
@@ -1582,30 +1607,31 @@ async function handlePetAction(action) {
         });
     if (!result.adminBypass) setMemberPoints(result.points);
   const pet = currentPet();
+  const moodBefore = petMoodV17(pet, new Date().getHours()).id;
   if (action === "feed") {
     pet.hunger = Math.min(100, pet.hunger + 18);
     pet.joy = Math.min(100, pet.joy + 3);
-    completePetInteraction(pet, 6, "Pixel a dégusté une orange avec plaisir.", "pet-eat", "Miam ! 🍊", "🍊");
+    completePetInteraction(pet, 6, "Pixel a dégusté une orange avec plaisir.", "pet-eat", "Miam ! 🍊", "🍊", {action, previousMood: moodBefore});
   }
   if (action === "bounce") {
     pet.joy = Math.min(100, pet.joy + 13);
     pet.energy = Math.max(5, pet.energy - 5);
-    completePetInteraction(pet, 8, "Pixel a joué et bondi dans tout l’atelier.", "pet-bounce", "Youpi ! ✨", "✨");
+    completePetInteraction(pet, 8, "Pixel a joué et bondi dans tout l’atelier.", "pet-bounce", "Youpi ! ✨", "✨", {action, previousMood: moodBefore});
   }
   if (action === "walk") {
     pet.joy = Math.min(100, pet.joy + 16);
     pet.hunger = Math.max(5, pet.hunger - 4);
     pet.energy = Math.max(5, pet.energy - 8);
-    completePetInteraction(pet, 12, "Vous êtes partis vous promener autour de PDD.", "pet-walk", "En route ! 👟", "💨");
+    completePetInteraction(pet, 12, "Vous êtes partis vous promener autour de PDD.", "pet-walk", "En route ! 👟", "💨", {action, previousMood: moodBefore});
   }
   if (action === "sleep") {
     pet.energy = Math.min(100, pet.energy + 24);
     pet.hunger = Math.max(5, pet.hunger - 3);
-    completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤");
+    completePetInteraction(pet, 5, "Pixel s’est reposé dans son petit coin douillet.", "pet-sleep", "Zzz… 🌙", "💤", {action, previousMood: moodBefore});
   }
     if (action === "pet") {
       pet.joy = Math.min(100, pet.joy + 5);
-      completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛");
+      completePetInteraction(pet, 2, "Tu as caressé Pixel. Il se sent aimé.", "pet-pet", "Encore ! 💛", "💛", {action, previousMood: moodBefore});
     }
     setFormStatus(
       $("#petActionStatus"),
@@ -1666,6 +1692,7 @@ $$("[data-shop-item]").forEach((button) => {
       }
       const effect = shopEffects[item];
       const pet = currentPet();
+      const moodBefore = petMoodV17(pet, new Date().getHours()).id;
       pet.hunger = Math.min(100, pet.hunger + effect.hunger);
       pet.joy = Math.min(100, pet.joy + effect.joy);
       completePetInteraction(
@@ -1674,7 +1701,8 @@ $$("[data-shop-item]").forEach((button) => {
         effect.diary,
         "pet-eat",
         effect.reaction,
-        effect.particle
+        effect.particle,
+        { action: item, previousMood: moodBefore }
       );
       setFormStatus(
         $("#pixelShopStatus"),
@@ -1700,11 +1728,17 @@ function schedulePixelIdleMovement() {
   window.setTimeout(() => {
     const mascot = $("#petMascot");
     const pixelPageVisible = $("#page-pixel").classList.contains("active");
-    if (pixelPageVisible && !petActionPending) {
+    if (pixelPageVisible && document.visibilityState === "visible" && !petActionPending) {
       const target = 29 + Math.round(Math.random() * 42);
       mascot.style.left = `${target}%`;
       mascot.classList.add("pet-idle-step");
       window.setTimeout(() => mascot.classList.remove("pet-idle-step"), 1900);
+      const now = Date.now();
+      if (now - lastPetInteractionAt > 25_000 && now - lastPetAmbientAt > 38_000 &&
+          !mascot.classList.contains("pixel-live-draw")) {
+        $("#petReaction").textContent = petIdleThought(currentPet(), new Date().getHours(), petAmbientIndex++);
+        lastPetAmbientAt = now;
+      }
     }
     schedulePixelIdleMovement();
   }, delay);

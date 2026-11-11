@@ -1,6 +1,6 @@
 {
   "name": "pixel-everywhere",
-  "version": "0.31.27",
+  "version": "1.7.0-beta.1",
   "private": true,
   "description": "Application mobile communautaire du serveur Discord Pixel Difficult Drawer.",
   "type": "module",
@@ -30,7 +30,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "sql.js": "^1.13.0",
-    "zod": "^4.0.17"
+    "zod": "^4.0.17",
+    "ws": "8.22.2"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",
@@ -44,8 +45,8 @@
   },
   "main": "electron/entry.cjs",
   "build": {
-    "appId": "com.pdd.pixeleverywhere",
-    "productName": "Pixel Everywhere",
+    "appId": "com.pdd.pixeleverywhere.beta",
+    "productName": "Pixel Everywhere Bêta",
     "asar": true,
     "directories": {
       "output": "release"

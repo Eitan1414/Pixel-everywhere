@@ -1,0 +1,30 @@
+/* Pixel 2.0: responsive temperament card and subtle mood cues. */
+.pet-personality{
+ display:flex;align-items:flex-start;gap:13px;margin:4px 0 15px;
+ padding:13px 15px;border:1px solid rgba(255,255,255,.1);
+ border-radius:16px;background:linear-gradient(120deg,rgba(238,161,72,.11),rgba(55,174,212,.06));
+}
+.pet-personality-symbol{
+ display:grid;place-items:center;flex:0 0 39px;width:39px;height:39px;
+ border-radius:12px;background:rgba(255,198,112,.13);color:var(--orange);
+ font-size:1.35rem;
+}
+.pet-personality>div{display:grid;gap:3px;min-width:0}
+.pet-personality small{color:var(--muted);font-size:.71rem;letter-spacing:.02em}
+.pet-personality strong{font-size:.98rem}
+.pet-personality p{margin:2px 0 0;color:var(--muted);font-size:.84rem;line-height:1.45}
+.pet-stage[data-pixel-mood="excited"] .pet-character-body{animation-duration:2.15s}
+.pet-stage[data-pixel-mood="sleepy"] .pet-character-body{animation-duration:6s}
+.pet-stage[data-pixel-mood="sleepy"] .pet-character-eye{animation-duration:8s;filter:brightness(.82)}
+.pet-stage[data-pixel-mood="tired"] .pet-character-body{animation-duration:5.2s}
+.pet-stage[data-pixel-mood="grumpy"] .pet-character-eye{animation-duration:8s}
+.pet-stage[data-pixel-mood="curious"] .pet-character-eye{animation-duration:3.4s}
+.pet-stage[data-pixel-mood="hungry"] .pet-character-eye{animation-duration:3s}
+@media(max-width:420px){
+ .pet-personality{padding:12px;gap:10px}
+ .pet-personality-symbol{flex-basis:34px;width:34px;height:34px}
+}
+@media(prefers-reduced-motion:reduce){
+ .pet-stage[data-pixel-mood] .pet-character-body,
+ .pet-stage[data-pixel-mood] .pet-character-eye{animation:none}
+}
