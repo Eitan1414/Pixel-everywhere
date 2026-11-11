@@ -413,6 +413,14 @@ async function prepareApplicationPage() {
 }
 
 const loginDialog = $("#loginDialog");
+window.addEventListener("pixel:discord-member-login", (event) => {
+  const { token, member } = event.detail || {};
+  if (typeof token !== "string" || !token || !member || !Number.isInteger(member.id)) return;
+  // Reuse the existing member session path: Discord never creates a staff session.
+  saveMemberSession(token, member);
+  if (loginDialog.open) loginDialog.close();
+  toast("Connexion avec Discord réussie.");
+});
 $("#accountButton").addEventListener("click", () => {
   updateAccountDialog();
   loginDialog.showModal();
