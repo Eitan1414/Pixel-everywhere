@@ -3,6 +3,10 @@ import {
   INBOX_TABS, inboxSectionForPage, inboxUnreadTotals,
   inboxSearchMatch, normalizeUnread
 } from "./v17-inbox-model.js";
+import {
+  INBOX_FILTERS, normalizedPinnedIds,
+  visibleConversation, sortConversations
+} from "./v17-inbox-filters.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const create = (tag, className = "", text) => {
@@ -67,6 +71,38 @@ function installUnifiedInbox() {
   let selected = "staff";
   let activeMode = "staff";
   let search = { private: "", staff: "" };
+  let filters = { private: "all", staff: "all" };
+
+  function accountStorageKey(mode) {
+    try {
+      const member = JSON.parse(localStorage.getItem("pixel-member") || "null");
+      const staff = JSON.parse(sessionStorage.getItem("pixel-user") || "null");
+      const identity = mode === "staff" && staffConnected()
+        ? { kind: "staff", id: staff?.id }
+        : { kind: "member", id: member?.id };
+      if (!Number.isSafeInteger(Number(identity.id)) || Number(identity.id) < 1) return null;
+      if (identity.kind === "member" && !memberConnected()) return null;
+      return "pixel-inbox-pins-v17:" + identity.kind + ":" + String(identity.id);
+    } catch { return null; }
+  }
+
+  function readPins(mode) {
+    const key = accountStorageKey(mode);
+    if (!key) return [];
+    try { return normalizedPinnedIds(JSON.parse(localStorage.getItem(key) || "[]")); }
+    catch { return []; }
+  }
+
+  function togglePin(mode, id) {
+    const key = accountStorageKey(mode);
+    if (!key) return;
+    const pins = readPins(mode);
+    const next = pins.includes(id) ? pins.filter(value => value !== id)
+      : normalizedPinnedIds([...pins, id]);
+    try { localStorage.setItem(key, JSON.stringify(next)); }
+    catch { return; }
+    applySearch();
+  }
 
   function memberConnected() {
     return Boolean(localStorage.getItem("pixel-member-token"));
@@ -139,6 +175,7 @@ function installUnifiedInbox() {
       if (lettersHint) {
         lettersHint.hidden = current !== "staff" || !memberConnected();
       }
+      if (current === "private" || current === "staff") updateFilterButtons(current);
       applySearch();
     }
   }
@@ -187,18 +224,112 @@ function installUnifiedInbox() {
   searchRow.append(searchBox, lettersShortcut);
   conversationPage.querySelector(".v17-inbox-tabs")?.after(searchRow);
 
+  const filterBar = create("div", "v17-inbox-filters");
+  filterBar.setAttribute("role", "group");
+  filterBar.setAttribute("aria-label", "Filtrer les conversations");
+  for (const definition of INBOX_FILTERS) {
+    const button = create("button", "v17-inbox-filter", definition.label);
+    button.type = "button";
+    button.dataset.inboxFilter = definition.id;
+    button.setAttribute("aria-pressed", String(definition.id === "all"));
+    button.addEventListener("click", () => {
+      const mode = $("#memberDirectTab")?.classList.contains("active")
+        ? "private" : "staff";
+      filters[mode] = definition.id;
+      updateFilterButtons(mode);
+      applySearch();
+    });
+    filterBar.append(button);
+  }
+  searchRow.after(filterBar);
+
+  function updateFilterButtons(mode) {
+    for (const button of filterBar.querySelectorAll("[data-inbox-filter]")) {
+      const active = button.dataset.inboxFilter === filters[mode];
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", String(active));
+    }
+  }
+
   const lettersHint = create("p", "v17-inbox-letters-hint",
     "Les courriers administratifs de PDD restent accessibles depuis l’onglet Staff.");
   lettersHint.id = "v17InboxLettersHint";
   lettersHint.hidden = !memberConnected();
-  searchRow.after(lettersHint);
+  filterBar.after(lettersHint);
 
   const emptySearch = create("p", "v17-inbox-search-empty",
     "Aucune conversation ne correspond à cette recherche.");
   emptySearch.hidden = true;
   searchRow.after(emptySearch);
 
+  function decorateThreads(list, mode) {
+    if (!list) return;
+    const threads = [...list.children].filter(child =>
+      child.classList?.contains("conversation-thread"));
+    for (const [index, thread] of threads.entries()) {
+      const id = thread.dataset.v17ConversationId;
+      if (!/^\d{1,18}$/.test(String(id || ""))) continue;
+      const row = create("div", "v17-inbox-thread-row");
+      row.dataset.v17ConversationId = id;
+      row.dataset.v17UpdatedAt = thread.dataset.v17UpdatedAt || "";
+      row.dataset.v17UnreadCount = thread.dataset.v17UnreadCount || "0";
+      row.dataset.v17OriginalOrder = String(index);
+      const pin = create("button", "v17-inbox-pin", "📌");
+      pin.type = "button";
+      pin.addEventListener("click", () => togglePin(mode, id));
+      list.insertBefore(row, thread);
+      row.append(thread, pin);
+    }
+  }
+
+  function organizeList(mode) {
+    const list = mode === "private" ? $("#memberDirectList") : $("#conversationList");
+    if (!list) return {count:0, matching:0};
+    decorateThreads(list, mode);
+    const pins = readPins(mode);
+    const pinned = new Set(pins);
+    const rows = [...list.querySelectorAll(":scope > .v17-inbox-thread-row")];
+    const items = rows.map(row => ({
+      row,
+      id: row.dataset.v17ConversationId,
+      updatedAt: row.dataset.v17UpdatedAt,
+      unread: Number(row.dataset.v17UnreadCount || 0),
+      order: Number(row.dataset.v17OriginalOrder || 0),
+      text: row.querySelector(".conversation-thread")?.textContent || ""
+    }));
+    const ordered = sortConversations(items, pins);
+    // Only mutate the DOM when order truly differs: a MutationObserver also
+    // follows these lists and would otherwise cause a reordering loop.
+    ordered.forEach((item, index) => {
+      if (list.children[index] !== item.row) {
+        list.insertBefore(item.row, list.children[index] || null);
+      }
+    });
+    let matching = 0;
+    for (const item of items) {
+      const isPinned = pinned.has(item.id);
+      const button = item.row.querySelector(".v17-inbox-pin");
+      if (button) {
+        button.classList.toggle("is-pinned", isPinned);
+        button.setAttribute("aria-pressed", String(isPinned));
+        button.setAttribute("aria-label", isPinned
+          ? "Désépingler cette conversation" : "Épingler cette conversation");
+        button.title = isPinned ? "Désépingler" : "Épingler en haut";
+        button.textContent = isPinned ? "📌" : "☆";
+      }
+      item.row.classList.toggle("is-pinned", isPinned);
+      const visible = visibleConversation(item, {
+        filter:filters[mode], query:search[mode], pins
+      });
+      item.row.classList.toggle("v17-inbox-filtered", !visible);
+      if (visible) matching += 1;
+    }
+    return {count:items.length, matching};
+  }
+
   function applySearch() {
+    const privateResult = organizeList("private");
+    const staffResult = organizeList("staff");
     const isConversations = conversationPage.classList.contains("active");
     if (!isConversations) {
       emptySearch.hidden = true;
@@ -206,17 +337,16 @@ function installUnifiedInbox() {
     }
     const mode = $("#memberDirectTab")?.classList.contains("active")
       ? "private" : "staff";
-    const list = mode === "private" ? $("#memberDirectList") : $("#conversationList");
-    const query = search[mode] || "";
-    let count = 0;
-    let matching = 0;
-    for (const button of list?.querySelectorAll(".conversation-thread") || []) {
-      count += 1;
-      const matches = inboxSearchMatch(button.textContent, query);
-      button.classList.toggle("v17-inbox-filtered", !matches);
-      if (matches) matching += 1;
-    }
-    emptySearch.hidden = !query || count === 0 || matching > 0;
+    const {count, matching} = mode === "private" ? privateResult : staffResult;
+    const filter = filters[mode];
+    emptySearch.textContent = search[mode]
+      ? "Aucune conversation ne correspond à cette recherche."
+      : filter === "unread"
+        ? "Aucune conversation non lue."
+        : filter === "recent"
+          ? "Aucune conversation des 7 derniers jours."
+          : "Aucune conversation épinglée.";
+    emptySearch.hidden = count === 0 || matching > 0 || (filter === "all" && !search[mode]);
   }
 
   searchBox.addEventListener("input", () => {
@@ -308,7 +438,9 @@ function installUnifiedInbox() {
   }
   window.addEventListener("pixel:member-session-changed", () => {
     search = {private:"",staff:""};
+    filters = {private:"all",staff:"all"};
     searchBox.value = "";
+    updateFilterButtons("staff");
     // Do not leave unread counts from the previous member visible while
     // the existing message modules refresh their authenticated data.
     for (const selector of ["#memberDirectBadge","#conversationBadge","#inboxBadge"]) {
@@ -322,6 +454,9 @@ function installUnifiedInbox() {
     }
     updateCounts();
     syncTabs();
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key?.startsWith("pixel-inbox-pins-v17:")) applySearch();
   });
   window.addEventListener("pageshow", () => {syncTabs();updateCounts();});
   updateCounts();
