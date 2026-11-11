@@ -2,6 +2,8 @@ import crypto from "node:crypto";
 import rateLimit from "express-rate-limit";
 import { fetchAnnouncements } from "./discord.mjs";
 import { registerDiscordLoginV17Routes } from "./discord-login-v17.mjs";
+import { createDiscordActivityStore } from "./discord-activity-v17.mjs";
+import { startDiscordActivityGateway } from "./discord-gateway-v17.mjs";
 
 const API = "https://discord.com/api/v10";
 const STATE_TTL_SECONDS = 10 * 60;
@@ -126,6 +128,20 @@ export function registerDiscordV17Routes({
   });
   const memberOnly = [authenticateMember, requireActiveMember];
   const staffAccess = [authenticate, requireActiveStaff, staffOnly];
+  const activityStore = createDiscordActivityStore({
+    db, guildId: String(process.env.DISCORD_GUILD_ID || "")
+  });
+  const activityGateway = startDiscordActivityGateway({store: activityStore});
+  app.get("/api/staff/discord/activity/events", ...staffAccess, (req, res) => {
+    res.set("Cache-Control", "no-store");
+    const type = typeof req.query.type === "string" ? req.query.type : "all";
+    const days = Number(req.query.days || 7);
+    res.json({
+      events: activityStore.list({type,days,limit:50}),
+      gateway: activityGateway.getStatus(),
+      retentionDays:30
+    });
+  });
 
   app.get("/api/members/discord/link", ...memberOnly, (req, res) => {
     const link = db.prepare(
