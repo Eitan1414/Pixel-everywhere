@@ -73,6 +73,9 @@ if (!source.includes('from "./pixel-helper-ai.mjs"')) {
 if (!source.includes('from "./discord-v17.mjs"')) {
   extraImports.push('import { registerDiscordV17Routes } from "./discord-v17.mjs";');
 }
+if (!source.includes('from "./notifications-v17.mjs"')) {
+  extraImports.push('import { registerNotificationV17Routes } from "./notifications-v17.mjs";');
+}
 if (!source.includes("authenticateAny")) {
   extraImports.push('import { authenticateAny } from "./auth.mjs";');
 }
@@ -267,6 +270,14 @@ if (!source.includes("registerDiscordV17Routes({")) {
   requireActiveMember,
   staffOnly,
   createToken
+});`);
+}
+if (!source.includes("registerNotificationV17Routes({")) {
+  registrations.push(`registerNotificationV17Routes({
+  app,
+  db,
+  authenticateMember,
+  requireActiveMember
 });`);
 }
 if (!source.includes("registerPixelHelperAiRoutes({")) {
