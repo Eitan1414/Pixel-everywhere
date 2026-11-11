@@ -81,8 +81,15 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
   };
   const { db, close } = createDatabase();
   const app = express();
+  app.use(express.json());
+  let memberSessionsCreated = 0;
   registerDiscordV17Routes({
     app, db,
+    createToken: (member, kind) => {
+      assert.equal(kind, "member");
+      memberSessionsCreated += 1;
+      return "member-jwt-test-" + member.id;
+    },
     authenticate: authentication("staff"),
     authenticateMember: authentication("member"),
     requireActiveMember: (_req, _res, next) => next(),
@@ -102,8 +109,13 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     }
   });
   const root = "http://127.0.0.1:" + server.address().port;
-  const request = (endpoint, token, method = "GET") => globalThis.fetch(root + endpoint, {
-    method, headers: token ? { Authorization: "Bearer " + token } : {}
+  const request = (endpoint, token, method = "GET", body) => globalThis.fetch(root + endpoint, {
+    method,
+    headers: {
+      ...(token ? { Authorization: "Bearer " + token } : {}),
+      ...(body === undefined ? {} : { "Content-Type": "application/json" })
+    },
+    body: body === undefined ? undefined : JSON.stringify(body)
   });
   const start = async (token) => {
     const response = await request("/api/members/discord/link/start", token, "POST");
@@ -180,4 +192,79 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     assert.match(await callback(state), /expiré/);
     assert.equal((await status("member-1")).linked, false);
   });
+
+  const startDiscordLogin = async () => {
+    const response = await request("/api/members/discord/login/start", "", "POST");
+    assert.equal(response.status, 200);
+    const payload = await response.json();
+    const authorization = new URL(payload.authorizationUrl);
+    assert.equal(authorization.hostname, "discord.com");
+    assert.equal(authorization.searchParams.get("scope"), "identify");
+    assert.ok(/^[a-zA-Z0-9_-]{30,64}$/.test(payload.claimKey));
+    assert.ok(/^[a-zA-Z0-9_-]{30,64}$/.test(payload.requestId));
+    return { ...payload, state: authorization.searchParams.get("state") };
+  };
+  const finishDiscordLogin = (attempt, overrides = {}) => request(
+    "/api/members/discord/login/finish", "", "POST", {
+      requestId: attempt.requestId,
+      claimKey: attempt.claimKey,
+      ...overrides
+    }
+  );
+
+  await t.test("connexion Discord: pas de session avant l'autorisation et la réclamation", async () => {
+    const attempt = await startDiscordLogin();
+    const noAuth = await finishDiscordLogin(attempt);
+    assert.equal(noAuth.status, 202);
+    assert.deepEqual(await noAuth.json(), { status: "pending" });
+    assert.equal(memberSessionsCreated, 0);
+    const forged = await finishDiscordLogin(attempt, { claimKey: "A".repeat(43) });
+    assert.equal(forged.status, 410);
+    assert.equal(memberSessionsCreated, 0);
+    assert.match(await callback(attempt.state), /confirmé ton identité/);
+    assert.equal(memberSessionsCreated, 0);
+    const success = await finishDiscordLogin(attempt);
+    assert.equal(success.status, 200);
+    const data = await success.json();
+    assert.equal(data.member.id, 2);
+    assert.equal(data.member.username, undefined);
+    assert.equal(data.token, "member-jwt-test-2");
+    assert.equal(memberSessionsCreated, 1);
+    assert.equal((await finishDiscordLogin(attempt)).status, 410);
+    assert.match(await callback(attempt.state), /déjà été utilisée/);
+  });
+
+  await t.test("connexion Discord: refus et comptes non liés ne créent aucune session", async () => {
+    const denied = await startDiscordLogin();
+    assert.match(await callback(denied.state, "&error=access_denied"), /annulée/);
+    assert.equal((await finishDiscordLogin(denied)).status, 409);
+    assert.equal(memberSessionsCreated, 1);
+    const formerId = identity.id;
+    identity.id = "999999999999999999";
+    try {
+      const unlinked = await startDiscordLogin();
+      assert.match(await callback(unlinked.state), /Aucun compte Pixel Everywhere/);
+      const response = await finishDiscordLogin(unlinked);
+      assert.equal(response.status, 409);
+      assert.match((await response.json()).error, /associe/);
+      assert.equal(memberSessionsCreated, 1);
+    } finally {
+      identity.id = formerId;
+    }
+  });
+
+  await t.test("connexion Discord: expiration et déliaison empêchent la création du jeton", async () => {
+    const expired = await startDiscordLogin();
+    db.prepare("UPDATE discord_login_attempts SET created_at = 0 WHERE state_hash = ?")
+      .run((await import("node:crypto")).createHash("sha256").update(expired.state).digest("hex"));
+    assert.match(await callback(expired.state), /expiré/);
+    assert.equal((await finishDiscordLogin(expired)).status, 410);
+
+    const beforeUnlink = await startDiscordLogin();
+    assert.match(await callback(beforeUnlink.state), /confirmé ton identité/);
+    assert.equal((await request("/api/members/discord/link", "member-2", "DELETE")).status, 200);
+    assert.equal((await finishDiscordLogin(beforeUnlink)).status, 410);
+    assert.equal(memberSessionsCreated, 1);
+  });
+
 });
