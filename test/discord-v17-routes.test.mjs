@@ -63,7 +63,7 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     DISCORD_BOT_TOKEN: ""
   });
   const nativeFetch = globalThis.fetch;
-  const identity = { id: "888888888888888888", username: "pixeluser", global_name: "Pixel User" };
+  const identity = { id: "888888888888888888", username: "pixeluser", global_name: "Pixel User", avatar: "a_abcdef0123456789abcdef0123456789" };
   let tokenExchanges = 0;
   globalThis.fetch = (input, options) => {
     const url = String(input);
@@ -166,6 +166,7 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     assert.equal(linked.linked, true);
     assert.equal(linked.discord.id, identity.id);
     assert.equal(linked.discord.displayName, identity.global_name);
+    assert.equal(linked.discord.avatarUrl, "https://cdn.discordapp.com/avatars/" + identity.id + "/" + identity.avatar + ".webp?size=128&animated=true");
   });
 
   await t.test("un Discord ne peut pas être lié à un second membre", async () => {
