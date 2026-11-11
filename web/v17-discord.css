@@ -25,3 +25,12 @@
 .v17-discord-announcement small {color:var(--muted);font-size:.72rem}
 .v17-discord-announcement p {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
 @media(max-width:420px) {.v17-discord-card {padding:15px}.v17-discord-stats {gap:6px}.v17-discord-stat {padding:10px}.v17-discord-stat strong {font-size:1.3rem}.v17-discord-actions button,.v17-discord-actions a {width:100%}}
+
+/* Optional Discord sign-in from the existing member login dialog. */
+.v17-discord-login{display:grid;gap:10px;padding-top:16px;margin-top:14px;border-top:1px solid var(--line)}
+.v17-discord-login .v17-discord-muted{margin:0}
+.v17-discord-login > button,.v17-discord-login > a{display:flex;align-items:center;justify-content:center;min-height:43px;border-radius:12px;padding:10px 14px;text-decoration:none;font:inherit;font-weight:750;cursor:pointer}
+.v17-discord-login > [hidden]{display:none!important}
+.v17-discord-login-button{background:#5865f2;color:white;border:1px solid #5865f2}
+.v17-discord-login-continue{background:var(--orange);color:#121019;border:1px solid transparent}
+.v17-discord-login > button:disabled{opacity:.65;cursor:wait}
