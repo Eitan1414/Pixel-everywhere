@@ -62,6 +62,12 @@ export function createDiscordActivityStore({ db, guildId, now = () => Date.now()
       for (const role of (Array.isArray(payload.roles) ? payload.roles : [])) {
         if (SNOWFLAKE.test(String(role?.id || ""))) roles.set(String(role.id),clean(role.name,100));
       }
+      // Discord may include an initial partial member snapshot. This builds
+      // a baseline without pretending those users just joined the server.
+      for (const member of (Array.isArray(payload.members) ? payload.members : [])) {
+        const id = String(member?.user?.id || "");
+        if (SNOWFLAKE.test(id)) saveSnapshot(id,makeName(member),normalizeRoles(member.roles));
+      }
       return false;
     }
     if (["GUILD_ROLE_CREATE","GUILD_ROLE_UPDATE"].includes(type)) {
@@ -91,6 +97,7 @@ export function createDiscordActivityStore({ db, guildId, now = () => Date.now()
       logEvent("join",id,username);
       return true;
     }
+    if (type === "GUILD_MEMBER_UPDATE" && !Array.isArray(payload.roles)) return false;
     if (!saved) {
       // First UPDATE after startup may not contain a prior baseline: do not invent a role change.
       saveSnapshot(id,username,nextRoles);
