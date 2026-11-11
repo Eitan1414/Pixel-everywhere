@@ -1,5 +1,6 @@
 import "./v17-admin-panel.css";
 import { getV17StaffSections } from "./v17-admin-model.js";
+import { hasLinkedStaffMember, safeStaffDiscordAvatarUrl } from "./v17-admin-avatar.js";
 
 const find = (selector, scope = document) => scope.querySelector(selector);
 const findAll = (selector, scope = document) => [...scope.querySelectorAll(selector)];
@@ -42,7 +43,8 @@ function install() {
   const dashboard = make("section", "v17-admin-dashboard");
   dashboard.id = "v17StaffDashboard";
   const splash = make("div", "v17-admin-splash");
-  splash.append(make("span", "v17-admin-emblem", "◈"));
+  const emblem = make("span", "v17-admin-emblem", "◈");
+  splash.append(emblem);
   const splashText = make("div", "v17-admin-splash-copy");
   splashText.append(
     make("p", "eyebrow", "Pixel Everywhere · v1.7"),
@@ -77,6 +79,54 @@ function install() {
   workspace.append(footer);
 
   let currentView = "dashboard";
+  let avatarKey = "";
+  let avatarCheckedAt = 0;
+  let avatarRequestId = 0;
+
+  function resetAvatar() {
+    emblem.textContent = "◈";
+  }
+
+  async function refreshStaffAvatar(force = false) {
+    const user = readStaff();
+    let member = null;
+    try { member = JSON.parse(localStorage.getItem("pixel-member") || "null"); } catch {}
+    const token = localStorage.getItem("pixel-member-token") || "";
+    if (!hasLinkedStaffMember(user, member, token)) {
+      avatarRequestId += 1;
+      avatarKey = "";
+      avatarCheckedAt = 0;
+      resetAvatar();
+      return;
+    }
+    const base = String(localStorage.getItem("pixel-api-base-url") ||
+      import.meta.env.VITE_API_BASE_URL || "/api").replace(/\/$/, "");
+    const key = [user.id, member.id, token, base].join(":");
+    if (!force && key === avatarKey && Date.now() - avatarCheckedAt < 30000) return;
+    avatarKey = key;
+    avatarCheckedAt = Date.now();
+    const requestId = ++avatarRequestId;
+    const headers = { Authorization: "Bearer " + token };
+    if (base.includes(".ngrok-free.")) headers["ngrok-skip-browser-warning"] = "pixel-everywhere";
+    try {
+      const response = await fetch(base + "/members/discord/link", { headers, cache: "no-store" });
+      if (!response.ok) throw new Error("Discord profile unavailable");
+      const payload = await response.json();
+      if (requestId !== avatarRequestId) return;
+      const avatarUrl = safeStaffDiscordAvatarUrl(payload);
+      if (!avatarUrl) { resetAvatar(); return; }
+      const picture = make("img", "v17-admin-avatar");
+      picture.src = avatarUrl;
+      picture.alt = "Avatar Discord du compte staff";
+      picture.referrerPolicy = "no-referrer";
+      picture.addEventListener("error", () => {
+        if (emblem.contains(picture)) resetAvatar();
+      }, { once: true });
+      emblem.replaceChildren(picture);
+    } catch {
+      if (requestId === avatarRequestId) resetAvatar();
+    }
+  }
 
   function sections() {
     const user = readStaff();
@@ -85,6 +135,7 @@ function install() {
 
   function drawDashboard() {
     const user = readStaff();
+    void refreshStaffAvatar();
     const label = find("#page-staff .section-heading h2");
     if (label) label.textContent = user?.role === "admin" ? "Admin Panel" : "Staff Panel";
     splashText.querySelector("h3").textContent =
@@ -170,6 +221,15 @@ function install() {
     if (currentView === "dashboard") drawDashboard();
   }).observe(tabs, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] });
 
+  window.addEventListener("pixel-member-session-ready", () => {
+    if (page.classList.contains("active")) void refreshStaffAvatar(true);
+  });
+  window.addEventListener("pixel-member-session-cleared", () => {
+    void refreshStaffAvatar(true);
+  });
+  window.addEventListener("focus", () => {
+    if (page.classList.contains("active")) void refreshStaffAvatar(true);
+  });
   showDashboard();
   document.documentElement.classList.add("v17-admin-ready");
 }
