@@ -1,6 +1,6 @@
 import { fetchAnnouncements } from "./discord.mjs";
 
-const DISCORD_ID = /^\\d{15,25}$/;
+const DISCORD_ID = /^\d{15,25}$/;
 const CACHE_MS = 30_000;
 const MAX_ITEMS = 30;
 const MAX_READ_IDS = 30;
