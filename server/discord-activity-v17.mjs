@@ -45,6 +45,7 @@ export function createDiscordActivityStore({ db, guildId, now = () => Date.now()
       "VALUES(?,?,?,?,?,?,?)"
     ].join(" ")).run(guildId,id,username,type,JSON.stringify(roleLabels(added)),
       JSON.stringify(roleLabels(removed)),new Date(now()).toISOString());
+    // Keep headroom between periodic prunes so the hard 5,000-row cap holds.
     if (++changes % 25 === 0) prune();
   }
   function prune() {
@@ -54,7 +55,7 @@ export function createDiscordActivityStore({ db, guildId, now = () => Date.now()
     db.prepare([
       "DELETE FROM discord_activity_events WHERE guild_id = ? AND id NOT IN",
       "(SELECT id FROM discord_activity_events WHERE guild_id = ? ORDER BY id DESC LIMIT ?)"
-    ].join(" ")).run(guildId,guildId,MAX_ROWS);
+    ].join(" ")).run(guildId,guildId,MAX_ROWS - 25);
   }
   function observe(type, payload) {
     if (!payload || String(payload.guild_id || payload.id || "") !== String(guildId)) return false;
