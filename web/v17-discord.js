@@ -62,7 +62,7 @@ function makeMemberPage(){
  if(!main||!grid||$("#page-v17-discord"))return;
  const page=node("section","page v17-discord-page");
  page.id="page-v17-discord";
- page.append(node("p","eyebrow","Pixel Everywhere · Discord"),node("h2","","Lier mon compte Discord"));
+ page.append(node("p","eyebrow","Pixel Everywhere · Discord"),node("h2","","Mon compte Discord"));
  const card=node("article","v17-discord-card");
  const status=node("p","v17-discord-muted","Vérification du compte Discord…");
  status.setAttribute("role","status");
@@ -96,10 +96,11 @@ function makeMemberPage(){
  actions.append(connect,open,refresh,unlink);
  card.append(status,identity,actions);
  page.append(node("p","v17-discord-muted","Associe ton compte via la page officielle Discord. Aucun mot de passe Discord n'est demandé dans l'application."),card,
-   node("p","v17-discord-muted","Après l'autorisation dans le navigateur, reviens ici et appuie sur Actualiser."));
+   node("p","v17-discord-muted","Après l'autorisation dans le navigateur, reviens ici : le profil s'actualise automatiquement. Le bouton Actualiser reste disponible si nécessaire."));
  main.append(page);
  let pendingAuth=null;
  let loading=false;
+ let reloadAfterCurrent=false;
  function clearPendingAuth(){
   pendingAuth=null;open.hidden=true;open.removeAttribute("href");
  }
@@ -109,7 +110,7 @@ function makeMemberPage(){
    Date.now()<pendingAuth.expiresAt);
  }
  async function load(){
-  if(loading)return;
+  if(loading){reloadAfterCurrent=true;return;}
   loading=true;
   const tokenAtStart=localStorage.getItem("pixel-member-token");
   connect.disabled=true;refresh.disabled=true;
@@ -148,7 +149,10 @@ function makeMemberPage(){
     connect.hidden=true;unlink.hidden=true;quickUnlink.hidden=true;
    }
   }
-  finally{connect.disabled=false;refresh.disabled=false;loading=false;}
+  finally{
+   connect.disabled=false;refresh.disabled=false;loading=false;
+   if(reloadAfterCurrent){reloadAfterCurrent=false;void load();}
+  }
  }
  connect.addEventListener("click",async()=>{
   connect.disabled=true;status.textContent="Préparation de l'autorisation…";
