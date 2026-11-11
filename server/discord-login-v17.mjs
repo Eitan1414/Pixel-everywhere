@@ -169,6 +169,15 @@ export function registerDiscordLoginV17Routes({
       }
       const member = db.prepare("SELECT id FROM member_users WHERE id = ?").get(linked.member_id);
       if (!member) return fail("Ce compte Pixel Everywhere n'existe plus.");
+      // The verified Discord identity refreshes the saved display name and
+      // avatar, without changing the member's own Pixel Everywhere profile.
+      const updated = db.prepare(
+        "UPDATE member_discord_links SET discord_username = ?, discord_display_name = ?, discord_avatar_hash = ? WHERE member_id = ? AND discord_id = ?"
+      ).run(String(identity.username).slice(0,80),
+        String(identity.global_name || "").slice(0,100) || null,
+        typeof identity.avatar === "string" ? identity.avatar : null,
+        member.id, String(identity.id));
+      if (updated.changes !== 1) return fail("La liaison Discord a été modifiée. Recommence la connexion.");
       db.prepare(
         "UPDATE discord_login_attempts SET status = 'ready', member_id = ?, discord_id = ? WHERE state_hash = ? AND status = 'processing'"
       ).run(member.id, String(identity.id), stateHash);
