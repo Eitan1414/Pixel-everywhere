@@ -11,8 +11,8 @@ const SQL = await initSqlJs({ locateFile: (file) => path.join(sqlJsDirectory, fi
 
 function createDatabase() {
   const sqlite = new SQL.Database();
-  sqlite.run("PRAGMA foreign_keys = ON; CREATE TABLE member_users (id INTEGER PRIMARY KEY);");
-  sqlite.run("INSERT INTO member_users(id) VALUES (1), (2)");
+  sqlite.run("PRAGMA foreign_keys = ON; CREATE TABLE member_users (id INTEGER PRIMARY KEY, username TEXT NOT NULL, display_name TEXT NOT NULL, points INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);");
+  sqlite.run("INSERT INTO member_users(id, username, display_name) VALUES (1, 'member1', 'Membre 1'), (2, 'member2', 'Membre 2')");
   const db = {
     exec: (sql) => sqlite.exec(sql),
     prepare(sql) {
@@ -227,7 +227,7 @@ test("Discord OAuth2: liaison, unicité, expiration, révocation et accès prot�
     assert.equal(success.status, 200);
     const data = await success.json();
     assert.equal(data.member.id, 2);
-    assert.equal(data.member.username, undefined);
+    assert.equal(data.member.username, "member2");
     assert.equal(data.token, "member-jwt-test-2");
     assert.equal(memberSessionsCreated, 1);
     assert.equal((await finishDiscordLogin(attempt)).status, 410);
