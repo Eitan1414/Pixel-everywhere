@@ -62,7 +62,8 @@ const moduleLoaders = Object.freeze({
   v17Details: () => import("./v17-details.js"),
   v17Discord: () => import("./v17-discord.js"),
   v17Notifications: () => import("./v17-notifications.js"),
-  v17Inbox: () => import("./v17-inbox.js")
+  v17Inbox: () => import("./v17-inbox.js"),
+  v17BetaPreview: () => import("./v17-beta-preview.js")
 });
 
 async function loadOptional(loader, label) {
@@ -167,6 +168,7 @@ async function bootPixelEverywhere() {
   await loadOptional(moduleLoaders.v17Discord, "liaison Discord et activité du serveur v1.7");
   await loadOptional(moduleLoaders.v17Notifications, "centre de notifications des annonces PDD v1.7");
   await loadOptional(moduleLoaders.v17Inbox, "messagerie 2.0 et boîte de réception unifiée");
+  await loadOptional(moduleLoaders.v17BetaPreview, "bannière de consultation de la bêta 1.7");
 
   exposeBootState();
   window.pixelDesktop?.reportRendererReady?.();
