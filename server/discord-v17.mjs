@@ -30,6 +30,20 @@ function hashedState(state) {
   return crypto.createHash("sha256").update(state).digest("hex");
 }
 
+// A validated Discord CDN URL, with a deterministic default avatar when no
+// custom avatar is set. Never interpolate arbitrary profile data into a URL.
+export function discordAvatarUrl(discordId, avatarHash) {
+  const id = String(discordId || "");
+  if (!/^\d{15,25}$/.test(id)) return null;
+  const hash = String(avatarHash || "");
+  if (/^(?:a_)?[a-f\d]{32}$/i.test(hash)) {
+    const animated = /^a_/i.test(hash) ? "&animated=true" : "";
+    return `https://cdn.discordapp.com/avatars/${id}/${hash}.webp?size=128${animated}`;
+  }
+  const defaultIndex = Number((BigInt(id) >> 22n) % 6n);
+  return `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png`;
+}
+
 function escapeHTML(value) {
   return String(value).replace(/[&<>"']/g, (x) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -115,7 +129,7 @@ export function registerDiscordV17Routes({
 
   app.get("/api/members/discord/link", ...memberOnly, (req, res) => {
     const link = db.prepare(
-      "SELECT discord_id, discord_username, discord_display_name, linked_at FROM member_discord_links WHERE member_id = ?"
+      "SELECT discord_id, discord_username, discord_display_name, discord_avatar_hash, linked_at FROM member_discord_links WHERE member_id = ?"
     ).get(req.currentMember.id);
     res.set("Cache-Control", "no-store");
     res.json({
@@ -124,6 +138,7 @@ export function registerDiscordV17Routes({
         id: link.discord_id,
         username: link.discord_username,
         displayName: link.discord_display_name || link.discord_username,
+        avatarUrl: discordAvatarUrl(link.discord_id, link.discord_avatar_hash),
         linkedAt: link.linked_at
       } : null,
       configured: Boolean(discordOAuthConfiguration())
